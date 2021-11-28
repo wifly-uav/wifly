@@ -1,0 +1,6 @@
+model_checkpoint_path: "D:\\ml_b4\\ml_test _2\\iwashiro_ml\\layer_change_program\\models\\WiflyDual_DQN2020-06-10"
+all_model_checkpoint_paths: "D:\\ml_b4\\ml_test _2\\iwashiro_ml\\layer_change_program\\models\\WiflyDual_DQN020040"
+all_model_checkpoint_paths: "D:\\ml_b4\\ml_test _2\\iwashiro_ml\\layer_change_program\\models\\WiflyDual_DQN020131"
+all_model_checkpoint_paths: "D:\\ml_b4\\ml_test _2\\iwashiro_ml\\layer_change_program\\models\\WiflyDual_DQN020219"
+all_model_checkpoint_paths: "D:\\ml_b4\\ml_test _2\\iwashiro_ml\\layer_change_program\\models\\WiflyDual_DQN020310"
+all_model_checkpoint_paths: "D:\\ml_b4\\ml_test _2\\iwashiro_ml\\layer_change_program\\models\\WiflyDual_DQN2020-06-10"
