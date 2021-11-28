@@ -20,8 +20,8 @@
 
 #include "camera_pins.h"
 
-const char* ssid = "TP-Link_99D8";
-const char* password = "40258126";
+const char* ssid = "------";
+const char* password = "------";
 
 void startCameraServer();
 
