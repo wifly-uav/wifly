@@ -20,8 +20,8 @@
 
 #include "camera_pins.h"
 
-const char* ssid = "------";
-const char* password = "------";
+const char* ssid = "501HWa-8F9472";
+const char* password = "3940451a";
 
 void startCameraServer();
 
@@ -102,7 +102,6 @@ void setup() {
     Serial.print(".");
   }
   Serial.println("");
-  Serial.println("WiFi connected");
 
   startCameraServer();
 

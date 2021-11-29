@@ -21,17 +21,19 @@ void setup()
   WiFi.config(ip, gatway, subnet);
 
   // attempt to connect to Wifi network:
+  Serial.print("Attempting to connect to SSID: ");
+  Serial.println(ssid);
+  // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
+  WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED)
   {
-    Serial.print("Attempting to connect to SSID: ");
-    Serial.println(ssid);
-    // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
-    WiFi.begin(ssid, password);
-
-    // wait 10 seconds for connection:
-    delay(10000);
+    delay(500);
+    Serial.print(".");
   }
 
+  Serial.println("");
+  Serial.println("WiFi connected");
+  
   //esp_err_t err = cam.init(esp32cam_aithinker_config);
   esp_err_t err = cam.init(espeye_config);
   if (err != ESP_OK)
@@ -39,8 +41,11 @@ void setup()
     Serial.printf("Camera init failed with error 0x%x", err);
     return;
   }
+  Serial.print("Camera Ready! localIP:");
+  Serial.println(WiFi.localIP());
 
   rtspServer.begin();
+  Serial.println("rtsp begin");
 }
 
 CStreamer *streamer;
@@ -82,6 +87,8 @@ void loop()
   else
   {
     client = rtspServer.accept();
+    Serial.print("client:");
+    Serial.println(client);
 
     if (client)
     {
