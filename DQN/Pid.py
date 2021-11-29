@@ -12,10 +12,10 @@ MODEL_NAME_HEADER = "WiflyDual_DQN"
 
 if __name__ == "__main__":
     log = logger()
-    saturations = [0,60]
+    saturations = [0,100]
     pwm_def = 100
     pid = calc_PID(saturations)
-    param = [1.5,0.00001,0.000001,0]
+    param = [1.5,0.0001,0,0]
     ti = 10
     actions = [pwm_def, pwm_def]
     pid.update_params(param)

@@ -7,7 +7,7 @@ from collections import deque
 RIGHT_WING = 1
 LEFT_WING = 3
 PWM_WING = 140
-FRAMES = 5
+FRAMES = 4
 default_params = [255, PWM_WING, 0, PWM_WING, 0]
                 ##header,right,servo,left,controlmode
 receive_byt = 7
@@ -42,6 +42,16 @@ class Environment():
             data, _, _ = self.communicator.recieve_from_laz(byt=receive_byt)
             self.update(flag=False, data=data)
 
+    def reset_pid(self):
+        self.communicator.start_laz(default_params)
+        self.state = deque()
+        self.params_to_send = default_params
+        for i in range(FRAMES):
+            self.params_to_send = default_params
+            data, _, _ = self.communicator.recieve_from_laz(byt=receive_byt)
+            data.append(0)
+            self.update(flag=False, data=data)
+
     def update(self, flag, data):
         """
         状態を更新する
@@ -58,6 +68,13 @@ class Environment():
         状態を更新した上で状態を確認する
         """
         data, ti, ti_ = self.communicator.recieve_from_laz(byt=receive_byt)
+        self.update(flag=flag, data=data)
+        return self.state, ti, ti_
+    
+    
+    def observe_update_state_pid(self, flag=True, pid=0):
+        data, ti, ti_ = self.communicator.recieve_from_laz(byt=receive_byt)
+        data.append(pid)
         self.update(flag=flag, data=data)
         return self.state, ti, ti_
 
@@ -77,11 +94,11 @@ class Environment():
         """
         ##報酬の設定
         err = abs(float(data[0][0])-0.0)
-        if err < 30:
+        if err < 10:
             return 1
-        elif err < 60:
+        elif err < 30:
             return 0
-        elif err <90:
+        elif err <45:
             return -1
         else:
             return -10
@@ -105,12 +122,18 @@ class Environment():
             self.params_to_send[RIGHT_WING]=PWM_WING
             self.params_to_send[LEFT_WING]=PWM_WING
         elif action == 2:
-            self.params_to_send[RIGHT_WING]=PWM_WING+30
+            self.params_to_send[RIGHT_WING]=PWM_WING+20
             self.params_to_send[LEFT_WING]=PWM_WING
         elif action == 3:
             self.params_to_send[RIGHT_WING]=PWM_WING
-            self.params_to_send[LEFT_WING]=PWM_WING+30
+            self.params_to_send[LEFT_WING]=PWM_WING+20
         elif action == 4:
+            self.params_to_send[RIGHT_WING]=PWM_WING+40
+            self.params_to_send[LEFT_WING]=PWM_WING
+        elif action == 5:
+            self.params_to_send[RIGHT_WING]=PWM_WING
+            self.params_to_send[LEFT_WING]=PWM_WING+40
+        elif action == 6:
             self.params_to_send[RIGHT_WING]=PWM_WING+60
             self.params_to_send[LEFT_WING]=PWM_WING
         else:
@@ -125,6 +148,32 @@ class Environment():
         self.params_to_send[RIGHT_WING]=actions[0]
         self.params_to_send[LEFT_WING]=actions[1]
     
+        self.communicator.send_to_laz(self.params_to_send)
+    
+    
+    def excute_action_pid(self, action, actions):
+        if action == 1:
+            self.params_to_send[RIGHT_WING]=actions[0]
+            self.params_to_send[LEFT_WING]=actions[1]
+        elif action == 2:
+            self.params_to_send[RIGHT_WING]=actions[0]+10
+            self.params_to_send[LEFT_WING]=actions[1]
+        elif action == 3:
+            self.params_to_send[RIGHT_WING]=actions[0]
+            self.params_to_send[LEFT_WING]=actions[1]+10
+        elif action == 4:
+            self.params_to_send[RIGHT_WING]=actions[0]+20
+            self.params_to_send[LEFT_WING]=actions[1]
+        elif action == 5:
+            self.params_to_send[RIGHT_WING]=actions[0]
+            self.params_to_send[LEFT_WING]=actions[1]+20
+        elif action == 6:
+            self.params_to_send[RIGHT_WING]=actions[0]+30
+            self.params_to_send[LEFT_WING]=actions[1]
+        else:
+            self.params_to_send[RIGHT_WING]=actions[0]
+            self.params_to_send[LEFT_WING]=actions[1]+30
+
         self.communicator.send_to_laz(self.params_to_send)
 
     def reaction(self, state):

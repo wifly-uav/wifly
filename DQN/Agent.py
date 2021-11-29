@@ -18,17 +18,17 @@ import os
 MODEL_NAME = "WiflyDual_DQN" + str(datetime.today())[0:10]
 MODEL_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 CHECKPOINT_NAME = "WiflyDual_DQN"
-MINIBATCH_SIZE = 32
+MINIBATCH_SIZE = 8
 REPLAY_MEMORY_SIZE = 10000
-LEARNING_RATE = 0.01
+LEARNING_RATE = 0.015
 DISCOUNT_FACTOR = 0.95
 EPSILON = 0.1
-ENABLE_ACTIONS = [1,2,3,4,5]
+ENABLE_ACTIONS = [1,2,3,4,5,6,7]
 N_ACTIONS = len(ENABLE_ACTIONS)
-FRAMES = 5
-INPUTS = 3
-HIDDEN_1 = 5
-HIDDEN_2 = 3
+FRAMES = 4
+INPUTS = 4
+HIDDEN_1 = 10
+HIDDEN_2 = 5
 
 #----------------------------------------------------------------------------------------------
 
@@ -176,10 +176,10 @@ class DQNAgent:
         self.log_q.append(list(state))
         self.log_q.append(a)
         angle = float(state[0][0])
-        if angle<-90:
-            return 4
-        elif angle>90:
-            return 5
+        if angle<-45:
+            return 6
+        elif angle>45:
+            return 7
         elif np.random.rand() <= self.epsilon:
             # random
             act = np.random.choice(self.enable_actions)

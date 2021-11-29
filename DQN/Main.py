@@ -6,8 +6,8 @@ from Logger import logger
 import sys
 from visualize_nn import visual_nn
 
-N_EPOCHS = 1
-N_FRAMES = 100
+N_EPOCHS = 7
+N_FRAMES = 500
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 
 if __name__ == "__main__":
