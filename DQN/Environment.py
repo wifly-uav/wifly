@@ -42,14 +42,14 @@ class Environment():
             data, _, _ = self.communicator.recieve_from_laz(byt=receive_byt)
             self.update(flag=False, data=data)
 
-    def reset_pid(self):
+    def reset_pid(self, add=0):
         self.communicator.start_laz(default_params)
         self.state = deque()
         self.params_to_send = default_params
         for i in range(FRAMES):
             self.params_to_send = default_params
             data, _, _ = self.communicator.recieve_from_laz(byt=receive_byt)
-            data.append(0)
+            data.append(add)
             self.update(flag=False, data=data)
 
     def update(self, flag, data):
@@ -149,6 +149,20 @@ class Environment():
         self.params_to_send[LEFT_WING]=actions[1]
     
         self.communicator.send_to_laz(self.params_to_send)
+    
+    
+    def execute_action_gain(self, action):
+
+        if action == 1:
+            return 1.5
+        elif action == 2:
+            return 1.75
+        elif action == 3:
+            return 2
+        elif action == 4:
+            return 1.25
+        else:
+            return 1
     
     
     def excute_action_pid(self, action, actions):
