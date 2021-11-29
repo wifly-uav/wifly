@@ -1,4 +1,5 @@
 #from Calc_Control import Calc_Control
+from matplotlib.pyplot import flag
 import numpy as np
 from Environment import Environment
 from Agent import DQNAgent
@@ -55,6 +56,6 @@ if __name__ == "__main__":
 
 
     #agent.save_model()
-    log.output_log()
+    log.output_log(flag=False)
 
     print("finish")

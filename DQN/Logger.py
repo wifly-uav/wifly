@@ -3,12 +3,14 @@ import datetime
 import copy
 
 import os
+from graph import Graph
 
 class logger():
-    def __init__(self):
+    def __init__(self, flag==True):
         self.log = [["pitch"], ["yaw"], ["left"], ["right"]]
         self.log2 = []
         self.path = os.path.dirname(__file__)
+        self.flag = flag
         ##self.log = [["pitch,yaw,slope,roll"]]
 
     def add_log_state_and_action(self, state, action, sent_param, time, time2):
@@ -32,11 +34,15 @@ class logger():
         self.log2.append(row_)
 
     def output_log(self):
-        with open(os.path.join(self.path, 'log/log_{0:%H%M%S}'.format(datetime.datetime.now()) + ".csv"), 'w') as f:
+        name = '{0:%H%M%S}'.format(datetime.datetime.now())
+        with open(os.path.join(self.path, 'log/log_'+ name + ".csv"), 'w') as f:
             writer = csv.writer(f, lineterminator='\n')  # 改行コード（\n）を指定しておく
             writer.writerows(self.log)
             f.close()
-        with open(os.path.join(self.path, 'log/log2_{0:%H%M%S}'.format(datetime.datetime.now()) + ".csv"), 'w') as f:
+        with open(os.path.join(self.path, 'log/log2_'+ name + ".csv"), 'w') as f:
             writer = csv.writer(f, lineterminator='\n')  # 改行コード（\n）を指定しておく
             writer.writerows(self.log2)
             f.close()
+        if self.flag:
+            self.gra = Graph(file='log/debug_loss.csv', file2='log/log2_' + name + '.csv')
+            self.gra.graph()

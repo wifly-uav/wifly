@@ -20,13 +20,13 @@ try:
         writer = csv.writer(f)
         title = ['name','ave','var','hz']
         writer.writerow(title)
-        files = glob.glob(add + "*")
+        files = glob.glob(path + "*")
         
         for file in files:
             print(file)
         for file in files:
             #結果を保存したdata.csvがあった場合、読み込むのを防ぐため
-            if(file != add + "data.csv"):
+            if(file != path + "data.csv"):
                 name = os.path.splitext(os.path.basename(file))[0]
                 ext = os.path.splitext(os.path.basename(file))[1]
                 #print(name)
@@ -48,7 +48,7 @@ try:
                     ave = eng.mean(mat)
                     var = eng.var(mat)
                     #フーリエ解析し、結果を画像として保存する
-                    F = eng.fft_ori(mat, add + name)
+                    F = eng.fft_ori(mat, path + name)
                     #print(ave)
                     #print(var)
                     #print(F)

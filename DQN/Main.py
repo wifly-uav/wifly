@@ -78,12 +78,12 @@ if __name__ == "__main__":
 
 
     agent.save_model()
-    log.output_log()
     agent.debug_nn()
     agent.debug_memory()
     agent.debug_minibatch()
     agent.debug_q()
     agent.debug_loss()
+    log.output_log()
 
     vi.visualize()
 
