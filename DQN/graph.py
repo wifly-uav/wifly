@@ -14,9 +14,12 @@ import sys
 
 class Graph():
 
-    def __init__(self, file, file2, save_place=None):
-        self.file = file
-        self.file_a = file2
+    def __init__(self, path, path2, save_place=None):
+        
+        files = glob.glob(path + 'debug_loss.csv')
+        files2 = glob.glob(path2 + 'log2_*.csv')
+        self.file = files
+        self.file_a = files2
         self.save_place = save_place
 
     def graph(self):
@@ -83,9 +86,7 @@ if __name__ == "__main__":
     folder_path = input()
     path = folder_path + "/"
     
-    files = glob.glob(path + 'debug_loss.csv')
-    files_a = glob.glob(path + 'log2_*.csv')
 
-    gra = Graph(file=files[0], file2=files_a[0], save_place=path)
+    gra = Graph(path=path, path2=path, save_place=path)
     gra.graph()
     

@@ -6,7 +6,7 @@ import os
 from graph import Graph
 
 class logger():
-    def __init__(self, flag==True):
+    def __init__(self, flag=True):
         self.log = [["pitch"], ["yaw"], ["left"], ["right"]]
         self.log2 = []
         self.path = os.path.dirname(__file__)
@@ -44,5 +44,5 @@ class logger():
             writer.writerows(self.log2)
             f.close()
         if self.flag:
-            self.gra = Graph(file='log/debug_loss.csv', file2='log/log2_' + name + '.csv')
+            self.gra = Graph(path='log/', path2='log/' + name + '.csv')
             self.gra.graph()

@@ -7,18 +7,18 @@ import sys
 from visualize_nn import visual_nn
 from Calc_Control import calc_PID
 
-N_EPOCHS = 7
+N_EPOCHS = 5
 N_FRAMES = 500
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 
 if __name__ == "__main__":
-    log = logger()
+    log = logger(flag=False)
     agent = DQNAgent()
     env = Environment()
     vi = visual_nn(False)
 
     #PID_param
-    saturations = [0,100]
+    saturations = [0,150]
     pwm_def = 100
     pid = calc_PID(saturations)
     param = [1.5,0,0,0]
@@ -71,7 +71,7 @@ if __name__ == "__main__":
                     actions[1] = pwm_def
 
                 agent.epsilon -= 0.1/3000
-                env.excute_action_(actions)
+                env.execute_action_(actions)
                 if i != 0:
                     agent.experience_replay()
                 state_next, ti, ti_ = env.observe_update_state_pid(pid=p_gain)
@@ -89,8 +89,9 @@ if __name__ == "__main__":
             #log.add_log([checkpoint_report])
             #log.add_log(["Epoch End"])
 
-    except:
+    except ZeroDivisionError as e:
     #except KeyboardInterrupt:
+        print(e)
         print("Key finish")
         print(state_next)
 

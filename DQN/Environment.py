@@ -156,13 +156,13 @@ class Environment():
         if action == 1:
             return 1.5
         elif action == 2:
-            return 1.75
-        elif action == 3:
             return 2
+        elif action == 3:
+            return 3
         elif action == 4:
-            return 1.25
+            return 4
         else:
-            return 1
+            return 5
     
     
     def excute_action_pid(self, action, actions):
