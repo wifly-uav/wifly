@@ -136,7 +136,7 @@ class Communicator():
                     if (persed_data.pop(0).startswith('S') and persed_data.pop(-1).startswith('E')):
                         persed_data.pop(0)
                         if (persed_data[0] != '' or persed_data[0] != '-'):
-                            print(persed_data[0])
+                            #print(persed_data[0])
                             recieve_time_ = persed_data.pop(-1)
                             #recieve_time_ = 0
                             #add_log = self.create_log(persed_data, recieve_time)
