@@ -48,7 +48,7 @@ class logger():
 
     def loss_graph(self, loss):
         plt.plot(loss)
-        plt.ylim(0,)
+        plt.ylim(0,64)
         plt.title("LOSS",fontsize=25)
         plt.savefig(self.folder + '/loss.png')
         plt.show()

@@ -18,12 +18,12 @@ import os
 MODEL_NAME = "WiflyDual_DQN"# + str(datetime.today())[0:10]
 MODEL_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 CHECKPOINT_NAME = "WiflyDual_DQN"
-MINIBATCH_SIZE = 8
+MINIBATCH_SIZE = 32
 REPLAY_MEMORY_SIZE = 10000
-LEARNING_RATE = 0.015
+LEARNING_RATE = 0.02
 DISCOUNT_FACTOR = 0.95
 EPSILON = 0.1
-ENABLE_ACTIONS = [1,2,3,4,5,6,7]
+ENABLE_ACTIONS = [1,2,3,4,5]
 N_ACTIONS = len(ENABLE_ACTIONS)
 FRAMES = 4
 INPUTS = 4
@@ -70,6 +70,7 @@ class DQNAgent:
         """
         variance_epsilon = 1e-3
         scale = tf.Variable(tf.ones([inputs.get_shape()[-1]]))
+        scale = tf.Variable(tf.ones([inputs.get_shape()[-1]]))
         beta = tf.Variable(tf.zeros([inputs.get_shape()[-1]]))
         pop_mean = tf.Variable(tf.zeros([inputs.get_shape()[-1]]), trainable=False)
         pop_var = tf.Variable(tf.ones([inputs.get_shape()[-1]]), trainable=False)
@@ -86,6 +87,15 @@ class DQNAgent:
         else:
             return tf.nn.batch_normalization(inputs,
                 pop_mean, pop_var, beta, scale, variance_epsilon)
+
+    def huber_loss(y_true, y_pred, clip_delta=1.0):
+        error = y_true - y_pred
+        cond  = tf.keras.backend.abs(error) < clip_delta
+
+        squared_loss = 0.5 * tf.keras.backend.square(error)
+        linear_loss  = clip_delta * (tf.keras.backend.abs(error) - 0.5 * clip_delta)
+
+        return tf.where(cond, squared_loss, linear_loss)
 
     def init_model(self):
         """
@@ -219,9 +229,12 @@ class DQNAgent:
 
         #最新の経験をミニバッチに確定で入れるかどうか
         
-        minibatch_indexes = np.random.randint(0, len(self.replay_memory), minibatch_size-1)
-        minibatch_indexes = np.insert(minibatch_indexes,0,len(self.replay_memory)-1)
-        
+        #minibatch_indexes = np.random.randint(0, len(self.replay_memory), minibatch_size-1)
+        #minibatch_indexes = np.insert(minibatch_indexes,0,len(self.replay_memory)-1)
+    
+        beta = np.random.beta(2,1,self.minibatch_size)
+        beta = beta * len(self.replay_memory)
+        minibatch_indexes = [int(n) for n in beta]
 
         self.minibatch_index_log = np.concatenate([self.minibatch_index_log, minibatch_indexes])
         k = np.append(self.minibatch_index_log,-1)

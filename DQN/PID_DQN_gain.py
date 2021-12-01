@@ -8,8 +8,8 @@ from visualize_nn import visual_nn
 from Calc_Control import calc_PID
 import os
 
-N_EPOCHS = 2
-N_FRAMES = 50
+N_EPOCHS = 5
+N_FRAMES = 500
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 
 if __name__ == "__main__":
@@ -34,10 +34,10 @@ if __name__ == "__main__":
 
 
     #PID_param
-    saturations = [0,150]
-    pwm_def = 100
+    saturations = [0,100]
+    pwm_def = 250
     pid = calc_PID(saturations)
-    param = [1.5,0,0,0]
+    param = [1.5,0.001,0,0]
     ti = 10
     actions = [pwm_def, pwm_def]
     pid.update_params(param)
@@ -96,11 +96,11 @@ if __name__ == "__main__":
 
                 diff = pid.calculate_output(current_value=(int)(state_current[0][0]), delta_time= (int)(ti), mode=True)
                 if diff > 0:
-                    actions[0] = pwm_def
-                    actions[1] = pwm_def + diff
-                else:
                     actions[0] = pwm_def - diff
                     actions[1] = pwm_def
+                else:
+                    actions[0] = pwm_def
+                    actions[1] = pwm_def + diff
 
                 agent.epsilon -= 0.1/3000
                 env.execute_action_(actions)
