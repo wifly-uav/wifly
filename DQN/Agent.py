@@ -15,7 +15,7 @@ warnings.filterwarnings('ignore')
 
 import os
 #--------------------------const, directory name, model name, etc...-------------------------
-MODEL_NAME = "WiflyDual_DQN" + str(datetime.today())[0:10]
+MODEL_NAME = "WiflyDual_DQN"# + str(datetime.today())[0:10]
 MODEL_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 CHECKPOINT_NAME = "WiflyDual_DQN"
 MINIBATCH_SIZE = 8
@@ -34,7 +34,7 @@ HIDDEN_2 = 5
 
 
 class DQNAgent:
-    def __init__(self):
+    def __init__(self, folder='log'):
         # Load parameters
         self.name = os.path.splitext(os.path.basename(__file__))[0]
         self.path = os.path.dirname(__file__)
@@ -52,6 +52,8 @@ class DQNAgent:
         self.log_q = []
         self.log_act = []
         self.log_loss = []
+
+        self.folder = folder
 
         # create deque object for replay memory
         self.replay_memory = deque(maxlen=self.replay_memory_size)
@@ -253,25 +255,27 @@ class DQNAgent:
 
     def load_model(self, model_path):
         # load from model_path
-        self.saver.restore(self.sess,os.path.join(self.model_dir,  model_path))
+        #self.saver.restore(self.sess,os.path.join(self.model_dir, model_path))
+        self.saver.restore(self.sess, self.folder + '/' + model_path)
 
     def save_model(self):
-        self.saver.save(self.sess, os.path.join(self.model_dir, self.model_name))
+        #self.saver.save(self.sess, os.path.join(self.model_dir, self.model_name))
+        self.saver.save(self.sess, self.folder + '/' + self.model_name)
 
     def debug_nn(self):
-        with open(os.path.join(self.path, 'debug/debug.csv'), 'a') as f:
+        with open(self.folder + '/debug.csv', 'a') as f:
             np.savetxt(f, self.sess.run(self.W_fc1))
             np.savetxt(f, self.sess.run(self.b_fc1))
             np.savetxt(f, self.sess.run(self.W_fc2))
             np.savetxt(f, self.sess.run(self.b_fc2))
             np.savetxt(f, self.sess.run(self.W_out))
             #np.savetxt(f, self.sess.run(self.b_out))
-        np.savetxt(os.path.join(self.path,'debug/debug_W_fc1.csv'), self.sess.run(self.W_fc1), delimiter=',')
-        np.savetxt(os.path.join(self.path,'debug/debug_b_fc1.csv'), self.sess.run(self.b_fc1), delimiter=',')
-        np.savetxt(os.path.join(self.path,'debug/debug_W_fc2.csv'), self.sess.run(self.W_fc2), delimiter=',')
-        np.savetxt(os.path.join(self.path,'debug/debug_b_fc2.csv'), self.sess.run(self.b_fc2), delimiter=',')
-        np.savetxt(os.path.join(self.path,'debug/debug_W_out.csv'), self.sess.run(self.W_out), delimiter=',')
-        np.savetxt(os.path.join(self.path,'debug/debug_b_out.csv'), self.sess.run(self.b_out), delimiter=',')
+        np.savetxt(self.folder + '/debug_W_fc1.csv', self.sess.run(self.W_fc1), delimiter=',')
+        np.savetxt(self.folder + '/debug_b_fc1.csv', self.sess.run(self.b_fc1), delimiter=',')
+        np.savetxt(self.folder + '/debug_W_fc2.csv', self.sess.run(self.W_fc2), delimiter=',')
+        np.savetxt(self.folder + '/debug_b_fc2.csv', self.sess.run(self.b_fc2), delimiter=',')
+        np.savetxt(self.folder + '/debug_W_out.csv', self.sess.run(self.W_out), delimiter=',')
+        np.savetxt(self.folder + '/debug_b_out.csv', self.sess.run(self.b_out), delimiter=',')
         '''
         with open('debug_nn' + ".csv", 'w') as f:
             writer = csv.writer(f, lineterminator='\n')  # 改行コード（\n）を指定しておく
@@ -285,23 +289,26 @@ class DQNAgent:
         '''
 
     def debug_memory(self):
-        with open(os.path.join(self.path,'debug/debug_memory' + ".csv"), 'w') as f:
+        with open(self.folder + '/debug_memory.csv', 'w') as f:
             writer = csv.writer(f, lineterminator='\n')
             writer.writerows(self.replay_memory)
 
     def debug_minibatch(self):
         #print(self.minibatch_ind)
-        np.savetxt(os.path.join(self.path,'debug/debug_minibatch.csv'), self.minibatch_index_log, delimiter=',', fmt='%s')
+        np.savetxt(self.folder + '/debug_minibatch.csv', self.minibatch_index_log, delimiter=',', fmt='%s')
 
     def debug_q(self):
-        with open(os.path.join(self.path,'debug/debug_q' + ".csv"), 'w') as f:
+        with open(self.folder + '/debug_q.csv', 'w') as f:
             writer = csv.writer(f, lineterminator='\n')
             writer.writerows(self.log_q)
-        with open(os.path.join(self.path,'debug/debug_act' + ".csv"), 'w') as f:
+        with open(self.folder + '/debug_act.csv', 'w') as f:
             writer = csv.writer(f, lineterminator='\n')
             writer.writerows(self.log_act)
 
     def debug_loss(self):
-        with open(os.path.join(self.path,'log/debug_loss' + ".csv"), 'w') as f:
+        with open(self.folder + '/debug_loss.csv', 'w') as f:
             writer = csv.writer(f, lineterminator='\n')
             writer.writerows(self.log_loss)
+
+    def check_loss(self):
+        return self.log_loss

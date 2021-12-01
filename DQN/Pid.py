@@ -12,7 +12,27 @@ N_FRAMES = 500
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 
 if __name__ == "__main__":
-    log = logger()
+    path = os.path.dirname(__file__)
+    print('save folder name:')
+    save_folder = input()
+    save_file = os.path.join(path, 'result', save_folder)
+    print(save_file)
+
+    if not os.path.exists(save_file):
+        # ディレクトリが存在しない場合、ディレクトリを作成する
+        os.makedirs(save_file)
+    else:
+        print('The folder exists.')
+        print('override? y/n')
+        override = input()
+        if (override == 'y'):
+            pass
+        else:
+            print('Quit')
+            sys.exit()
+
+    log = logger(folder=save_file)
+    env = Environment()
     saturations = [0,100]
     pwm_def = 100
     pid = calc_PID(saturations)
@@ -57,5 +77,6 @@ if __name__ == "__main__":
 
     #agent.save_model()
     log.output_log(flag=False)
+    log.angle_graph()
 
     print("finish")

@@ -3,8 +3,9 @@ from PIL import Image, ImageDraw, ImageFont
 import os
 
 class visual_nn:
-    def __init__(self, flag):
+    def __init__(self, flag=False, folder='log'):
         self.flag = flag
+        self.folder = folder
 
     def visualize(self):
         circle_size = 60
@@ -17,16 +18,16 @@ class visual_nn:
 
         path = os.path.dirname(__file__)
 
-        W_fc1 = np.loadtxt(os.path.join(path, 'debug/debug_W_fc1.csv'), delimiter=',')
-        W_fc2 = np.loadtxt(os.path.join(path, 'debug/debug_W_fc2.csv'), delimiter=',')
-        W_out = np.loadtxt(os.path.join(path, 'debug/debug_W_out.csv'), delimiter=',')
+        W_fc1 = np.loadtxt(self.folder + '/debug_W_fc1.csv', delimiter=',')
+        W_fc2 = np.loadtxt(self.folder + '/debug_W_fc2.csv', delimiter=',')
+        W_out = np.loadtxt(self.folder + '/debug_W_out.csv', delimiter=',')
         input_layer = W_fc1.shape[0]
         middle_layer_1 = W_fc1.shape[1]
         middle_layer_2 = W_fc2.shape[1]
         output_layer = W_out.shape[1]
 
-        b_fc1 = np.loadtxt(os.path.join(path,'debug/debug_b_fc1.csv'), delimiter=',')
-        b_fc2 = np.loadtxt(os.path.join(path,'debug/debug_b_fc2.csv'), delimiter=',')
+        b_fc1 = np.loadtxt(self.folder + '/debug_b_fc1.csv', delimiter=',')
+        b_fc2 = np.loadtxt(self.folder + '/debug_b_fc2.csv', delimiter=',')
         #b_out = np.loadtxt(os.path.join(path,'debug/debug_b_out.csv'), delimiter=',')
 
         #position
@@ -160,4 +161,4 @@ class visual_nn:
 
         if self.flag:
             im.show()
-        im.save(os.path.join(path,'debug/nn.jpg'), quality=100)
+        im.save(self.folder + '/nn.jpg', quality=100)

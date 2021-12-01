@@ -1,16 +1,19 @@
 import csv
 import datetime
 import copy
+import matplotlib.pyplot as plt
+
+import statistics
 
 import os
 from graph import Graph
 
 class logger():
-    def __init__(self, flag=True):
+    def __init__(self, folder='log'):
         self.log = [["pitch"], ["yaw"], ["left"], ["right"]]
         self.log2 = []
         self.path = os.path.dirname(__file__)
-        self.flag = flag
+        self.folder = folder
         ##self.log = [["pitch,yaw,slope,roll"]]
 
     def add_log_state_and_action(self, state, action, sent_param, time, time2):
@@ -34,15 +37,46 @@ class logger():
         self.log2.append(row_)
 
     def output_log(self):
-        name = '{0:%H%M%S}'.format(datetime.datetime.now())
-        with open(os.path.join(self.path, 'log/log_'+ name + ".csv"), 'w') as f:
+        with open(self.folder + '/log.csv', 'w') as f:
             writer = csv.writer(f, lineterminator='\n')  # 改行コード（\n）を指定しておく
             writer.writerows(self.log)
             f.close()
-        with open(os.path.join(self.path, 'log/log2_'+ name + ".csv"), 'w') as f:
+        with open(self.folder + '/log2.csv', 'w') as f:
             writer = csv.writer(f, lineterminator='\n')  # 改行コード（\n）を指定しておく
             writer.writerows(self.log2)
             f.close()
-        if self.flag:
-            self.gra = Graph(path='log/', path2='log/' + name + '.csv')
-            self.gra.graph()
+
+    def loss_graph(self, loss):
+        plt.plot(loss)
+        plt.ylim(0,)
+        plt.title("LOSS",fontsize=25)
+        plt.savefig(self.folder + '/loss.png')
+        plt.show()
+
+    def angle_graph(self):
+        angle = []
+        time_ = []
+        for i in self.log2:
+            angle.append(int(i[0]))
+            time_.append(int(i[2]))
+        
+        med = statistics.median(time_)
+        sum = 0
+        time = []
+
+        for i in time_:
+            if i < 0:
+                i = med
+            if i > 200:
+                i = med
+            sum += i
+            time.append(sum/1000)
+                
+        plt.plot(time,angle)
+        plt.ylim(-90,90)
+        plt.plot([0, time[-1]],[10, 10], "red", linestyle='dashed')
+        plt.plot([0, time[-1]],[-10, -10], "red", linestyle='dashed')
+        plt.plot([0, time[-1]],[0, 0], "black")
+        plt.title("ANGLE",fontsize=25)
+        plt.savefig(self.folder + '/angle.png')
+        plt.show()

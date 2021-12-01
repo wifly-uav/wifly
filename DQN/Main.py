@@ -10,23 +10,53 @@ N_EPOCHS = 7
 N_FRAMES = 500
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 
-if __name__ == "__main__":
-    log = logger()
-    agent = DQNAgent()
-    env = Environment()
-    vi = visual_nn(False)
+if __name__ == "__main__":    
+    path = os.path.dirname(__file__)
+    print('save folder name:')
+    save_folder = input()
+    save_file = os.path.join(path, 'result', save_folder)
+    print(save_file)
+
+    if not os.path.exists(save_file):
+        # ディレクトリが存在しない場合、ディレクトリを作成する
+        os.makedirs(save_file)
+    else:
+        print('The folder exists.')
+        print('override? y/n')
+        override = input()
+        if (override == 'y'):
+            pass
+        else:
+            print('Quit')
+            sys.exit()
+
     
     print('Use saved model? y/n')
     ans_yn = input()
     if (ans_yn == 'y'):
-        print('Type model no.')
-        agent.load_model(model_path=MODEL_NAME_HEADER + input())
+        print('save folder name:')
+        save_folder = input()
+        save_file_ = save_file
+        save_file = os.path.join(path, 'result/test',save_folder)
+        if not os.path.exists(save_file):
+            os.makedirs(save_file)
+        
+        print('use folder name:')
+        use_folder = input()
+
+        agent = DQNAgent(folder=save_file)
+        agent.load_model(model_path='../' + use_folder + '/' + MODEL_NAME_HEADER)
         print('Model load has been done')
     elif(ans_yn == 'n'):
+        agent = DQNAgent(folder=save_file)
         print('Progam starts without loading a model')
     else:
         print("Type y or n . Quit the program")
         sys.exit()
+
+    log = logger(folder=save_file)
+    env = Environment()
+    vi = visual_nn(folder=save_file)
     
     print("press y to start")
 
@@ -84,6 +114,10 @@ if __name__ == "__main__":
     agent.debug_q()
     agent.debug_loss()
     log.output_log()
+    
+    loss = agent.check_loss()
+    log.loss_graph(loss)
+    log.angle_graph()
 
     vi.visualize()
 
