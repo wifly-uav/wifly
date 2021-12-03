@@ -164,7 +164,7 @@ class DQNAgent:
             [int]: 決定した行動の番号
         """
         a = self.Q_values(state)
-        self.log_q.append(list(state))
+        self.log_q.append(state.copy())
         self.log_q.append(a)
         if np.random.rand() <= self.epsilon:
             # random
@@ -213,10 +213,10 @@ class DQNAgent:
             state_1 ([deque]): 1フレーム前の状態
             terminal ([int]): ターミナル
         """
-        self.replay_memory.append((state, action, reward, state_1, terminal))
+        self.replay_memory.append((state.copy(), action, reward, state_1.copy(), terminal))
 
     # train the network by replaying experience
-    def experience_replay(self):
+    def experience_replay(self, a=4, b=1):
         """
         ミニバッチ学習を行う
         """
@@ -232,7 +232,7 @@ class DQNAgent:
         #minibatch_indexes = np.random.randint(0, len(self.replay_memory), minibatch_size-1)
         #minibatch_indexes = np.insert(minibatch_indexes,0,len(self.replay_memory)-1)
     
-        beta = np.random.beta(2,1,self.minibatch_size)
+        beta = np.random.beta(a,b,self.minibatch_size)
         beta = beta * len(self.replay_memory)
         minibatch_indexes = [int(n) for n in beta]
 
@@ -269,7 +269,12 @@ class DQNAgent:
     def load_model(self, model_path):
         # load from model_path
         #self.saver.restore(self.sess,os.path.join(self.model_dir, model_path))
-        self.saver.restore(self.sess, self.folder + '/' + model_path)
+        ckpt = tf.train.get_checkpoint_state(self.folder + '/../' + model_path + '/')
+        if ckpt:
+            self.saver.restore(self.sess, self.folder + '/../' + model_path + '/' + MODEL_NAME)
+            return True
+        else:
+            return False
 
     def save_model(self):
         #self.saver.save(self.sess, os.path.join(self.model_dir, self.model_name))

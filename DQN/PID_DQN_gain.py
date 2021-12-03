@@ -5,11 +5,14 @@ from Agent import DQNAgent
 from Logger import logger
 import sys
 from visualize_nn import visual_nn
+from visualize_heatmap import visual_minibach
 from Calc_Control import calc_PID
 import os
 
 N_EPOCHS = 5
 N_FRAMES = 500
+I_GAIN = 0.001
+D_GAIN = 0
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 
 if __name__ == "__main__":
@@ -37,38 +40,43 @@ if __name__ == "__main__":
     saturations = [0,100]
     pwm_def = 250
     pid = calc_PID(saturations)
-    param = [1.5,0.001,0,0]
+    param = [1.5,I_GAIN,D_GAIN,0]
     ti = 10
     actions = [pwm_def, pwm_def]
     pid.update_params(param)
 
     
+    agent = DQNAgent(folder=save_file)
+    
     print('Use saved model? y/n')
     ans_yn = input()
-    if (ans_yn == 'y'):
-        print('save folder name:')
-        save_folder = input()
-        save_file_ = save_file
-        save_file = os.path.join(path, 'result/test',save_folder)
-        if not os.path.exists(save_file):
-            os.makedirs(save_file)
-        
-        print('use folder name:')
+    if (ans_yn == 'y'):        
+        print('use model folder name:')
         use_folder = input()
 
-        agent = DQNAgent(folder=save_file)
-        agent.load_model(model_path='../' + use_folder + '/' + MODEL_NAME_HEADER)
-        print('Model load has been done')
-    elif(ans_yn == 'n'):
-        agent = DQNAgent(folder=save_file)
-        print('Progam starts without loading a model')
+        load_flag = agent.load_model(model_path= use_folder)
+        if load_flag:
+            print('Model load has been done')
+            print('training? y/n')
+            ans = input()
+            if (ans == 'y'):
+                training_flag = True
+                print('training')
+            else:
+                training_flag = False
+                print('test')
+        else:
+            print('No model data')
+            sys.exit()
+
     else:
-        print("Type y or n . Quit the program")
-        sys.exit()
+        print('Progam starts without loading a model')
+        training_flag = True
     
     log = logger(folder=save_file)
     env = Environment()
     vi = visual_nn(folder=save_file)
+    mi = visual_minibach(folder=save_file)
     
     print("press y to start")
 
@@ -91,7 +99,7 @@ if __name__ == "__main__":
                 
                 action = agent.select_action(state_current)
                 p_gain = env.execute_action_gain(action)
-                param = [p_gain,0,0,0]
+                param = [p_gain,I_GAIN,D_GAIN,0]
                 pid.update_params(param)
 
                 diff = pid.calculate_output(current_value=(int)(state_current[0][0]), delta_time= (int)(ti), mode=True)
@@ -102,9 +110,12 @@ if __name__ == "__main__":
                     actions[0] = pwm_def
                     actions[1] = pwm_def + diff
 
-                agent.epsilon -= 0.1/3000
+                if training_flag:
+                    agent.epsilon -= 0.1/3000
+                else:
+                    agent.epsilon = 0
                 env.execute_action_(actions)
-                if j != 0:
+                if (j != 0 and training_flag == True):
                     agent.experience_replay()
                 state_next, ti, ti_ = env.observe_update_state_pid(pid=p_gain)
 
@@ -122,9 +133,7 @@ if __name__ == "__main__":
             #log.add_log(["Epoch End"])
 
     except ZeroDivisionError as e:
-    #except KeyboardInterrupt:
         print(e)
-        print("Key finish")
         print(state_next)
 
 
@@ -142,5 +151,6 @@ if __name__ == "__main__":
     log.angle_graph()
 
     vi.visualize()
+    mi.visualize()
 
     print("finish")
