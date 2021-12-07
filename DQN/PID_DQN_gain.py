@@ -5,6 +5,7 @@ from Agent import DQNAgent
 from Logger import logger
 import sys
 from visualize_nn import visual_nn
+from visualize_heatmap import visual_minibach
 from Calc_Control import calc_PID
 import os
 
@@ -34,10 +35,10 @@ if __name__ == "__main__":
 
 
     #PID_param
-    saturations = [0,100]
+    saturations = [0,200]
     pwm_def = 250
     pid = calc_PID(saturations)
-    param = [1.5,0.001,0,0]
+    param = [1.5,0.0001,0,0]
     ti = 10
     actions = [pwm_def, pwm_def]
     pid.update_params(param)
@@ -49,7 +50,7 @@ if __name__ == "__main__":
         print('save folder name:')
         save_folder = input()
         save_file_ = save_file
-        save_file = os.path.join(path, 'result/test',save_folder)
+        save_file = os.path.join(path, 'result',save_folder)
         if not os.path.exists(save_file):
             os.makedirs(save_file)
         
@@ -69,6 +70,7 @@ if __name__ == "__main__":
     log = logger(folder=save_file)
     env = Environment()
     vi = visual_nn(folder=save_file)
+    mi = visual_minibach(folder=save_file)
     
     print("press y to start")
 
@@ -91,16 +93,16 @@ if __name__ == "__main__":
                 
                 action = agent.select_action(state_current)
                 p_gain = env.execute_action_gain(action)
-                param = [p_gain,0,0,0]
+                param = [p_gain,0.0001,0,0]
                 pid.update_params(param)
 
                 diff = pid.calculate_output(current_value=(int)(state_current[0][0]), delta_time= (int)(ti), mode=True)
                 if diff > 0:
-                    actions[0] = pwm_def - diff
-                    actions[1] = pwm_def
-                else:
                     actions[0] = pwm_def
-                    actions[1] = pwm_def + diff
+                    actions[1] = pwm_def - diff
+                else:
+                    actions[0] = pwm_def + diff
+                    actions[1] = pwm_def
 
                 agent.epsilon -= 0.1/3000
                 env.execute_action_(actions)
@@ -121,13 +123,14 @@ if __name__ == "__main__":
             #log.add_log([checkpoint_report])
             #log.add_log(["Epoch End"])
 
-    except ZeroDivisionError as e:
+    except :
     #except KeyboardInterrupt:
-        print(e)
-        print("Key finish")
+        print("except finish")
         print(state_next)
 
-
+    env.execute_action_([0,0])
+    env.execute_action_([0,0])
+    env.execute_action_([0,0])
     agent.save_model()
     agent.debug_nn()
     agent.debug_memory()
@@ -142,5 +145,6 @@ if __name__ == "__main__":
     log.angle_graph()
 
     vi.visualize()
+    mi.visualize()
 
     print("finish")
