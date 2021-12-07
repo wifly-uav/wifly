@@ -269,7 +269,12 @@ class DQNAgent:
     def load_model(self, model_path):
         # load from model_path
         #self.saver.restore(self.sess,os.path.join(self.model_dir, model_path))
-        self.saver.restore(self.sess, self.folder + '/' + model_path)
+        ckpt = tf.train.get_checkpoint_state(self.folder + '/../' + model_path + '/')
+        if ckpt:
+            self.saver.restore(self.sess, self.folder + '/../' + model_path + '/' + MODEL_NAME)
+            return True
+        else:
+            return False
 
     def save_model(self):
         #self.saver.save(self.sess, os.path.join(self.model_dir, self.model_name))
