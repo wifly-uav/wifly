@@ -232,7 +232,11 @@ class DQNAgent:
         #minibatch_indexes = np.random.randint(0, len(self.replay_memory), minibatch_size-1)
         #minibatch_indexes = np.insert(minibatch_indexes,0,len(self.replay_memory)-1)
     
+<<<<<<< HEAD
+        beta = np.random.beta(4,1,self.minibatch_size)
+=======
         beta = np.random.beta(a,b,self.minibatch_size)
+>>>>>>> 54ff8b6d318da767897227acd8349c752cf03a98
         beta = beta * len(self.replay_memory)
         minibatch_indexes = [int(n) for n in beta]
 

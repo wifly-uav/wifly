@@ -9,7 +9,7 @@ from visualize_heatmap import visual_minibach
 from Calc_Control import calc_PID
 import os
 
-N_EPOCHS = 5
+N_EPOCHS = 2
 N_FRAMES = 500
 I_GAIN = 0.001
 D_GAIN = 0
@@ -17,13 +17,24 @@ MODEL_NAME_HEADER = "WiflyDual_DQN"
 
 if __name__ == "__main__":
 
+    #PID_param
+    saturations = [0,200]
+    pwm_def = 250
+    pid = calc_PID(saturations)
+    param = [1.5,0.0001,0,0]
+    ti = 10
+    actions = [pwm_def, pwm_def]
+    pid.update_params(param)
+
+    
     path = os.path.dirname(__file__)
     print('save folder name:')
     save_folder = input()
-    save_file = os.path.join(path, 'result',save_folder)
+    save_file = os.path.join(path, 'result', save_folder)
     print(save_file)
 
     if not os.path.exists(save_file):
+        # ディレクトリが存在しない場合、ディレクトリを作成する
         os.makedirs(save_file)
     else:
         print('The folder exists.')
@@ -35,6 +46,9 @@ if __name__ == "__main__":
             print('Quit')
             sys.exit()
 
+<<<<<<< HEAD
+    agent = DQNAgent(folder=save_file)
+=======
 
     #PID_param
     saturations = [0,100]
@@ -45,6 +59,7 @@ if __name__ == "__main__":
     actions = [pwm_def, pwm_def]
     pid.update_params(param)
 
+>>>>>>> 54ff8b6d318da767897227acd8349c752cf03a98
     
     agent = DQNAgent(folder=save_file)
     
@@ -99,16 +114,20 @@ if __name__ == "__main__":
                 
                 action = agent.select_action(state_current)
                 p_gain = env.execute_action_gain(action)
+<<<<<<< HEAD
+                param = [p_gain,0.0001,0,0]
+=======
                 param = [p_gain,I_GAIN,D_GAIN,0]
+>>>>>>> 54ff8b6d318da767897227acd8349c752cf03a98
                 pid.update_params(param)
 
                 diff = pid.calculate_output(current_value=(int)(state_current[0][0]), delta_time= (int)(ti), mode=True)
                 if diff > 0:
-                    actions[0] = pwm_def - diff
-                    actions[1] = pwm_def
-                else:
                     actions[0] = pwm_def
-                    actions[1] = pwm_def + diff
+                    actions[1] = pwm_def - diff
+                else:
+                    actions[0] = pwm_def + diff
+                    actions[1] = pwm_def
 
                 if training_flag:
                     agent.epsilon -= 0.1/3000
@@ -132,11 +151,19 @@ if __name__ == "__main__":
             #log.add_log([checkpoint_report])
             #log.add_log(["Epoch End"])
 
+<<<<<<< HEAD
+    except :
+    #except KeyboardInterrupt:
+        print("except finish")
+=======
     except ZeroDivisionError as e:
         print(e)
+>>>>>>> 54ff8b6d318da767897227acd8349c752cf03a98
         print(state_next)
 
-
+    env.execute_action_([0,0])
+    env.execute_action_([0,0])
+    env.execute_action_([0,0])
     agent.save_model()
     agent.debug_nn()
     agent.debug_memory()

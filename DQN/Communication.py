@@ -136,16 +136,19 @@ class Communicator():
                     if (persed_data.pop(0).startswith('S') and persed_data.pop(-1).startswith('E')):
                         persed_data.pop(0)
                         if (persed_data[0] != '' or persed_data[0] != '-'):
-                            #print(persed_data[0])
-                            recieve_time_ = persed_data.pop(-1)
-                            #recieve_time_ = 0
-                            #add_log = self.create_log(persed_data, recieve_time)
-                            #if mode == True:
-                            #    self.log.append(add_log)
-                            self.dataset_from_laz = persed_data
-                            #print(str(self.dataset_from_laz) + ":" + str(recieve_time))
-                            self.__fail_counter = 0
-                            return self.dataset_from_laz, recieve_time_, delta_time
+                            try:
+                                a = int(persed_data[0])
+                                recieve_time_ = persed_data.pop(-1)
+                                #recieve_time_ = 0
+                                #add_log = self.create_log(persed_data, recieve_time)
+                                #if mode == True:
+                                #    self.log.append(add_log)
+                                self.dataset_from_laz = persed_data
+                                #print(str(self.dataset_from_laz) + ":" + str(recieve_time))
+                                self.__fail_counter = 0
+                                return self.dataset_from_laz, recieve_time_, delta_time
+                            except:
+                                print("- detected")
                         else:
                             print(persed_data[0])
                             print("no data")

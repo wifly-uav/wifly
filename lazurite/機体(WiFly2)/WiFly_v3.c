@@ -134,7 +134,7 @@ void Update_Posture_Data_From_Sensor(){
 	static float val[16];
 	int i;
 	SUBGHZ_MSG msg;
-	wait_event(&kxg03_irq);
+	//wait_event(&kxg03_irq);
 	kxg03.get_angle(val);
 	
 	old = current;
