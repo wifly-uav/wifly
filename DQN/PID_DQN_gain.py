@@ -18,10 +18,10 @@ MODEL_NAME_HEADER = "WiflyDual_DQN"
 if __name__ == "__main__":
 
     #PID_param
-    saturations = [0,200]
+    saturations = [0,100]
     pwm_def = 250
     pid = calc_PID(saturations)
-    param = [1.5,0.0001,0,0]
+    param = [1.5,I_GAIN,D_GAIN,0]
     ti = 10
     actions = [pwm_def, pwm_def]
     pid.update_params(param)
@@ -99,7 +99,7 @@ if __name__ == "__main__":
                 
                 action = agent.select_action(state_current)
                 p_gain = env.execute_action_gain(action)
-                param = [p_gain,0.0001,0,0]
+                param = [p_gain,I_GAIN,D_GAIN,0]
                 pid.update_params(param)
 
                 diff = pid.calculate_output(current_value=(int)(state_current[0][0]), delta_time= (int)(ti), mode=True)

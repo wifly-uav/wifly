@@ -43,7 +43,7 @@ void setup() {
     pinMode(LED, OUTPUT);
     pinMode(ORANGE_LED, OUTPUT);
 
-	Serial.begin(57600);
+	Serial.begin(9600);
 	//Serial.print("Serial started");
 
     //initializing Sub_GHz 以降のコードについては公式リファレンスを見たらわかる。

@@ -78,7 +78,7 @@ void Emargency_Stop(){
 	Serial.println("Emargency Stop!");
 	hhb.write(3,0L);
 	hhb.write(2,0L);
-	hsv.write(0,0);
+	hhb.write(0,0);
 	hsv.update();
 
 	fly_param.flight_permission = false;
@@ -121,6 +121,7 @@ void Update_Motor_Data(void){
 
 	level1.ControlValue = mac.payload[4];
 	level2.ControlValue = mac.payload[0];
+	level2.ControlValue = 100;
 	servo.ControlValue = mac.payload[2];
 	//yaw.ControlValue = mac.payload[8];
 
@@ -135,7 +136,6 @@ void Update_Posture_Data_From_Sensor(){
 	int i;
 	SUBGHZ_MSG msg;
 	//wait_event(&kxg03_irq);
-	kxg03.get_angle(val);
 	
 	old = current;
 	current = millis();
@@ -196,9 +196,9 @@ void Update_Posture_Data_From_Sensor(){
 
 void Motor_Sets(){
 
-	hhb.write(3, map((long)level1.ControlValue,0L,255L,0L,1023L));
-	hhb.write(2, map((long)level2.ControlValue,0L,255L,0L,1023L));
-	hhb.write(1, map((long)yaw.ControlValue,0L,255L,-1023L,1023L));
+	hsv.write(3, map((long)level1.ControlValue,0L,255L,0L,125L));
+	hsv.write(2, map((long)level2.ControlValue,0L,255L,0L,125L));
+	hsv.write(1, map((long)yaw.ControlValue,0L,255L,900L,1923L));
 	hsv.write(0, map((unsigned short)servo.ControlValue,0L,255L,900L,1923L));
 	hsv.update();
 
@@ -258,11 +258,11 @@ void setup() {
 	digitalWrite(BLUE_LED, HIGH);
 
 	// Motor LES Setting
-	digitalWrite(MOTOR_PWM, LOW);
-	digitalWrite(MOTOR_PS, HIGH);
+	//digitalWrite(MOTOR_PWM, LOW);
+	//digitalWrite(MOTOR_PS, HIGH);
 
-	pinMode(MOTOR_PWM, LOW);
-	pinMode(MOTOR_PS, HIGH);
+	//pinMode(MOTOR_PWM, LOW);
+	//pinMode(MOTOR_PS, HIGH);
 
 	// Servo Motor API Initializings
 	level1.ControlValue = 0;
@@ -277,34 +277,27 @@ void setup() {
 	hsv.write(1,1);
 	hsv.start(); 
 	
-	hhb.init(3,1023);	//DCmotor1
-	hhb.attach(3,9,3);
-	//hhb.attach(3,16,8);
-	hhb.write(3,0L);
-	hhb.start(3);
+	hsv.init(3,125);	//DCmotor1
+	hsv.attach(3,3);
+	hsv.write(3,1);
+	hsv.start();
 
-	hhb.init(1,1023);	//yaw
-	hhb.attach(1,4,5);
-	hhb.write(1,0L);
-	hhb.start(1);
+	hsv.init(1,24000);	//servo2
+	hsv.attach(1,5);
+	hsv.write(0,(unsigned short)map(0L,-512L,511L,900L,1900L));
+	hsv.write(1,1);
+	hsv.start();
 
-	hhb.init(2,1023);	//DCmotor2
-	hhb.attach(2,16,8);
-	//hhb.attach(3,16,8);
-	hhb.write(2,0L);
-	hhb.start(2);
+	hsv.init(2,1023);	//DCmotor2
+	hsv.attach(2,8);
+	hsv.write(2,1);
+	hsv.start();
 
 	// Initializing sensor
 	Wire.begin();
-	rc = kxg03.sync_init(KXG03_DEVICE_ADDRESS_4E, KXG03_ODR_25HZ,kxg03_isr);
 	//rc = bm1422.init(0); //磁気センサ
 	//rc = bm1383.init(0); //気圧センサ
 
-	kxg03.angle_init(KXG03_MODE_PR | KXG03_MODE_KALMAN ,3,2,1,2,-3,-1);
-	kxg03.set_acc_out(true);
-	kxg03.set_gyro_out(true);
-	kxg03.set_kalman_out(true);
-	kxg03.set_deg_out(true);
 
 
 	// Initializing Sub-GHz
