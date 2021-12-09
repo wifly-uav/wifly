@@ -47,7 +47,7 @@ class calc_PID():
         Returns:
             int: 出力
         """
-        error = current_value - self.__target
+        error = self.__target - current_value
         self.__error_D = (self.__error_P - error)/ delta_time
         self.__error_P = error
         self.__error_I = self.__error_I + error*delta_time

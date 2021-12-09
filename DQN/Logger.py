@@ -10,6 +10,7 @@ from graph import Graph
 
 class logger():
     def __init__(self, folder='log'):
+        self.log = []
         self.log2 = []
         self.path = os.path.dirname(__file__)
         self.folder = folder

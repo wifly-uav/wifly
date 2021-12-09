@@ -18,7 +18,7 @@ import os
 MODEL_NAME = "WiflyDual_DQN"# + str(datetime.today())[0:10]
 MODEL_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 CHECKPOINT_NAME = "WiflyDual_DQN"
-MINIBATCH_SIZE = 32
+MINIBATCH_SIZE = 16
 REPLAY_MEMORY_SIZE = 10000
 LEARNING_RATE = 0.02
 DISCOUNT_FACTOR = 0.95
@@ -178,7 +178,7 @@ class DQNAgent:
             # max_action Q(state, action)
             act = self.enable_actions[np.argmax(a)]
             
-        self.log_act.append(act)
+        self.log_act.append([act])
         return act
 
     def select_action_epsilon(self, state, act_count=0):
@@ -204,7 +204,7 @@ class DQNAgent:
             act = self.action_old
             self.epsilon_act -= 1
             
-        self.log_act.append(act)
+        self.log_act.append([act])
         return act
     
     def select_action_limit(self, state):
@@ -229,7 +229,7 @@ class DQNAgent:
             # max_action Q(state, action)
             act = self.enable_actions[np.argmax(a)]
             
-        self.log_act.append(act)
+        self.log_act.append([act])
         return act
 
     # store experience to replay memory

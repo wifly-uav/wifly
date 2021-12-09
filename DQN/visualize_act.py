@@ -40,8 +40,8 @@ class visual_act:
         ln1 = ax1.plot(time, angle, color="red", label='angle')
 
         ax2 = ax1.twinx()
-        ln2 = ax2.plot(time, q_max, color="green", label='Q_max')
-        ln3 = ax2.plot(time, act, color="blue", label='Action')
+        ln2 = ax2.plot(time, q_max, color="green", linestyle='dashed',linewidth = 0, marker='.', label='Q_max')
+        #ln3 = ax2.plot(time, act, color="blue", linestyle='dashdot', linewidth = 0.3, label='Action')
         
         h1, l1 = ax1.get_legend_handles_labels()
         h2, l2 = ax2.get_legend_handles_labels()
@@ -58,5 +58,5 @@ class visual_act:
 if __name__ == "__main__":
     path = os.path.dirname(__file__)
 
-    ac = visual_act(folder=path + '/result/12_7_i_0001')
+    ac = visual_act(flag=1,folder=path + '/result/test')
     ac.visualize()

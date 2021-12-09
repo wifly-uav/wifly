@@ -34,7 +34,7 @@ class Communicator():
         #self.__ser = serial.Serial(port_controller, 115200)
         self.__ser = serial.Serial( #SERIAL通信の設定
                         port_controller, #COMの番号
-                        baudrate = 9600,
+                        baudrate = 57600,
                         parity = serial.PARITY_NONE,
                         bytesize = serial.EIGHTBITS,
                         stopbits = serial.STOPBITS_ONE,

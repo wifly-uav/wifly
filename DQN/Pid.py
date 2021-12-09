@@ -6,8 +6,9 @@ from Agent import DQNAgent
 from Logger import logger
 import sys
 from Calc_Control import calc_PID
+import os
 
-N_EPOCHS = 5*500
+N_EPOCHS = 5*800
 N_FRAMES = 500
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 
@@ -33,32 +34,30 @@ if __name__ == "__main__":
 
     log = logger(folder=save_file)
     env = Environment()
-    saturations = [0,100]
-    pwm_def = 100
+    saturations = [0,150]
+    pwm_def = 250
     pid = calc_PID(saturations)
-    param = [1.5,0.0001,0,0]
+    param = [2,0.0001,0,0]
     ti = 10
     actions = [pwm_def, pwm_def]
     pid.update_params(param)
     #agent = DQNAgent()
-    env = Environment()
         
     print("start")
     terminal = env.observe_terminal()
     state_next, ti, ti_ = env.observe_update_state(flag=False)
-    try:
-        for i in range(N_EPOCHS):
-            #init
-            #env.reset()
-
+    for i in range(N_EPOCHS):
+        #init
+        #env.reset()
+        try:
             state_current = state_next
             diff = pid.calculate_output(current_value=(int)(state_current[0][0]), delta_time= (int)(ti), mode=True)
             if diff > 0:
-                actions[0] = pwm_def
-                actions[1] = pwm_def + diff
-            else:
                 actions[0] = pwm_def - diff
                 actions[1] = pwm_def
+            else:
+                actions[0] = pwm_def
+                actions[1] = pwm_def + diff
             env.execute_action_(actions)
             state_next, ti, ti_ = env.observe_update_state()
             #reward = env.observe_reward(state_next)
@@ -70,13 +69,13 @@ if __name__ == "__main__":
             log.add_log_state(state_next, reward, ti)
             #print(state_next)
             #env.reset()
-    except:
-        pass
+        except:
+            state_next = state_current
 
 
 
     #agent.save_model()
-    log.output_log(flag=False)
+    log.output_log()
     log.angle_graph()
 
     print("finish")
