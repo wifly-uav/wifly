@@ -10,7 +10,7 @@ from visualize_act import visual_act
 from Calc_Control import calc_PID
 import os
 
-N_EPOCHS = 5
+N_EPOCHS = 6
 N_FRAMES = 500
 I_GAIN = 0.0001
 D_GAIN = 0
@@ -117,7 +117,7 @@ if __name__ == "__main__":
                 else:
                     agent.epsilon = 0
                 env.execute_action_(actions)
-                if (j != 0 or training_flag == True):
+                if (j != 0 and training_flag == True):
                     agent.experience_replay()
                 state_next, ti, ti_ = env.observe_update_state_pid(pid=p_gain)
 
@@ -127,6 +127,7 @@ if __name__ == "__main__":
                 # for loging
                 log.add_log_state_and_action(state_next, action, env.params_to_send, ti, ti_)
                 log.add_log_state(state_next, reward, ti)
+                
 
                 #agent.create_checkpoint()
                 #checkpoint_report = "EPOCH: {:03d}/{:03d} | REWARD: {:03f} | LOSS: {:.4f} | Q_MAX: {:.4f}".format(i, N_EPOCHS - 1, reward, loss, Q_max)

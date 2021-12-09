@@ -37,7 +37,7 @@ if __name__ == "__main__":
     saturations = [0,150]
     pwm_def = 250
     pid = calc_PID(saturations)
-    param = [2,0.0001,0,0]
+    param = [4,0.0002,0,0]
     ti = 10
     actions = [pwm_def, pwm_def]
     pid.update_params(param)

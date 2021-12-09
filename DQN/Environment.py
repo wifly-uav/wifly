@@ -157,13 +157,13 @@ class Environment():
     def execute_action_gain(self, action):
 
         if action == 1:
-            return 1
-        elif action == 2:
-            return 1.5
-        elif action == 3:
             return 2
-        elif action == 4:
+        elif action == 2:
+            return 3.5
+        elif action == 3:
             return 4
+        elif action == 4:
+            return 4.5
         else:
             return 6
     

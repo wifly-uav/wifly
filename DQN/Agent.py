@@ -90,17 +90,17 @@ class DQNAgent:
             return tf.nn.batch_normalization(inputs,
                 pop_mean, pop_var, beta, scale, variance_epsilon)
 
-    def huber_loss(y_true, y_pred, clip_delta=1.0):
+    def huber_loss(self, y_true, y_pred, clip_delta=1.0):
         error = y_true - y_pred
-        squared_loss = 0.5 * tf.square(error)
-        linear_loss  = clip_delta * (tf.abs(error) - 0.5 * clip_delta)
+        cond  = tf.keras.backend.abs(error) < clip_delta
 
-        if abs(error) < clip_delta:
-            loss = squared_loss
-        else:
-            loss = linear_loss
+        squared_loss = 0.5 * tf.keras.backend.square(error)
+        linear_loss  = clip_delta * (tf.keras.backend.abs(error) - 0.5 * clip_delta)
 
-        return loss
+        return tf.where(cond, squared_loss, linear_loss)
+
+    def huber_loss_mean(self, y_true, y_pred, clip_delta=1.0):
+        return tf.keras.backend.mean(self.huber_loss(y_true, y_pred, clip_delta))
 
     def init_model(self):
         """
@@ -134,8 +134,8 @@ class DQNAgent:
         # loss function
         with tf.name_scope('loss'):
             self.y_ = tf.placeholder(tf.float32, [None, N_ACTIONS])
-            self.loss = tf.reduce_mean(tf.square(self.y_ - self.y), name="loss")
-            #self.loss = tf.reduce_mean(self.huber_loss(self.y_, self.y), name="loss")
+            #self.loss = tf.reduce_mean(tf.square(self.y_ - self.y), name="loss")
+            self.loss = tf.reduce_mean(self.huber_loss_mean(self.y_, self.y), name="loss")
 
         # train operation RMSPropOptimizer
         with tf.name_scope('Optimizer'):

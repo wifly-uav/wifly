@@ -135,7 +135,7 @@ class Communicator():
                     self.time_last_receive = time.time()
                     if (persed_data.pop(0).startswith('S') and persed_data.pop(-1).startswith('E')):
                         persed_data.pop(0)
-                        if (persed_data[0] != '' or persed_data[0] != '-'):
+                        if (persed_data[0] != '' or persed_data[0] != '-' or persed_data[1] != '' or persed_data[2] != ''):
                             try:
                                 a = int(persed_data[0])
                                 recieve_time_ = persed_data.pop(-1)
