@@ -3,15 +3,16 @@ from PIL import Image, ImageDraw, ImageFont
 import os
 
 class visual_nn:
-    def __init__(self, flag=False, folder='log'):
+    def __init__(self, flag=False, folder='log', save=True):
         self.flag = flag
         self.folder = folder
+        self.save = save
 
-    def visualize(self):
+    def visualize(self, w=100, b=5):
         circle_size = 60
         nn_layer = 4
-        weight_bias = 100
-        b_bias = 1
+        weight_bias = w
+        b_bias = b
 
         th_max = 10000
         th_min = 0
@@ -28,7 +29,7 @@ class visual_nn:
 
         b_fc1 = np.loadtxt(self.folder + '/debug_b_fc1.csv', delimiter=',')
         b_fc2 = np.loadtxt(self.folder + '/debug_b_fc2.csv', delimiter=',')
-        #b_out = np.loadtxt(os.path.join(path,'debug/debug_b_out.csv'), delimiter=',')
+        b_out = np.loadtxt(self.folder + '/debug_b_out.csv', delimiter=',')
 
         #position
         input = np.zeros((input_layer,2))
@@ -78,7 +79,7 @@ class visual_nn:
         height = im.height/output_layer
         width = start_x+width_x*3
         for i in range (output_layer):
-            circle_size_output = circle_size# + b_out[i]*b_bias
+            circle_size_output = circle_size + b_out[i]*b_bias
             #print(b_out[i])
             draw.ellipse((width, height*(i+0.5)-circle_size_output/2, width+circle_size_output, height*(i+0.5)+circle_size_output-circle_size_output/2), fill=(0, 255, 0))
             output[i][0] = width+circle_size_output/2
@@ -161,4 +162,16 @@ class visual_nn:
 
         if self.flag:
             im.show()
-        im.save(self.folder + '/nn.jpg', quality=100)
+        if self.save:
+            im.save(self.folder + '/nn.jpg', quality=100)
+
+
+if __name__ == "__main__":
+
+    path = os.path.dirname(__file__)
+    print('folder name:')
+    save_folder = input()
+    save_file = os.path.join(path, 'result', save_folder)
+    print(save_file)
+    vi = visual_nn(flag=True,folder=save_file,save=False)
+    vi.visualize(w=50, b=5)

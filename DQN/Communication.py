@@ -6,8 +6,6 @@ import csv
 import msvcrt
 import sys
 
-KEYS_LOG = ["Slope", "Pitch", "R-servo", "L-servo", "R-DC", "L-DC", "time"]
-#[受信データ , 送信データ , time]
 class Communicator():
     """
     マイコンと通信するためのクラス
@@ -64,7 +62,7 @@ class Communicator():
         self.__raw_data = ""
         self.terminal_flag = 1
         self.dataset_from_laz = []
-        self.log = [KEYS_LOG]
+        self.log = []
         self.time_started = None
         self.time_last_receive = time.time()
 
@@ -146,8 +144,10 @@ class Communicator():
                                 self.dataset_from_laz = persed_data
                                 #print(str(self.dataset_from_laz) + ":" + str(recieve_time))
                                 self.__fail_counter = 0
-                                return self.dataset_from_laz, recieve_time_, delta_time
+                                if (int(persed_data[1]) > 100 and int(persed_data[2]) > 100):
+                                    return self.dataset_from_laz, recieve_time_, delta_time
                             except:
+                                self.__ser.flushInput()
                                 print("- detected")
                         else:
                             print(persed_data[0])

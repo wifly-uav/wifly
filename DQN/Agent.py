@@ -8,6 +8,7 @@ tf.disable_v2_behavior()
 tf.get_logger().setLevel("ERROR")
 import numpy as np
 import csv
+import math
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -180,6 +181,17 @@ class DQNAgent:
             
         self.log_act.append([act])
         return act
+
+    def select_action_softmax(self, tau, state):
+        """
+            softmax 行動選択
+        """
+        values = self.Q_values(state)
+        sum_exp_values = sum([np.exp(v/tau) for v in values])   # softmax選択の分母の計算
+        p = [np.exp(v/tau)/sum_exp_values for v in values]      # 確率分布の生成
+
+        action = np.random.choice(np.arange(len(values)), p=p)  # 確率分布pに従ってランダムで選択
+        return action
 
     def select_action_epsilon(self, state, act_count=0):
         """
