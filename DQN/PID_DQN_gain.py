@@ -90,8 +90,7 @@ if __name__ == "__main__":
             Q_max = 0.0
             reward = 0
             p_gain = 1.5
-            terminal = True
-            data = True
+            terminal = False
             env.reset_pid(add=p_gain)
             state_next = env.observe_state()
 

@@ -201,7 +201,7 @@ class Communicator():
                     self.terminal_flag = 1
                 elif key == 'y'.encode('utf-8'):
                     self.terminal_flag = 0
-                    return True
+                    return False
                 print("terminal wait")
         #return self.terminal_flag
 
