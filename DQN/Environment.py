@@ -95,11 +95,11 @@ class Environment():
         ##報酬の設定
         try:
             err = abs(float(data[0][0])-0.0)
-            if err < 10:
+            if err < 15:
                 return 1
             elif err < 30:
                 return 0
-            elif err <45:
+            elif err < 45:
                 return -1
             else:
                 return -10
@@ -159,13 +159,34 @@ class Environment():
         if action == 1:
             return 2
         elif action == 2:
-            return 3.5
+            return 2.5
         elif action == 3:
-            return 4
+            return 3
         elif action == 4:
+            return 3.5
+        elif action == 5:
+            return 4
+        elif action == 6:
             return 4.5
-        else:
+        elif action == 7:
+            return 5
+        elif action == 8:
+            return 5.5
+        elif action == 9:
             return 6
+        elif action == 10:
+            return 6.5
+        elif action == 11:
+            return 7
+        elif action == 12:
+            return 7.5
+        elif action == 13:
+            return 8
+        elif action == 14:
+            return 8.5
+        else:
+            return 9
+        
     
     
     def excute_action_pid(self, action, actions):

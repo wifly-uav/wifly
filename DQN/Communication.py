@@ -143,11 +143,16 @@ class Communicator():
                                 #add_log = self.create_log(persed_data, recieve_time)
                                 #if mode == True:
                                 #    self.log.append(add_log)
-                                self.dataset_from_laz = persed_data
-                                #print(str(self.dataset_from_laz) + ":" + str(recieve_time))
-                                self.__fail_counter = 0
-                                return self.dataset_from_laz, recieve_time_, delta_time
+                                if abs(int(persed_data[1]) - int(persed_data[2])) <= 150:
+                                    self.dataset_from_laz = persed_data
+                                    self.__fail_counter = 0
+                                    return self.dataset_from_laz, recieve_time_, delta_time
+                                else:
+                                    print(persed_data)
+                                    self.__ser.flushInput()
+                                    print("data missing")
                             except:
+                                self.__ser.flushInput()
                                 print("- detected")
                         else:
                             print(persed_data[0])

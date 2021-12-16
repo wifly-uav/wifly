@@ -23,7 +23,7 @@ REPLAY_MEMORY_SIZE = 10000
 LEARNING_RATE = 0.02
 DISCOUNT_FACTOR = 0.95
 EPSILON = 0.1
-ENABLE_ACTIONS = [1,2,3,4,5]
+ENABLE_ACTIONS = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
 N_ACTIONS = len(ENABLE_ACTIONS)
 FRAMES = 4
 INPUTS = 4
@@ -134,8 +134,8 @@ class DQNAgent:
         # loss function
         with tf.name_scope('loss'):
             self.y_ = tf.placeholder(tf.float32, [None, N_ACTIONS])
-            #self.loss = tf.reduce_mean(tf.square(self.y_ - self.y), name="loss")
-            self.loss = tf.reduce_mean(self.huber_loss_mean(self.y_, self.y), name="loss")
+            self.loss = tf.reduce_mean(tf.square(self.y_ - self.y), name="loss")
+            #self.loss = tf.reduce_mean(self.huber_loss_mean(self.y_, self.y), name="loss")
 
         # train operation RMSPropOptimizer
         with tf.name_scope('Optimizer'):
@@ -161,7 +161,7 @@ class DQNAgent:
         """
         return self.sess.run(self.y, feed_dict={self.x: [state]})[0]
 
-    def select_action(self, state):
+    def select_action(self, state, flag=True):
         """
         行動決定(方策)
         Args:
@@ -169,17 +169,21 @@ class DQNAgent:
         Returns:
             [int]: 決定した行動の番号
         """
-        a = self.Q_values(state)
-        self.log_q.append(a)
-        if np.random.rand() <= self.epsilon:
-            # random
-            act = np.random.choice(self.enable_actions)
+        if flag:
+            self.a = self.Q_values(state)
+            self.log_q.append(self.a)
+            if np.random.rand() <= self.epsilon:
+                # random
+                self.act = np.random.choice(self.enable_actions)
+            else:
+                # max_action Q(state, action)
+                self.act = self.enable_actions[np.argmax(self.a)]
+                
+            self.log_act.append([self.act])
+            return self.act
         else:
-            # max_action Q(state, action)
-            act = self.enable_actions[np.argmax(a)]
-            
-        self.log_act.append([act])
-        return act
+            self.log_q.append(self.a)
+            return self.act
 
     def select_action_epsilon(self, state, act_count=0):
         """

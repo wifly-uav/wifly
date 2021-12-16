@@ -8,7 +8,7 @@ import sys
 from Calc_Control import calc_PID
 import os
 
-N_EPOCHS = 5*800
+N_EPOCHS = 5*1000
 N_FRAMES = 500
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 
@@ -35,9 +35,9 @@ if __name__ == "__main__":
     log = logger(folder=save_file)
     env = Environment()
     saturations = [0,150]
-    pwm_def = 250
+    pwm_def = 240
     pid = calc_PID(saturations)
-    param = [4,0.0002,0,0]
+    param = [4,0.0003,0,0]
     ti = 10
     actions = [pwm_def, pwm_def]
     pid.update_params(param)

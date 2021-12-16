@@ -10,9 +10,9 @@ from visualize_act import visual_act
 from Calc_Control import calc_PID
 import os
 
-N_EPOCHS = 6
+N_EPOCHS = 10
 N_FRAMES = 500
-I_GAIN = 0.0001
+I_GAIN = 0.00000
 D_GAIN = 0
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 
@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     #PID_param
     saturations = [0,150]
-    pwm_def = 250
+    pwm_def = 240
     pid = calc_PID(saturations)
     param = [1.5,I_GAIN,D_GAIN,0]
     ti = 10
@@ -82,64 +82,74 @@ if __name__ == "__main__":
     
     print("press y to start")
 
-    try:
-        for i in range(N_EPOCHS):
-            #init
-            frame = 0
-            loss = 0.0
-            Q_max = 0.0
-            reward = 0
-            p_gain = 1.5
-            terminal = True
-            data = True
-            env.reset_pid(add=p_gain)
-            state_next = env.observe_state()
+    #try:
+    for i in range(N_EPOCHS):
+        #init
+        frame = 0
+        loss = 0.0
+        Q_max = 0.0
+        reward = 0
+        p_gain = 1.5
+        count = 100
+        action = 0
+        terminal = True
+        data = True
+        env.reset_pid(add=p_gain)
+        state_next = env.observe_state()
 
-            for j in range(N_FRAMES):
-                terminal = env.observe_terminal()
-                state_current = state_next
-                
-                action = agent.select_action(state_current)
-                p_gain = env.execute_action_gain(action)
-                param = [p_gain,I_GAIN,D_GAIN,0]
-                pid.update_params(param)
+        for j in range(N_FRAMES):
+            terminal = env.observe_terminal()
+            state_current = state_next
 
-                diff = pid.calculate_output(current_value=(int)(state_current[0][0]), delta_time= (int)(ti), mode=True)
-                if diff > 0:
-                    actions[0] = pwm_def - diff
-                    actions[1] = pwm_def
-                else:
-                    actions[0] = pwm_def
-                    actions[1] = pwm_def + diff
+            #if count > 4:
+            action = agent.select_action(state_current, flag=True)
+                #if act != action:
+                #    pid.reset_error_I()
+                #action = act
+                #count = 0
+            #else:
+            #    action = agent.select_action(state_current, flag=False)
+            #    count += 1
+            p_gain = env.execute_action_gain(action)
+            param = [p_gain,I_GAIN,D_GAIN,0]
+            pid.update_params(param)
 
-                if training_flag:
-                    agent.epsilon -= 0.1/3000
-                else:
-                    agent.epsilon = 0
-                env.execute_action_(actions)
-                if (j != 0 and training_flag == True):
-                    agent.experience_replay()
-                state_next, ti, ti_ = env.observe_update_state_pid(pid=p_gain)
+            diff = pid.calculate_output(current_value=(int)(state_current[0][0]), delta_time= (int)(ti), mode=True)
+            if diff > 0:
+                actions[0] = pwm_def - diff
+                actions[1] = pwm_def
+            else:
+                actions[0] = pwm_def
+                actions[1] = pwm_def + diff
 
-                reward = env.observe_reward(state_next)
-                agent.store_experience(state_current, action, reward, state_next, terminal)
-                print(i,j,state_next[0], reward)
-                # for loging
-                log.add_log_state_and_action(state_next, action, env.params_to_send, ti, ti_)
-                log.add_log_state(state_next, reward, ti)
-                
+            if training_flag:
+                agent.epsilon -= 0.1/30000
+            else:
+                agent.epsilon = 0
+            env.execute_action_(actions)
+            if (j != 0 and training_flag == True):
+                agent.experience_replay()
+            state_next, ti, ti_ = env.observe_update_state_pid(pid=p_gain)
 
-                #agent.create_checkpoint()
-                #checkpoint_report = "EPOCH: {:03d}/{:03d} | REWARD: {:03f} | LOSS: {:.4f} | Q_MAX: {:.4f}".format(i, N_EPOCHS - 1, reward, loss, Q_max)
-                #print(checkpoint_report)
-                #log.add_log([checkpoint_report])
-                #log.add_log(["Epoch End"])
+            reward = env.observe_reward(state_next)
+            agent.store_experience(state_current, action, reward, state_next, terminal)
+            print(i,j,state_next[0], reward)
+            # for loging
+            log.add_log_state_and_action(state_next, action, env.params_to_send, ti, ti_)
+            log.add_log_state(state_next, reward, ti)
+            
 
+            #agent.create_checkpoint()
+            #checkpoint_report = "EPOCH: {:03d}/{:03d} | REWARD: {:03f} | LOSS: {:.4f} | Q_MAX: {:.4f}".format(i, N_EPOCHS - 1, reward, loss, Q_max)
+            #print(checkpoint_report)
+            #log.add_log([checkpoint_report])
+            #log.add_log(["Epoch End"])
+    '''
     except :
-    #except KeyboardInterrupt:
+        print(sys.exc_info())
         print("except finish")
         print(state_next)
-
+    '''
     env.execute_action_([0,0])
     env.execute_action_([0,0])
     env.execute_action_([0,0])

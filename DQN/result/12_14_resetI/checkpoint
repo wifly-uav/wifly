@@ -1,0 +1,2 @@
+model_checkpoint_path: "c:/Users/hp/wifly/DQN\\result\\12_14_resetI/WiflyDual_DQN"
+all_model_checkpoint_paths: "c:/Users/hp/wifly/DQN\\result\\12_14_resetI/WiflyDual_DQN"

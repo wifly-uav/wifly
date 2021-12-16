@@ -48,7 +48,7 @@ class visual_act:
         ax1.legend(h1+h2, l1+l2, loc='lower right')
 
         ax1.set_ylim([-180, 180])
-        ax2.set_ylim([0,6])
+        ax2.set_ylim([0,16])
 
         plt.savefig(self.folder + '/act.png')
         if self.flag:
@@ -58,5 +58,5 @@ class visual_act:
 if __name__ == "__main__":
     path = os.path.dirname(__file__)
 
-    ac = visual_act(flag=1,folder=path + '/result/test')
+    ac = visual_act(flag=1,folder=path + '/result/12_14_10ACTIONS')
     ac.visualize()
