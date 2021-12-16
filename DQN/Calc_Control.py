@@ -48,10 +48,10 @@ class calc_PID():
             int: 出力
         """
         error = self.__target - current_value
-        self.__error_D = (self.__error_P - error)/ delta_time
+        #self.__error_D = (self.__error_P - error)/ delta_time
         self.__error_P = error
         self.__error_I = self.__error_I + error*delta_time
-        out = int(self.__param_P * self.__error_P + self.__param_I * self.__error_I + self.__param_D * self.__error_D)
+        out = int(self.__param_P * self.__error_P + self.__param_I * self.__error_I)# + self.__param_D * self.__error_D)
         if mode == True:
             out = self.saturation_block(out)
         #print(out)

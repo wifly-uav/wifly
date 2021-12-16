@@ -134,8 +134,8 @@ class DQNAgent:
         # loss function
         with tf.name_scope('loss'):
             self.y_ = tf.placeholder(tf.float32, [None, N_ACTIONS])
-            #self.loss = tf.reduce_mean(tf.square(self.y_ - self.y), name="loss")
-            self.loss = tf.reduce_mean(self.huber_loss_mean(self.y_, self.y), name="loss")
+            self.loss = tf.reduce_mean(tf.square(self.y_ - self.y), name="loss")
+            #self.loss = tf.reduce_mean(self.huber_loss_mean(self.y_, self.y), name="loss")
 
         # train operation RMSPropOptimizer
         with tf.name_scope('Optimizer'):
