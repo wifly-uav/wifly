@@ -16,6 +16,7 @@ class calc_PID():
         self.__upper_saturation = saturations[1]
         self.__error_P = 0
         self.__error_I = 0
+        self.I = 0
         self.__error_D = 0
         self.__error = 0
         self.__target = 0
@@ -47,10 +48,13 @@ class calc_PID():
         Returns:
             int: 出力
         """
+        if delta_time < 0 or delta_time > 100:
+            delta_time = 50
         error = self.__target - current_value
         #self.__error_D = (self.__error_P - error)/ delta_time
         self.__error_P = error
         self.__error_I = self.__error_I + error*delta_time
+        self.I = self.__error_I
         out = int(self.__param_P * self.__error_P + self.__param_I * self.__error_I)# + self.__param_D * self.__error_D)
         if mode == True:
             out = self.saturation_block(out)

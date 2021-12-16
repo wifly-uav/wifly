@@ -139,7 +139,7 @@ class Communicator():
                             try:
                                 a = int(persed_data[0])
                                 recieve_time_ = persed_data.pop(-1)
-                                if (abs(int(persed_data[1])-int(persed_data[2])) <= 150):
+                                if (abs(int(persed_data[1])-int(persed_data[2])) <= 200):
                                     #recieve_time_ = 0
                                     #add_log = self.create_log(persed_data, recieve_time)
                                     #if mode == True:

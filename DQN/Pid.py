@@ -37,7 +37,7 @@ if __name__ == "__main__":
     saturations = [0,150]
     pwm_def = 250
     pid = calc_PID(saturations)
-    param = [4,0.0002,0,0]
+    param = [4,0.0001,0,0]
     ti = 10
     actions = [pwm_def, pwm_def]
     pid.update_params(param)
@@ -54,10 +54,10 @@ if __name__ == "__main__":
             diff = pid.calculate_output(current_value=(int)(state_current[0][0]), delta_time= (int)(ti), mode=True)
             if diff > 0:
                 actions[0] = pwm_def - diff
-                actions[1] = pwm_def
+                actions[1] = pwm_def -30
             else:
                 actions[0] = pwm_def
-                actions[1] = pwm_def + diff
+                actions[1] = pwm_def + diff -30
             env.execute_action_(actions)
             state_next, ti, ti_ = env.observe_update_state()
             #reward = env.observe_reward(state_next)
