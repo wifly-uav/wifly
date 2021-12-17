@@ -97,7 +97,7 @@ class Environment():
             err = abs(float(data[0][0])-0.0)
             if err < 10:
                 return 1
-            elif err < 30:
+            elif err < 20:
                 return 0
             elif err <45:
                 return -1

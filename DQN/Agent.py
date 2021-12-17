@@ -129,14 +129,15 @@ class DQNAgent:
         with tf.name_scope('output'):
             # output layer (N_ACTIONS)
             self.W_out = tf.Variable(tf.truncated_normal([HIDDEN_2, N_ACTIONS], stddev=0.01), name="W_out")
-            self.b_out = tf.Variable(tf.zeros([N_ACTIONS]), name="b_out")
+            #self.b_out = tf.Variable(tf.zeros([N_ACTIONS]), name="b_out")
+            self.b_out = tf.Variable([10,5,1,0.1,0], name="b_out")
             self.y = tf.matmul(self.h_fc2, self.W_out) + self.b_out
 
         # loss function
         with tf.name_scope('loss'):
             self.y_ = tf.placeholder(tf.float32, [None, N_ACTIONS])
-            #self.loss = tf.reduce_mean(tf.square(self.y_ - self.y), name="loss")
-            self.loss = tf.reduce_mean(self.huber_loss_mean(self.y_, self.y), name="loss")
+            self.loss = tf.reduce_mean(tf.square(self.y_ - self.y), name="loss")
+            #self.loss = tf.reduce_mean(self.huber_loss_mean(self.y_, self.y), name="loss")
 
         # train operation RMSPropOptimizer
         with tf.name_scope('Optimizer'):

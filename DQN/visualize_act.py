@@ -5,8 +5,9 @@ import os
 import statistics
 
 class visual_act:
-    def __init__(self, flag=False, folder='log'):
+    def __init__(self, flag=False, folder='log', save=True):
         self.flag = flag
+        self.save = save
         self.folder = folder
 
     def visualize(self):
@@ -48,9 +49,11 @@ class visual_act:
         ax1.legend(h1+h2, l1+l2, loc='lower right')
 
         ax1.set_ylim([-180, 180])
+        ax1.set_xlim([50, 52.5])
         ax2.set_ylim([0,6])
 
-        plt.savefig(self.folder + '/act.png')
+        if self.save:
+            plt.savefig(self.folder + '/act.png')
         if self.flag:
             plt.show()
 
@@ -58,5 +61,5 @@ class visual_act:
 if __name__ == "__main__":
     path = os.path.dirname(__file__)
 
-    ac = visual_act(flag=1,folder=path + '/result/test')
+    ac = visual_act(flag=1,folder=path + '/result/12_16_betaI0', save=False)
     ac.visualize()

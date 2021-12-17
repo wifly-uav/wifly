@@ -10,10 +10,11 @@ from visualize_act import visual_act
 from Calc_Control import calc_PID
 import os
 
-N_EPOCHS = 6
+N_EPOCHS = 9
 N_FRAMES = 500
-I_GAIN = 0.0001
+I_GAIN = 0.000
 D_GAIN = 0
+ER = 30
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 
 if __name__ == "__main__":
@@ -106,10 +107,10 @@ if __name__ == "__main__":
                 diff = pid.calculate_output(current_value=(int)(state_current[0][0]), delta_time= (int)(ti), mode=True)
                 if diff > 0:
                     actions[0] = pwm_def - diff
-                    actions[1] = pwm_def
+                    actions[1] = pwm_def - ER
                 else:
                     actions[0] = pwm_def
-                    actions[1] = pwm_def + diff
+                    actions[1] = pwm_def + diff - ER
 
                 if training_flag:
                     agent.epsilon -= 0.1/3000
@@ -122,7 +123,7 @@ if __name__ == "__main__":
 
                 reward = env.observe_reward(state_next)
                 agent.store_experience(state_current, action, reward, state_next, terminal)
-                print(i,j,state_next[0], reward)
+                print(i,j,state_next[0], reward, pid.I*I_GAIN)
                 # for loging
                 log.add_log_state_and_action(state_next, action, env.params_to_send, ti, ti_)
                 log.add_log_state(state_next, reward, ti)
