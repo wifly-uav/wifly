@@ -54,10 +54,10 @@ if __name__ == "__main__":
             diff = pid.calculate_output(current_value=(int)(state_current[0][0]), delta_time= (int)(ti), mode=True)
             if diff > 0:
                 actions[0] = pwm_def - diff
-                actions[1] = pwm_def -30
+                actions[1] = pwm_def
             else:
                 actions[0] = pwm_def
-                actions[1] = pwm_def + diff -30
+                actions[1] = pwm_def + diff
             env.execute_action_(actions)
             state_next, ti, ti_ = env.observe_update_state()
             #reward = env.observe_reward(state_next)
