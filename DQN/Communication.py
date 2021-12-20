@@ -134,11 +134,12 @@ class Communicator():
                     delta_time = time.time() - self.time_last_receive
                     self.time_last_receive = time.time()
                     if (persed_data.pop(0).startswith('S') and persed_data.pop(-1).startswith('E')):
-                        persed_data.pop(0)
+                        persed_data.append(persed_data.pop(0))
                         if (persed_data[0] != '' or persed_data[0] != '-' or persed_data[1] != '' or persed_data[2] != ''):
                             try:
                                 a = int(persed_data[0])
-                                recieve_time_ = persed_data.pop(-1)
+                                b = int(persed_data[-1])
+                                recieve_time_ = int(persed_data.pop(-2))
                                 if (abs(int(persed_data[1])-int(persed_data[2])) <= 200):
                                     #recieve_time_ = 0
                                     #add_log = self.create_log(persed_data, recieve_time)

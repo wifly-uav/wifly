@@ -83,63 +83,58 @@ if __name__ == "__main__":
     
     print("press y to start")
 
-    try:
-        for i in range(N_EPOCHS):
-            #init
-            frame = 0
-            loss = 0.0
-            Q_max = 0.0
-            reward = 0
-            p_gain = 1.5
-            terminal = True
-            data = True
-            env.reset_pid(add=p_gain)
-            state_next = env.observe_state()
+#try:
+    for i in range(N_EPOCHS):
+        #init
+        frame = 0
+        loss = 0.0
+        Q_max = 0.0
+        reward = 0
+        p_gain = 1.5
+        terminal = True
+        data = True
+        env.reset_pid(add=p_gain)
+        state_next = env.observe_state()
 
-            for j in range(N_FRAMES):
-                terminal = env.observe_terminal()
-                state_current = state_next
-                
-                action = agent.select_action(state_current)
-                p_gain = env.execute_action_gain(action)
-                param = [p_gain,I_GAIN,D_GAIN,0]
-                pid.update_params(param)
+        for j in range(N_FRAMES):
+            terminal = env.observe_terminal()
+            state_current = state_next
+            
+            action = agent.select_action(state_current)
+            p_gain = env.execute_action_gain(action)
+            param = [p_gain,I_GAIN,D_GAIN,0]
+            pid.update_params(param)
 
-                diff = pid.calculate_output(current_value=(int)(state_current[0][0]), delta_time= (int)(ti), mode=True)
-                if diff > 0:
-                    actions[0] = pwm_def - diff
-                    actions[1] = pwm_def - ER
-                else:
-                    actions[0] = pwm_def
-                    actions[1] = pwm_def + diff - ER
+            #print(i,j,state_current[0][0],ti)
+            diff = pid.calculate_output(current_value=int(state_current[0][0]), delta_time= (int)(ti), mode=True)
+            if diff > 0:
+                actions[0] = pwm_def - diff
+                actions[1] = pwm_def - ER
+            else:
+                actions[0] = pwm_def
+                actions[1] = pwm_def + diff - ER
 
-                if training_flag:
-                    agent.epsilon -= 0.1/3000
-                else:
-                    agent.epsilon = 0
-                env.execute_action_(actions)
-                if (j != 0 and training_flag == True):
-                    agent.experience_replay()
-                state_next, ti, ti_ = env.observe_update_state_pid(pid=p_gain)
+            if training_flag:
+                agent.epsilon -= 0.1/3000
+            else:
+                agent.epsilon = 0
+            env.execute_action_(actions)
+            if (j != 0 and training_flag == True):
+                agent.experience_replay()
+            state_next, ti, ti_ = env.observe_update_state_pid(pid=p_gain)
 
-                reward = env.observe_reward(state_next)
-                agent.store_experience(state_current, action, reward, state_next, terminal)
-                print(i,j,state_next[0], reward, pid.I*I_GAIN)
-                # for loging
-                log.add_log_state_and_action(state_next, action, env.params_to_send, ti, ti_)
-                log.add_log_state(state_next, reward, ti)
-                
+            reward = env.observe_reward(state_next)
+            agent.store_experience(state_current, action, reward, state_next, terminal)
+            print(i,j,state_next[0], reward, pid.I*I_GAIN)
+            # for loging
+            log.add_log_state_and_action(state_next, action, env.params_to_send, ti, ti_)
+            log.add_log_state(state_next, reward, ti)
 
-                #agent.create_checkpoint()
-                #checkpoint_report = "EPOCH: {:03d}/{:03d} | REWARD: {:03f} | LOSS: {:.4f} | Q_MAX: {:.4f}".format(i, N_EPOCHS - 1, reward, loss, Q_max)
-                #print(checkpoint_report)
-                #log.add_log([checkpoint_report])
-                #log.add_log(["Epoch End"])
-
-    except :
-    #except KeyboardInterrupt:
-        print("except finish")
-        print(state_next)
+#except :
+#except KeyboardInterrupt:
+    #print("except finish")
+    #print(state_current)
+    #print(state_next)
 
     env.execute_action_([0,0])
     env.execute_action_([0,0])

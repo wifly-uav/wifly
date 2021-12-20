@@ -33,7 +33,7 @@ class logger():
 
     def add_log_state(self, state, reward, time):
         state_list_ = list(state)
-        row_ = [state_list_[0][0],reward,time]
+        row_ = [state_list_[0][0],state_list_[0][-2],reward,time]
         self.log2.append(row_)
 
     def output_log(self):
