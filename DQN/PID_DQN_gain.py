@@ -10,11 +10,11 @@ from visualize_act import visual_act
 from Calc_Control import calc_PID
 import os
 
-N_EPOCHS = 9
+N_EPOCHS = 5
 N_FRAMES = 500
-I_GAIN = 0.000
+I_GAIN = 0.0001
 D_GAIN = 0
-ER = 30
+ER = 0
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 
 if __name__ == "__main__":
