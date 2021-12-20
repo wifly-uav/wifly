@@ -45,9 +45,14 @@ with open(path + "/data.csv", 'w', newline='') as f:
                 lis = dft.values.tolist()
                 #print(lis[0])
                 mat = matlab.double(lis[0])
+                suc = sum([abs(i) <= 10 for i in lis[0]])
+                ang = suc/len(lis[0])*100
 
                 ave = eng.mean(mat)
                 std = eng.std(mat)
+                
+                suc2 = sum([abs(i-ave) <= 10 for i in lis[0]])
+                ang2 = suc2/len(lis[0])*100
 
-                data = [name, ave, std]
+                data = [name, ave, std, ang, ang2]
                 writer.writerow(data)

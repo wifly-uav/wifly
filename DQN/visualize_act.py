@@ -38,7 +38,9 @@ class visual_act:
         
         fig = plt.figure()
         ax1 = fig.add_subplot(111)
-        ln1 = ax1.plot(time, angle, color="red", label='angle')
+        ln1 = ax1.plot(time, angle, color="red", label='angle')        
+        _ = ax1.plot([0, time[-1]],[10, 10], "orange", linestyle='dashed')
+        _ = ax1.plot([0, time[-1]],[-10, -10], "orange", linestyle='dashed')
 
         ax2 = ax1.twinx()
         ln2 = ax2.plot(time, q_max, color="green", linestyle='dashed',linewidth = 0, marker='.', label='Q_max')
@@ -49,7 +51,7 @@ class visual_act:
         ax1.legend(h1+h2, l1+l2, loc='lower right')
 
         ax1.set_ylim([-180, 180])
-        ax1.set_xlim([50, 52.5])
+        ax1.set_xlim([50, 60])
         ax2.set_ylim([0,6])
 
         if self.save:
@@ -61,5 +63,5 @@ class visual_act:
 if __name__ == "__main__":
     path = os.path.dirname(__file__)
 
-    ac = visual_act(flag=1,folder=path + '/result/12_16_betaI0', save=False)
+    ac = visual_act(flag=1,folder=path + '/result/12_16_beta2', save=False)
     ac.visualize()
