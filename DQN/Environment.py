@@ -95,7 +95,7 @@ class Environment():
         ##報酬の設定
         try:
             err = abs(float(data[0][0])-0.0)
-            if err < 15:
+            if err < 10:
                 return 1
             elif err < 30:
                 return 0
@@ -159,13 +159,13 @@ class Environment():
         if action == 1:
             return 2
         elif action == 2:
-            return 2.5
-        elif action == 3:
-            return 3
-        elif action == 4:
             return 3.5
-        elif action == 5:
+        elif action == 3:
             return 4
+        elif action == 4:
+            return 4.5
+        elif action == 5:
+            return 6
         elif action == 6:
             return 4.5
         elif action == 7:

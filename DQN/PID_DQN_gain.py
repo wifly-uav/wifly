@@ -12,7 +12,7 @@ import os
 
 N_EPOCHS = 10
 N_FRAMES = 500
-I_GAIN = 0.00000
+I_GAIN = 0.0001
 D_GAIN = 0
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 
