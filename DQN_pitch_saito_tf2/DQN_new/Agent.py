@@ -33,7 +33,7 @@ EPSILON_END=0.01
 ENABLE_ACTIONS = [1,2,3,4,5]
 N_ACTIONS = len(ENABLE_ACTIONS)
 FRAMES = 4
-INPUT_DIMS = FRAMES*4
+INPUT_DIMS = FRAMES*1
 #INPUTS = 5
 HIDDEN_1 = 10
 HIDDEN_2 = 5
@@ -126,11 +126,13 @@ class DQNAgent:
         self.name = os.path.splitext(os.path.basename(__file__))[0] #このスクリプトの拡張子を含まないファイル名を取得
         self.path = os.path.dirname(__file__)                       #このスクリプトのディレクトリを取得
         self.minibatch_size = MINIBATCH_SIZE
+        self.batch_size = MINIBATCH_SIZE
 
         #self.replay_memory_size = REPLAY_MEMORY_SIZE
         self.memory = ReplayBuffer(REPLAY_MEMORY_SIZE,FRAMES)   #ReplayBufferクラスのインスタンス作成
         self.learning_rate = LEARNING_RATE
         self.discount_factor = DISCOUNT_FACTOR
+        self.gamma = DISCOUNT_FACTOR
         self.epsilon = EPSILON
         self.eps_dec = EPSILON_DEC                 
         self.eps_min = EPSILON_END
@@ -138,6 +140,7 @@ class DQNAgent:
         self.model_name = MODEL_NAME
         self.checkpoint_name = CHECKPOINT_NAME
         self.enable_actions = ENABLE_ACTIONS
+        self.action_space = N_ACTIONS
 
         #以下log用
         self.minibatch_index_log = np.empty(0)
@@ -156,7 +159,7 @@ class DQNAgent:
         self.q_eval = build_dqn(LEARNING_RATE, N_ACTIONS, INPUT_DIMS, HIDDEN_1, HIDDEN_2)
 
         # create TensorFlow graph (model)(tf1)
-        self.init_model()
+        #self.init_model()
 
         # reset current loss
         self.current_loss = 0.0
@@ -380,7 +383,7 @@ class DQNAgent:
         elif angle>45:
             return 7
         elif np.random.rand() <= self.epsilon:
-            # random
+            # randomstore_transition
             act = np.random.choice(self.enable_actions)
         else:
             # max_action Q(state, action)
@@ -486,7 +489,7 @@ class DQNAgent:
 
         q_next = self.q_eval.predict(states_)       
 
-        q_target = np.copy(q_eval)          
+        q_target = np.copy(q_eval)
 
         #0~batch_size-1までの連番リストを取得
         batch_index = np.arange(self.batch_size, dtype=np.int32)
@@ -504,7 +507,8 @@ class DQNAgent:
 
 
     def create_checkpoint(self):
-        self.saver.save(self.sess, os.path.join(self.model_dir, self.checkpoint_name + datetime.now().strftime('%H%M%S')))
+        #self.saver.save(self.sess, os.path.join(self.model_dir, self.checkpoint_name + datetime.now().strftime('%H%M%S')))
+        self.q_eval.save(self.folder + '/' + self.model_name + self.checkpoint_name + datetime.now().strftime('%H%M%S'))
 
     def load_model(self, model_path):
         # load from model_path
@@ -515,40 +519,36 @@ class DQNAgent:
         ckpt = tf.train.get_checkpoint_state(self.folder + '/../' + model_path + '/')
         if ckpt:
             #データが読み込まれる
-            self.saver.restore(self.sess, self.folder + '/../' + model_path + '/' + MODEL_NAME)
+            #self.saver.restore(self.sess, self.folder + '/../' + model_path + '/' + MODEL_NAME)
+            self.q_eval = keras.models.load_model(self.folder + '/../' + model_path + '/' + MODEL_NAME)
             return True
         else:
             return False
 
     def save_model(self):
         #self.saver.save(self.sess, os.path.join(self.model_dir, self.model_name))
-        self.saver.save(self.sess, self.folder + '/' + self.model_name)
+        #self.saver.save(self.sess, self.folder + '/' + self.model_name)
+        self.q_eval.save(self.folder + '/' + self.model_name)
 
     def debug_nn(self):
+        l1 = self.q_eval.layers[0]
+        l2 = self.q_eval.layers[1]
+        l3 = self.q_eval.layers[2]
+        l4 = self.q_eval.layers[3]
         with open(self.folder + '/debug.csv', 'a') as f:
-            np.savetxt(f, self.sess.run(self.W_fc1))
-            np.savetxt(f, self.sess.run(self.b_fc1))
-            np.savetxt(f, self.sess.run(self.W_fc2))
-            np.savetxt(f, self.sess.run(self.b_fc2))
-            np.savetxt(f, self.sess.run(self.W_out))
-            #np.savetxt(f, self.sess.run(self.b_out))
-        np.savetxt(self.folder + '/debug_W_fc1.csv', self.sess.run(self.W_fc1), delimiter=',')
-        np.savetxt(self.folder + '/debug_b_fc1.csv', self.sess.run(self.b_fc1), delimiter=',')
-        np.savetxt(self.folder + '/debug_W_fc2.csv', self.sess.run(self.W_fc2), delimiter=',')
-        np.savetxt(self.folder + '/debug_b_fc2.csv', self.sess.run(self.b_fc2), delimiter=',')
-        np.savetxt(self.folder + '/debug_W_out.csv', self.sess.run(self.W_out), delimiter=',')
-        np.savetxt(self.folder + '/debug_b_out.csv', self.sess.run(self.b_out), delimiter=',')
-        '''
-        with open('debug_nn' + ".csv", 'w') as f:
-            writer = csv.writer(f, lineterminator='\n')  # 改行コード（\n）を指定しておく
-            writer.writerows(self.sess.run(self.W_fc1))
-            writer.writerows(self.sess.run(self.b_fc1))
-            writer.writerows(self.sess.run(self.W_fc2))
-            writer.writerows(self.sess.run(self.b_fc2))
-            writer.writerows(self.sess.run(self.W_out))
-            writer.writerows(self.sess.run(self.b_out))
-            f.close()
-        '''
+            np.savetxt(f, l2.get_weights()[0])
+            np.savetxt(f, l2.get_weights()[1])
+            np.savetxt(f, l3.get_weights()[0])
+            np.savetxt(f, l3.get_weights()[1])
+            np.savetxt(f, l4.get_weights()[0])
+            np.savetxt(f, l4.get_weights()[1])
+        
+        np.savetxt(self.folder + '/debug_W_fc1.csv', l2.get_weights()[0], delimiter=',')
+        np.savetxt(self.folder + '/debug_b_fc1.csv', l2.get_weights()[1], delimiter=',')
+        np.savetxt(self.folder + '/debug_W_fc2.csv', l3.get_weights()[0], delimiter=',')
+        np.savetxt(self.folder + '/debug_b_fc2.csv', l3.get_weights()[1], delimiter=',')
+        np.savetxt(self.folder + '/debug_W_out.csv', l4.get_weights()[0], delimiter=',')
+        np.savetxt(self.folder + '/debug_b_out.csv', l4.get_weights()[1], delimiter=',')
 
     def debug_memory(self):
         with open(self.folder + '/debug_memory.csv', 'w') as f:

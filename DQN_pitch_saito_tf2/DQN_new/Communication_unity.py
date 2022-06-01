@@ -19,16 +19,15 @@ class Communicator():
         self.old_data = []
         self.new_data = []
 
-        self.com_start()
-        print('Connected to unity')
+        #self.start_laz()
 
-    def start_laz(self, data_to_send):
+    def start_laz(self, data_to_send=[0]):
         print("Press the play button on unity")
         try:
             # 1 接続
             self.s.listen(1)
             self.conn, self.addr = self.s.accept()
-            print("success")
+            print('Connected to unity')
         except:
             print("can't communicate")
 
@@ -41,9 +40,9 @@ class Communicator():
         #print(self.new_data)
         return self.new_data #order : roll,pitch,yaw,height
 
-    def recieve_from_laz(self, flag, byt=7):
+    def recieve_from_laz(self, mode=True, byt=7):
         re = self.conn.recv(1024)
-        if flag is False:
+        if mode is False:
             self.send_to_laz([0,0,0,0,0])
         self.__old_data = self.__raw_data
         self.__raw_data = re.decode('utf-8')

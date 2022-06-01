@@ -1,4 +1,4 @@
-from Communication import Communicator
+from Communication_unity import Communicator
 import numpy as np
 import random as rd
 import time
@@ -25,7 +25,7 @@ class Environment():
     """
     def __init__(self):
         self.communicator = Communicator()
-        self.reset()
+        #self.reset()
         self.params_to_send = default_params
         self.state = deque()
 
@@ -39,8 +39,10 @@ class Environment():
         self.params_to_send = default_params
         for i in range(FRAMES):
             self.params_to_send = default_params
-            data, _, _ = self.communicator.recieve_from_laz(byt=receive_byt)
+            data, _, _ = self.communicator.recieve_from_laz(byt=receive_byt, mode=False)
             self.update(flag=False, data=data)
+        print("state:")
+        print(self.state)
 
     def reset_pid(self, add=0):
         """
@@ -63,7 +65,7 @@ class Environment():
             #Lazuriteからデータを受信
             #正常に受信できれば、受信データ、受信した時間、前回受信との間隔が返ってくる
             #正常に受信できなかった場合、False,0,0が返ってくる
-            data, _, _ = self.communicator.recieve_from_laz(byt=receive_byt)
+            data, _, _ = self.communicator.recieve_from_laz(byt=receive_byt, mode=False)
 
             data.append(add)                        #受信データにPgainを付け加える（data=Falseの場合RE?）                                                        
             self.update(flag=False, data=data)      #受信した状態をstateに加える
