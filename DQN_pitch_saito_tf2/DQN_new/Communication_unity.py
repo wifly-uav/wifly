@@ -20,8 +20,9 @@ class Communicator():
         self.new_data = []
 
         self.com_start()
+        print('Connected to unity')
 
-    def com_start(self):
+    def start_laz(self, data_to_send):
         print("Press the play button on unity")
         try:
             # 1 接続
@@ -40,10 +41,10 @@ class Communicator():
         #print(self.new_data)
         return self.new_data #order : roll,pitch,yaw,height
 
-    def recieve_from_unity(self, flag):
+    def recieve_from_laz(self, flag, byt=7):
         re = self.conn.recv(1024)
         if flag is False:
-            self.send_to_unity([0,0,0,0,0])
+            self.send_to_laz([0,0,0,0,0])
         self.__old_data = self.__raw_data
         self.__raw_data = re.decode('utf-8')
         #print(self.__raw_data)
@@ -51,7 +52,7 @@ class Communicator():
             print("Not connecting")
             self.conn.close()
             print("Reconnect")
-            self.start_com()
+            self.start_laz()
 
         recieve_time = str(time.time() - self.time_started)
         delta_time = time.time() - self.time_last_receive
@@ -60,13 +61,13 @@ class Communicator():
 
         return data, recieve_time, recieve_time
 
-    def send_to_unity(self, msg):
+    def send_to_laz(self, msg):
         a = str(msg)
         b = a.strip("[""]")
         a_utf8 = b.encode("utf-8")
         self.conn.sendall(a_utf8)
 
-    def termination_switch(self):
+    def termination_switch(self, msg):
         self.flag_termination = [float(i) for i in self.__raw_data.split(",")[3:4]]
         if self.flag_termination[0] == 0.0:
             return False
