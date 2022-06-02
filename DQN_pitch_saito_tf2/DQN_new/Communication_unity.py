@@ -46,7 +46,7 @@ class Communicator():
             self.send_to_laz([0,0,0,0,0])
         self.__old_data = self.__raw_data
         self.__raw_data = re.decode('utf-8')
-        #print(self.__raw_data)
+        print(self.__raw_data)
         if self.__raw_data == "":
             print("Not connecting")
             self.conn.close()
@@ -69,9 +69,9 @@ class Communicator():
     def termination_switch(self, msg):
         self.flag_termination = [float(i) for i in self.__raw_data.split(",")[3:4]]
         if self.flag_termination[0] == 0.0:
-            return False
-        else:
             return True
+        else:
+            return False
 
     def com_finish(self):
         self.s.close()

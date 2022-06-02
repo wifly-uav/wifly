@@ -29,20 +29,21 @@ class Environment():
         self.params_to_send = default_params
         self.state = deque()
 
-    def reset(self):
+    def reset(self, i=0):
         """
         状態を格納するデックを作る
         最初に足りない分のフレームの状態を保存する
         """
-        self.communicator.start_laz(default_params)
+        if(i == 0):
+            self.communicator.start_laz(default_params)
         self.state = deque()
         self.params_to_send = default_params
         for i in range(FRAMES):
             self.params_to_send = default_params
             data, _, _ = self.communicator.recieve_from_laz(byt=receive_byt, mode=False)
             self.update(flag=False, data=data)
-        print("state:")
-        print(self.state)
+        #print("state:")
+        #print(self.state)
 
     def reset_pid(self, add=0):
         """

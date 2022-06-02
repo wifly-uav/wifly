@@ -7,7 +7,7 @@ import sys
 from visualize_nn import visual_nn
 import os
 
-N_EPOCHS = 1
+N_EPOCHS = 10
 N_FRAMES = 500
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 
@@ -74,11 +74,13 @@ if __name__ == "__main__":
         reward = 0
         terminal = True
         data = True
-        env.reset()
+        env.reset(i=i)
         state_next = env.observe_state()
+        print("i"+str(i))
 
         for j in range(N_FRAMES):
             terminal = env.observe_terminal()
+            data = terminal
             state_current = state_next
             #action = agent.select_action_limit(state_current)
             action = agent.choose_action(state_current)
@@ -90,12 +92,12 @@ if __name__ == "__main__":
             if (j != 0 and training_flag == True):
                 #agent.experience_replay()
                 agent.learn()
-            print(i,j,state_next[0], reward)
             state_next, ti, ti_ = env.observe_update_state()
             #action, data = env.reaction(state_next)
             if data == True:
                 reward = env.observe_reward(state_next)
                 terminal = env.observe_terminal()
+                #print(i,j,state_next[0], reward, terminal)
                 #agent.store_experience(state_current, action, reward, state_next, terminal)
                 '''
                 print("state_current:"+str(state_current))
@@ -110,6 +112,7 @@ if __name__ == "__main__":
                 log.add_log_state(state_next, reward, ti)
             else:
                 print("reset")
+                break
                 #print(state_next)
                 #env.reset()
 
@@ -120,7 +123,7 @@ if __name__ == "__main__":
         #print(state_next)
 
 
-    agent.save_model()
+    #agent.save_model()
     '''
     agent.debug_nn()
     agent.debug_memory()
