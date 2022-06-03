@@ -6,8 +6,9 @@ from Logger import logger
 import sys
 from visualize_nn import visual_nn
 import os
+import time
 
-N_EPOCHS = 10
+N_EPOCHS = 250
 N_FRAMES = 500
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 
@@ -77,8 +78,12 @@ if __name__ == "__main__":
         env.reset(i=i)
         state_next = env.observe_state()
         print("i"+str(i))
+        time_start = time.time()
 
         for j in range(N_FRAMES):
+            time_end = time.time()
+            print(time_end-time_start)
+            time_start = time.time()
             terminal = env.observe_terminal()
             data = terminal
             state_current = state_next
@@ -97,7 +102,7 @@ if __name__ == "__main__":
             if data == True:
                 reward = env.observe_reward(state_next)
                 terminal = env.observe_terminal()
-                #print(i,j,state_next[0], reward, terminal)
+                print(i,j,state_next[0], reward, terminal)
                 #agent.store_experience(state_current, action, reward, state_next, terminal)
                 '''
                 print("state_current:"+str(state_current))

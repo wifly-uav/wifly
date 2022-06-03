@@ -35,15 +35,21 @@ class Communicator():
         self.time_last_receive = time.time()
 
     def perse_raw_data(self):
-        self.old_data = [float(i) for i in self.__old_data.split(",")[0:4]]
-        self.new_data = [float(i) for i in self.__raw_data.split(",")[0:4]]
+        try:
+            self.old_data = [float(i) for i in self.__old_data.split(",")[0:4]]
+            self.new_data = [float(i) for i in self.__raw_data.split(",")[0:4]]
+        except:
+            print("error_recive")
+            self.recieve_from_laz(mode=False)
+            self.old_data = [float(i) for i in self.__old_data.split(",")[0:4]]
+            self.new_data = [float(i) for i in self.__raw_data.split(",")[0:4]]
         #print(self.new_data)
         return self.new_data #order : roll,pitch,yaw,height
 
     def recieve_from_laz(self, mode=True, byt=7):
-        re = self.conn.recv(1024)
         if mode is False:
-            self.send_to_laz([0,0,0,0,0])
+            self.send_to_laz([255,0,0,0,0])
+        re = self.conn.recv(1024)
         self.__old_data = self.__raw_data
         self.__raw_data = re.decode('utf-8')
         print(self.__raw_data)
@@ -65,6 +71,7 @@ class Communicator():
         b = a.strip("[""]")
         a_utf8 = b.encode("utf-8")
         self.conn.sendall(a_utf8)
+        print("send:" + str(msg))
 
     def termination_switch(self, msg):
         self.flag_termination = [float(i) for i in self.__raw_data.split(",")[3:4]]
