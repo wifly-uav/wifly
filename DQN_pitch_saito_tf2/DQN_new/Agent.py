@@ -17,6 +17,8 @@ import csv
 import warnings
 warnings.filterwarnings('ignore')
 
+import time
+
 
 import os
 #--------------------------const, directory name, model name, etc...-------------------------
@@ -484,10 +486,11 @@ class DQNAgent:
         states, actions, rewards, states_, dones = self.memory.sample_buffer(self.minibatch_size)
 
         #Fixed-Targetは未実装
-        
+        time_start = time.time()
         q_eval = self.q_eval.predict(states)
 
         q_next = self.q_eval.predict(states_)       
+        time_start2 = time.time()
 
         q_target = np.copy(q_eval)
 
@@ -497,9 +500,11 @@ class DQNAgent:
         #TDターゲットの計算
         q_target[batch_index, actions] = rewards + self.gamma * np.max(q_next, axis=1)*dones
 
+        time_start3 = time.time()
         #NNのパラメータ更新
         self.q_eval.train_on_batch(states, q_target)
-
+        a = time.time()
+        print("time:" + str(a-time_start) + " , " + str(time_start2-time_start) + " , "  + str(time_start3-time_start2) + " , "  + str(a-time_start3))
         #self.epsilon = self.epsilon - self.eps_dec if self.epsilon > self.eps_min else self.eps_min
         
         #logの取得が未実装

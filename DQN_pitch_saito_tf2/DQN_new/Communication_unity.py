@@ -46,7 +46,7 @@ class Communicator():
             self.send_to_laz([0,0,0,0,0])
         self.__old_data = self.__raw_data
         self.__raw_data = re.decode('utf-8')
-        print(self.__raw_data)
+        #print(self.__raw_data)
         if self.__raw_data == "":
             print("Not connecting")
             self.conn.close()

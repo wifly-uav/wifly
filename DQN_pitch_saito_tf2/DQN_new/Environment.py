@@ -6,7 +6,7 @@ from collections import deque
 
 RIGHT_WING = 1  #params_to_sendやdefault_params内での添え字
 LEFT_WING = 3   #
-PWM_WING = 140
+PWM_WING = 0
 FRAMES = 4
 default_params = [255, PWM_WING, 0, PWM_WING, 0]
                 ##header,right,servo,left,controlmode
@@ -171,7 +171,7 @@ class Environment():
         #報酬の設定
         #Yaw角の0.0度からのずれに基づいて報酬を与える
         try:
-            err = abs(float(data[0][0])-0.0)
+            err = abs(float(data[0][1])-0.0)
             if err < 10:
                 return 1
             elif err < 20:
@@ -199,26 +199,26 @@ class Environment():
             action ([int]): 行動の番号
         """
         if action == 1:
-            self.params_to_send[RIGHT_WING]=PWM_WING
+            self.params_to_send[RIGHT_WING]=PWM_WING+10
             self.params_to_send[LEFT_WING]=PWM_WING
         elif action == 2:
-            self.params_to_send[RIGHT_WING]=PWM_WING+20
+            self.params_to_send[RIGHT_WING]=PWM_WING+5
             self.params_to_send[LEFT_WING]=PWM_WING
         elif action == 3:
-            self.params_to_send[RIGHT_WING]=PWM_WING
-            self.params_to_send[LEFT_WING]=PWM_WING+20
+            self.params_to_send[RIGHT_WING]=PWM_WING+1
+            self.params_to_send[LEFT_WING]=PWM_WING
         elif action == 4:
-            self.params_to_send[RIGHT_WING]=PWM_WING+40
+            self.params_to_send[RIGHT_WING]=PWM_WING-5
             self.params_to_send[LEFT_WING]=PWM_WING
         elif action == 5:
-            self.params_to_send[RIGHT_WING]=PWM_WING
-            self.params_to_send[LEFT_WING]=PWM_WING+40
+            self.params_to_send[RIGHT_WING]=PWM_WING-10
+            self.params_to_send[LEFT_WING]=PWM_WING
         elif action == 6:
-            self.params_to_send[RIGHT_WING]=PWM_WING+60
+            self.params_to_send[RIGHT_WING]=PWM_WING-10
             self.params_to_send[LEFT_WING]=PWM_WING
         else:
-            self.params_to_send[RIGHT_WING]=PWM_WING
-            self.params_to_send[LEFT_WING]=PWM_WING+60
+            self.params_to_send[RIGHT_WING]=PWM_WING-20
+            self.params_to_send[LEFT_WING]=PWM_WING
 
         self.communicator.send_to_laz(self.params_to_send)
         #time.sleep(0.01)
