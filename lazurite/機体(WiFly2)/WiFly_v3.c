@@ -198,7 +198,7 @@ void Motor_Sets(){
 
 	hhb.write(3, map((long)level1.ControlValue,0L,255L,0L,1023L));
 	hhb.write(2, map((long)level2.ControlValue,0L,255L,0L,1023L));
-	hhb.write(1, map((long)yaw.ControlValue,0L,255L,-1023L,1023L));
+	//hhb.write(1, map((long)yaw.ControlValue,0L,255L,-1023L,1023L));
 	hsv.write(0, map((unsigned short)servo.ControlValue,0L,255L,900L,1923L));
 	hsv.update();
 

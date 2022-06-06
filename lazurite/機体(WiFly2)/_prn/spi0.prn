@@ -1,0 +1,1767 @@
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:   1 
+ Source File: obj\spi0.asm
+ Object File: obj\spi0.obj
+ Date  : 2022/03/02 Wed.[17:51]
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                            1   ;; Compile Options : /TML620504
+                                                F /MS /near /IC:\LAZURI~1\LIBRA
+                                                R~1\BM1383 /IC:\LAZURI~1\LIBRAR
+                                                ~1\BM1422 /IC:\LAZURI~1\LIBRAR~
+                                                1\HARDWA~1 /IC:\LAZURI~1\LIBRAR
+                                                ~1\HARDWA~2 /IC:\LAZURI~1\LIBRA
+                                                R~1\KXG03_~1 /IC:\LAZURI~1\LIBR
+                                                AR~1\VL53L0X /IC:\LAZURI~1\LIBR
+                                                AR~1\W
+                                            2   ;; Version Number  : Ver.3.53.1
+                                            3   ;; File Name       : spi0.c
+                                            4   
+                                            5           type (ML620504F) 
+                                            6           model small, near
+                                            7           $$NINITVAR segment data
+                                                 2h #0h
+                                            8           $$NINITTAB segment tabl
+                                                e 2h any
+                                            9           $$TABSPI0$spi0 segment 
+                                                table 2h #0h
+                                           10           $$_spi0_attachInterrupt
+                                                $spi0 segment code 2h #0h
+                                           11           $$_spi0_begin$spi0 segm
+                                                ent code 2h #0h
+                                           12           $$_spi0_detachInterrupt
+                                                $spi0 segment code 2h #0h
+                                           13           $$_spi0_end$spi0 segmen
+                                                t code 2h #0h
+                                           14           $$_spi0_setBitOrder$spi
+                                                0 segment code 2h #0h
+                                           15           $$_spi0_setClockDivider
+                                                $spi0 segment code 2h #0h
+                                           16           $$_spi0_setDataMode$spi
+                                                0 segment code 2h #0h
+                                           17           $$_spi0_transfer$spi0 s
+                                                egment code 2h #0h
+                                           18   CVERSION 3.53.1
+                                           19   CSGLOBAL 03H 0000H "_spi0_detac
+                                                hInterrupt" 08H 02H 65H 01H 80H
+                                                 00H 00H 00H 07H
+                                           20   CSGLOBAL 03H 0000H "_spi0_setDa
+                                                taMode" 08H 02H 69H 01H 80H 00H
+                                                 00H 00H 07H
+                                           21   CSGLOBAL 02H 0000H "_spi0_trans
+                                                fer" 08H 02H 63H 01H 81H 02H 00
+                                                H 00H 00H
+                                           22   CSGLOBAL 03H 0000H "_spi0_begin
+                                                " 08H 02H 66H 01H 80H 00H 00H 0
+                                                0H 07H
+                                           23   CSGLOBAL 03H 0000H "_spi0_attac
+                                                hInterrupt" 08H 02H 64H 01H 80H
+                                                 00H 00H 00H 07H
+                                           24   CSGLOBAL 03H 0000H "_spi0_setCl
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:   2 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                                ockDivider" 08H 02H 6AH 01H 80H
+                                                 00H 00H 00H 07H
+                                           25   CSGLOBAL 03H 0000H "_spi0_end" 
+                                                08H 02H 67H 01H 80H 00H 00H 00H
+                                                 07H
+                                           26   CSGLOBAL 03H 0000H "_spi0_setBi
+                                                tOrder" 08H 02H 68H 01H 80H 00H
+                                                 00H 00H 07H
+                                           27   CSTRUCTTAG 0000H 0000H 001FH 00
+                                                05H 00000008H "_Notag"
+                                           28   CSTRUCTMEM 42H 00000001H 000000
+                                                00H "max_length" 02H 00H 00H
+                                           29   CSTRUCTMEM 42H 00000002H 000000
+                                                02H "buf" 04H 03H 00H 00H 00H
+                                           30   CSTRUCTMEM 42H 00000001H 000000
+                                                04H "wr_p" 02H 00H 00H
+                                           31   CSTRUCTMEM 42H 00000001H 000000
+                                                05H "rd_p" 02H 00H 00H
+                                           32   CSTRUCTMEM 42H 00000001H 000000
+                                                06H "length" 02H 00H 00H
+                                           33   CSTRUCTTAG 0000H 0000H 001EH 00
+                                                08H 00000010H "_Notag"
+                                           34   CSTRUCTMEM 42H 00000002H 000000
+                                                00H "transfer" 0AH 03H 00H 02H 
+                                                2BH 01H 00H 00H 00H 00H 00H
+                                           35   CSTRUCTMEM 43H 00000002H 000000
+                                                02H "attachInterrupt" 0AH 03H 0
+                                                0H 02H 2CH 01H 00H 00H 00H 00H 
+                                                07H
+                                           36   CSTRUCTMEM 43H 00000002H 000000
+                                                04H "detachInterrupt" 0AH 03H 0
+                                                0H 02H 2DH 01H 00H 00H 00H 00H 
+                                                07H
+                                           37   CSTRUCTMEM 43H 00000002H 000000
+                                                06H "begin" 0AH 03H 00H 02H 2EH
+                                                 01H 00H 00H 00H 00H 07H
+                                           38   CSTRUCTMEM 43H 00000002H 000000
+                                                08H "end" 0AH 03H 00H 02H 2FH 0
+                                                1H 00H 00H 00H 00H 07H
+                                           39   CSTRUCTMEM 43H 00000002H 000000
+                                                0AH "setBitOrder" 0AH 03H 00H 0
+                                                2H 30H 01H 00H 00H 00H 00H 07H
+                                           40   CSTRUCTMEM 43H 00000002H 000000
+                                                0CH "setDataMode" 0AH 03H 00H 0
+                                                2H 31H 01H 00H 00H 00H 00H 07H
+                                           41   CSTRUCTMEM 43H 00000002H 000000
+                                                0EH "setClockDivider" 0AH 03H 0
+                                                0H 02H 32H 01H 00H 00H 00H 00H 
+                                                07H
+                                           42   CSTRUCTTAG 0000H 0000H 001DH 00
+                                                1BH 00000036H "_Notag"
+                                           43   CSTRUCTMEM 43H 00000002H 000000
+                                                00H "init" 0AH 03H 00H 02H 0CH 
+                                                01H 00H 00H 00H 00H 01H
+                                           44   CSTRUCTMEM 43H 00000002H 000000
+                                                02H "remove" 0AH 03H 00H 02H 0D
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:   3 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                                H 01H 00H 00H 00H 00H 01H
+                                           45   CSTRUCTMEM 43H 00000002H 000000
+                                                04H "begin" 0AH 03H 00H 02H 0EH
+                                                 01H 00H 00H 00H 00H 01H
+                                           46   CSTRUCTMEM 43H 00000002H 000000
+                                                06H "close" 0AH 03H 00H 02H 0FH
+                                                 01H 00H 00H 00H 00H 01H
+                                           47   CSTRUCTMEM 43H 00000002H 000000
+                                                08H "send" 0AH 03H 00H 02H 11H 
+                                                01H 00H 00H 00H 00H 01H
+                                           48   CSTRUCTMEM 43H 00000002H 000000
+                                                0AH "send64le" 0AH 03H 00H 02H 
+                                                13H 01H 00H 00H 00H 00H 01H
+                                           49   CSTRUCTMEM 43H 00000002H 000000
+                                                0CH "send64be" 0AH 03H 00H 02H 
+                                                15H 01H 00H 00H 00H 00H 01H
+                                           50   CSTRUCTMEM 43H 00000002H 000000
+                                                0EH "rxEnable" 0AH 03H 00H 02H 
+                                                17H 01H 00H 00H 00H 00H 01H
+                                           51   CSTRUCTMEM 43H 00000002H 000000
+                                                10H "setPromiscuous" 0AH 03H 00
+                                                H 02H 18H 01H 00H 00H 00H 00H 0
+                                                1H
+                                           52   CSTRUCTMEM 43H 00000002H 000000
+                                                12H "setAckReq" 0AH 03H 00H 02H
+                                                 19H 01H 00H 00H 00H 00H 01H
+                                           53   CSTRUCTMEM 43H 00000002H 000000
+                                                14H "setBroadcastEnb" 0AH 03H 0
+                                                0H 02H 1AH 01H 00H 00H 00H 00H 
+                                                01H
+                                           54   CSTRUCTMEM 43H 00000002H 000000
+                                                16H "rxDisable" 0AH 03H 00H 02H
+                                                 1BH 01H 00H 00H 00H 00H 01H
+                                           55   CSTRUCTMEM 43H 00000002H 000000
+                                                18H "readData" 0AH 03H 00H 02H 
+                                                1CH 01H 00H 00H 00H 00H 08H
+                                           56   CSTRUCTMEM 42H 00000002H 000000
+                                                1AH "getMyAddress" 0AH 03H 00H 
+                                                02H 1DH 01H 00H 00H 00H 00H 08H
+                                           57   CSTRUCTMEM 43H 00000002H 000000
+                                                1CH "getMyAddr64" 0AH 03H 00H 0
+                                                2H 1EH 01H 00H 00H 00H 00H 07H
+                                           58   CSTRUCTMEM 43H 00000002H 000000
+                                                1EH "setMyAddress" 0AH 03H 00H 
+                                                02H 1FH 01H 00H 00H 00H 00H 01H
+                                           59   CSTRUCTMEM 43H 00000002H 000000
+                                                20H "getStatus" 0AH 03H 00H 02H
+                                                 20H 01H 00H 00H 00H 00H 07H
+                                           60   CSTRUCTMEM 43H 00000002H 000000
+                                                22H "msgOut" 0AH 03H 00H 02H 21
+                                                H 01H 00H 00H 00H 00H 07H
+                                           61   CSTRUCTMEM 43H 00000002H 000000
+                                                24H "setSendMode" 0AH 03H 00H 0
+                                                2H 22H 01H 00H 00H 00H 00H 01H
+                                           62   CSTRUCTMEM 43H 00000002H 000000
+                                                26H "getSendMode" 0AH 03H 00H 0
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:   4 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                                2H 23H 01H 00H 00H 00H 00H 01H
+                                           63   CSTRUCTMEM 43H 00000002H 000000
+                                                28H "decMac" 0AH 03H 00H 02H 24
+                                                H 01H 00H 00H 00H 00H 07H
+                                           64   CSTRUCTMEM 43H 00000002H 000000
+                                                2AH "setKey" 0AH 03H 00H 02H 25
+                                                H 01H 00H 00H 00H 00H 01H
+                                           65   CSTRUCTMEM 42H 00000002H 000000
+                                                2CH "setEnhanceAck" 0AH 03H 00H
+                                                 02H 26H 01H 00H 00H 00H 00H 00
+                                                H
+                                           66   CSTRUCTMEM 43H 00000002H 000000
+                                                2EH "getEnhanceAck" 0AH 03H 00H
+                                                 02H 27H 01H 00H 00H 00H 00H 07
+                                                H
+                                           67   CSTRUCTMEM 43H 00000002H 000000
+                                                30H "setAckTxInterval" 0AH 03H 
+                                                00H 02H 28H 01H 00H 00H 00H 00H
+                                                 07H
+                                           68   CSTRUCTMEM 43H 00000002H 000000
+                                                32H "getEdValue" 0AH 03H 00H 02
+                                                H 29H 01H 00H 00H 00H 00H 07H
+                                           69   CSTRUCTMEM 43H 00000002H 000000
+                                                34H "antSwitch" 0AH 03H 00H 02H
+                                                 2AH 01H 00H 00H 00H 00H 07H
+                                           70   CSTRUCTTAG 0000H 0000H 0011H 00
+                                                0BH 00000002H "mac_fc_alignment
+                                                "
+                                           71   CSTRUCTMEM 52H 00000003H 000000
+                                                00H "frame_type" 02H 00H 00H
+                                           72   CSTRUCTMEM 52H 00000001H 000000
+                                                03H "sec_enb" 02H 00H 00H
+                                           73   CSTRUCTMEM 52H 00000001H 000000
+                                                04H "pending" 02H 00H 00H
+                                           74   CSTRUCTMEM 52H 00000001H 000000
+                                                05H "ack_req" 02H 00H 00H
+                                           75   CSTRUCTMEM 52H 00000001H 000000
+                                                06H "panid_comp" 02H 00H 00H
+                                           76   CSTRUCTMEM 52H 00000001H 000000
+                                                07H "nop" 02H 00H 00H
+                                           77   CSTRUCTMEM 52H 00000001H 000000
+                                                08H "seq_comp" 02H 00H 00H
+                                           78   CSTRUCTMEM 52H 00000001H 000000
+                                                09H "ielist" 02H 00H 00H
+                                           79   CSTRUCTMEM 52H 00000002H 000000
+                                                0AH "dst_addr_type" 02H 00H 00H
+                                           80   CSTRUCTMEM 52H 00000002H 000000
+                                                0CH "frame_ver" 02H 00H 00H
+                                           81   CSTRUCTMEM 52H 00000002H 000000
+                                                0EH "src_addr_type" 02H 00H 00H
+                                           82   CSTRUCTTAG 0000H 0000H 001CH 00
+                                                0BH 00000020H "_Notag"
+                                           83   CSTRUCTMEM 43H 00000002H 000000
+                                                00H "mac_header" 04H 00H 06H 12
+                                                H 00H
+                                           84   CSTRUCTMEM 42H 00000001H 000000
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:   5 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                                02H "seq_num" 02H 00H 00H
+                                           85   CSTRUCTMEM 42H 00000001H 000000
+                                                03H "addr_type" 02H 00H 00H
+                                           86   CSTRUCTMEM 42H 00000002H 000000
+                                                04H "dst_panid" 02H 00H 08H
+                                           87   CSTRUCTMEM 42H 00000008H 000000
+                                                06H "dst_addr" 05H 01H 08H 00H 
+                                                00H 00H
+                                           88   CSTRUCTMEM 42H 00000002H 000000
+                                                0EH "src_panid" 02H 00H 08H
+                                           89   CSTRUCTMEM 42H 00000008H 000000
+                                                10H "src_addr" 05H 01H 08H 00H 
+                                                00H 00H
+                                           90   CSTRUCTMEM 42H 00000002H 000000
+                                                18H "raw" 04H 03H 00H 00H 00H
+                                           91   CSTRUCTMEM 43H 00000002H 000000
+                                                1AH "raw_len" 02H 00H 08H
+                                           92   CSTRUCTMEM 42H 00000002H 000000
+                                                1CH "payload" 04H 03H 00H 00H 0
+                                                0H
+                                           93   CSTRUCTMEM 43H 00000002H 000000
+                                                1EH "payload_len" 02H 00H 08H
+                                           94   CSTRUCTTAG 0000H 0000H 001BH 00
+                                                06H 0000000AH "_Notag"
+                                           95   CSTRUCTMEM 42H 00000001H 000000
+                                                00H "addrType" 02H 00H 00H
+                                           96   CSTRUCTMEM 42H 00000001H 000000
+                                                01H "senseTime" 02H 00H 00H
+                                           97   CSTRUCTMEM 42H 00000001H 000000
+                                                02H "txRetry" 02H 00H 00H
+                                           98   CSTRUCTMEM 42H 00000002H 000000
+                                                04H "txInterval" 02H 00H 08H
+                                           99   CSTRUCTMEM 42H 00000002H 000000
+                                                06H "myAddress" 02H 00H 08H
+                                          100   CSTRUCTMEM 42H 00000002H 000000
+                                                08H "ccaWait" 02H 00H 08H
+                                          101   CSTRUCTTAG 0000H 0000H 001AH 00
+                                                02H 00000004H "_Notag"
+                                          102   CSTRUCTMEM 42H 00000001H 000000
+                                                00H "rssi" 02H 00H 00H
+                                          103   CSTRUCTMEM 43H 00000002H 000000
+                                                02H "status" 02H 00H 01H
+                                          104   CSTRUCTTAG 0000H 0000H 0008H 00
+                                                03H 00000006H "_Notag"
+                                          105   CSTRUCTMEM 42H 00000002H 000000
+                                                00H "data" 04H 03H 00H 00H 00H
+                                          106   CSTRUCTMEM 42H 00000002H 000000
+                                                02H "len" 02H 00H 08H
+                                          107   CSTRUCTMEM 43H 00000002H 000000
+                                                04H "size" 02H 00H 01H
+                                          108   CSTRUCTTAG 0000H 0000H 0009H 00
+                                                04H 00000010H "_Notag"
+                                          109   CSTRUCTMEM 42H 00000001H 000000
+                                                00H "id" 02H 00H 00H
+                                          110   CSTRUCTMEM 42H 00000002H 000000
+                                                02H "buf_size" 02H 00H 08H
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:   6 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                          111   CSTRUCTMEM 43H 00000006H 000000
+                                                04H "in" 04H 00H 05H 08H 00H
+                                          112   CSTRUCTMEM 43H 00000006H 000000
+                                                0AH "out" 04H 00H 05H 08H 00H
+                                          113   CSTRUCTTAG 0000H 0000H 000CH 00
+                                                15H 00000028H "_Notag"
+                                          114   CSTRUCTMEM 42H 00000001H 000000
+                                                00H "condition" 02H 00H 00H
+                                          115   CSTRUCTMEM 42H 00000001H 000000
+                                                01H "pages" 02H 00H 00H
+                                          116   CSTRUCTMEM 42H 00000001H 000000
+                                                02H "ch" 02H 00H 00H
+                                          117   CSTRUCTMEM 42H 00000001H 000000
+                                                03H "ccaRetry" 02H 00H 00H
+                                          118   CSTRUCTMEM 42H 00000001H 000000
+                                                04H "ccaBe" 02H 00H 00H
+                                          119   CSTRUCTMEM 42H 00000001H 000000
+                                                05H "ccaCount" 02H 00H 00H
+                                          120   CSTRUCTMEM 42H 00000001H 000000
+                                                06H "txPower" 02H 00H 00H
+                                          121   CSTRUCTMEM 42H 00000001H 000000
+                                                07H "txRetry" 02H 00H 00H
+                                          122   CSTRUCTMEM 42H 00000001H 000000
+                                                08H "txMode" 02H 00H 00H
+                                          123   CSTRUCTMEM 42H 00000001H 000000
+                                                09H "sequnceNum" 02H 00H 00H
+                                          124   CSTRUCTMEM 42H 00000001H 000000
+                                                0AH "resendingNum" 02H 00H 00H
+                                          125   CSTRUCTMEM 42H 00000001H 000000
+                                                0BH "rxOnEnable" 02H 00H 00H
+                                          126   CSTRUCTMEM 42H 00000001H 000000
+                                                0CH "promiscuousMode" 02H 00H 0
+                                                0H
+                                          127   CSTRUCTMEM 42H 00000002H 000000
+                                                0EH "ack_timeout" 02H 00H 08H
+                                          128   CSTRUCTMEM 43H 00000002H 000000
+                                                10H "status" 02H 00H 01H
+                                          129   CSTRUCTMEM 42H 00000004H 000000
+                                                12H "total_send_bytes" 02H 00H 
+                                                02H
+                                          130   CSTRUCTMEM 42H 00000004H 000000
+                                                16H "start_send_time" 02H 00H 0
+                                                2H
+                                          131   CSTRUCTMEM 42H 00000004H 000000
+                                                1AH "last_send_time" 02H 00H 02
+                                                H
+                                          132   CSTRUCTMEM 43H 00000002H 000000
+                                                1EH "phy" 06H 03H 00H 00H 05H 0
+                                                9H 00H
+                                          133   CSTRUCTMEM 43H 00000006H 000000
+                                                20H "ack" 04H 00H 05H 08H 00H
+                                          134   CSTRUCTMEM 42H 00000002H 000000
+                                                26H "tx_ack_interval" 02H 00H 0
+                                                8H
+                                          135   CSTRUCTTAG 0000H 0000H 0015H 00
+                                                05H 0000000EH "mac_addr"
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:   7 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                          136   CSTRUCTMEM 42H 00000001H 000000
+                                                00H "pan_coord" 02H 00H 00H
+                                          137   CSTRUCTMEM 42H 00000001H 000000
+                                                01H "lddn_addr" 02H 00H 00H
+                                          138   CSTRUCTMEM 42H 00000002H 000000
+                                                02H "pan_id" 02H 00H 08H
+                                          139   CSTRUCTMEM 42H 00000002H 000000
+                                                04H "short_addr" 02H 00H 08H
+                                          140   CSTRUCTMEM 42H 00000008H 000000
+                                                06H "ieee_addr" 05H 01H 08H 00H
+                                                 00H 00H
+                                          141   CSTRUCTTAG 0000H 0000H 000FH 00
+                                                02H 00000004H "_Notag"
+                                          142   CSTRUCTMEM 42H 00000001H 000000
+                                                00H "enb" 02H 00H 00H
+                                          143   CSTRUCTMEM 42H 00000002H 000000
+                                                02H "data" 02H 00H 08H
+                                          144   CSTRUCTTAG 0000H 0000H 000EH 00
+                                                03H 0000000EH "fc_addr"
+                                          145   CSTRUCTMEM 43H 00000004H 000000
+                                                00H "panid" 04H 00H 05H 0FH 00H
+                                          146   CSTRUCTMEM 42H 00000001H 000000
+                                                04H "addr_type" 02H 00H 00H
+                                          147   CSTRUCTMEM 43H 00000008H 000000
+                                                06H "addr" 04H 00H 06H 10H 00H
+                                          148   CSTRUCTTAG 0000H 0000H 0013H 00
+                                                0AH 00000036H "mac_header"
+                                          149   CSTRUCTMEM 43H 00000002H 000000
+                                                00H "fc" 04H 00H 06H 12H 00H
+                                          150   CSTRUCTMEM 43H 0000000EH 000000
+                                                02H "dst" 04H 00H 05H 0EH 00H
+                                          151   CSTRUCTMEM 43H 0000000EH 000000
+                                                10H "src" 04H 00H 05H 0EH 00H
+                                          152   CSTRUCTMEM 42H 00000001H 000000
+                                                1EH "seq" 02H 00H 00H
+                                          153   CSTRUCTMEM 42H 00000001H 000000
+                                                1FH "addr_type" 02H 00H 00H
+                                          154   CSTRUCTMEM 42H 00000001H 000000
+                                                20H "rssi" 02H 00H 00H
+                                          155   CSTRUCTMEM 43H 00000006H 000000
+                                                22H "payload" 04H 00H 05H 08H 0
+                                                0H
+                                          156   CSTRUCTMEM 43H 00000006H 000000
+                                                28H "raw" 04H 00H 05H 08H 00H
+                                          157   CSTRUCTMEM 43H 00000006H 000000
+                                                2EH "input" 04H 00H 05H 08H 00H
+                                          158   CSTRUCTMEM 43H 00000002H 000000
+                                                34H "payload_offset" 02H 00H 01
+                                                H
+                                          159   CSTRUCTTAG 0000H 0000H 0014H 00
+                                                0CH 00000016H "rf_param"
+                                          160   CSTRUCTMEM 42H 00000001H 000000
+                                                00H "ch" 02H 00H 00H
+                                          161   CSTRUCTMEM 42H 00000001H 000000
+                                                01H "pages" 02H 00H 00H
+                                          162   CSTRUCTMEM 42H 00000001H 000000
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:   8 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                                02H "cca_min_be" 02H 00H 00H
+                                          163   CSTRUCTMEM 42H 00000001H 000000
+                                                03H "cca_max_be" 02H 00H 00H
+                                          164   CSTRUCTMEM 42H 00000001H 000000
+                                                04H "cca_retry" 02H 00H 00H
+                                          165   CSTRUCTMEM 42H 00000001H 000000
+                                                05H "tx_min_be" 02H 00H 00H
+                                          166   CSTRUCTMEM 42H 00000001H 000000
+                                                06H "tx_max_be" 02H 00H 00H
+                                          167   CSTRUCTMEM 42H 00000001H 000000
+                                                07H "tx_retry" 02H 00H 00H
+                                          168   CSTRUCTMEM 42H 00000001H 000000
+                                                08H "ant_sw" 02H 00H 00H
+                                          169   CSTRUCTMEM 42H 00000004H 000000
+                                                0AH "ack_timeout" 02H 00H 02H
+                                          170   CSTRUCTMEM 43H 00000004H 000000
+                                                0EH "cca_level" 02H 00H 02H
+                                          171   CSTRUCTMEM 43H 00000004H 000000
+                                                12H "tx_power" 02H 00H 02H
+                                          172   CSTRUCTTAG 0000H 0000H 0016H 00
+                                                0AH 000000FAH "mach_param"
+                                          173   CSTRUCTMEM 43H 00000002H 000000
+                                                00H "macl" 06H 03H 00H 00H 05H 
+                                                0CH 00H
+                                          174   CSTRUCTMEM 43H 0000000EH 000000
+                                                02H "my_addr" 04H 00H 05H 15H 0
+                                                0H
+                                          175   CSTRUCTMEM 43H 0000000EH 000000
+                                                10H "coord_addr" 04H 00H 05H 15
+                                                H 00H
+                                          176   CSTRUCTMEM 43H 00000036H 000000
+                                                1EH "tx" 04H 00H 05H 13H 00H
+                                          177   CSTRUCTMEM 43H 00000036H 000000
+                                                54H "rx" 04H 00H 05H 13H 00H
+                                          178   CSTRUCTMEM 43H 00000036H 000000
+                                                8AH "rx_prev" 04H 00H 05H 13H 0
+                                                0H
+                                          179   CSTRUCTMEM 43H 00000036H 000000
+                                                C0H "ack" 04H 00H 05H 13H 00H
+                                          180   CSTRUCTMEM 42H 00000001H 000000
+                                                F6H "coordinator" 02H 00H 00H
+                                          181   CSTRUCTMEM 42H 00000001H 000000
+                                                F7H "sending" 02H 00H 00H
+                                          182   CSTRUCTMEM 43H 00000002H 000000
+                                                F8H "rf" 06H 03H 00H 00H 05H 14
+                                                H 00H
+                                          183   CSTRUCTTAG 0000H 0000H 000DH 00
+                                                04H 0000000EH "ieee802154_my_ad
+                                                dr"
+                                          184   CSTRUCTMEM 42H 00000002H 000000
+                                                00H "pan_id" 02H 00H 08H
+                                          185   CSTRUCTMEM 42H 00000002H 000000
+                                                02H "short_addr" 02H 00H 08H
+                                          186   CSTRUCTMEM 42H 00000008H 000000
+                                                04H "ieee_addr" 05H 01H 08H 00H
+                                                 00H 00H
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:   9 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                          187   CSTRUCTMEM 42H 00000001H 000000
+                                                0CH "pan_coord" 02H 00H 00H
+                                          188   CSTRUCTTAG 0000H 0000H 0006H 00
+                                                02H 00000008H "_Notag"
+                                          189   CSTRUCTMEM 43H 00000004H 000000
+                                                00H "quot" 02H 00H 02H
+                                          190   CSTRUCTMEM 43H 00000004H 000000
+                                                04H "rem" 02H 00H 02H
+                                          191   CSTRUCTTAG 0000H 0000H 0005H 00
+                                                02H 00000004H "_Notag"
+                                          192   CSTRUCTMEM 43H 00000002H 000000
+                                                00H "quot" 02H 00H 01H
+                                          193   CSTRUCTMEM 43H 00000002H 000000
+                                                02H "rem" 02H 00H 01H
+                                          194   CSTRUCTTAG 0000H 0000H 0004H 00
+                                                05H 0000000AH "_Notag"
+                                          195   CSTRUCTMEM 43H 00000002H 000000
+                                                00H "write" 0AH 03H 00H 02H 7BH
+                                                 00H 00H 00H 00H 00H 07H
+                                          196   CSTRUCTMEM 42H 00000002H 000000
+                                                02H "read" 0AH 03H 00H 02H 7CH 
+                                                00H 00H 00H 00H 00H 08H
+                                          197   CSTRUCTMEM 43H 00000002H 000000
+                                                04H "erase" 0AH 03H 00H 02H 7DH
+                                                 00H 00H 00H 00H 00H 07H
+                                          198   CSTRUCTMEM 43H 00000002H 000000
+                                                06H "write_byte" 0AH 03H 00H 02
+                                                H 7EH 00H 00H 00H 00H 00H 07H
+                                          199   CSTRUCTMEM 42H 00000002H 000000
+                                                08H "read_byte" 0AH 03H 00H 02H
+                                                 7FH 00H 00H 00H 00H 00H 00H
+                                          200   CSTRUCTTAG 0000H 0000H 0003H 00
+                                                08H 00000010H "_Notag"
+                                          201   CSTRUCTMEM 43H 00000002H 000000
+                                                00H "init" 0AH 03H 00H 02H 68H 
+                                                00H 00H 00H 00H 00H 07H
+                                          202   CSTRUCTMEM 43H 00000002H 000000
+                                                02H "p" 0AH 03H 00H 02H 69H 00H
+                                                 00H 00H 00H 00H 01H
+                                          203   CSTRUCTMEM 43H 00000002H 000000
+                                                04H "l" 0AH 03H 00H 02H 6AH 00H
+                                                 00H 00H 00H 00H 01H
+                                          204   CSTRUCTMEM 43H 00000002H 000000
+                                                06H "f" 0AH 03H 00H 02H 6BH 00H
+                                                 00H 00H 00H 00H 01H
+                                          205   CSTRUCTMEM 43H 00000002H 000000
+                                                08H "d" 0AH 03H 00H 02H 6CH 00H
+                                                 00H 00H 00H 00H 01H
+                                          206   CSTRUCTMEM 43H 00000002H 000000
+                                                0AH "ln" 0AH 03H 00H 02H 6DH 00
+                                                H 00H 00H 00H 00H 01H
+                                          207   CSTRUCTMEM 43H 00000002H 000000
+                                                0CH "status" 0AH 03H 00H 02H 6E
+                                                H 00H 00H 00H 00H 00H 01H
+                                          208   CSTRUCTMEM 43H 00000002H 000000
+                                                0EH "len" 0AH 03H 00H 02H 6FH 0
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:  10 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                                0H 00H 00H 00H 00H 01H
+                                          209   CSTRUCTTAG 0000H 0000H 0002H 00
+                                                0FH 0000001EH "_Notag"
+                                          210   CSTRUCTMEM 43H 00000002H 000000
+                                                00H "begin" 0AH 03H 00H 02H 59H
+                                                 00H 00H 00H 00H 00H 07H
+                                          211   CSTRUCTMEM 43H 00000002H 000000
+                                                02H "end" 0AH 03H 00H 02H 5AH 0
+                                                0H 00H 00H 00H 00H 07H
+                                          212   CSTRUCTMEM 43H 00000002H 000000
+                                                04H "available" 0AH 03H 00H 02H
+                                                 5BH 00H 00H 00H 00H 00H 01H
+                                          213   CSTRUCTMEM 43H 00000002H 000000
+                                                06H "read" 0AH 03H 00H 02H 5CH 
+                                                00H 00H 00H 00H 00H 01H
+                                          214   CSTRUCTMEM 43H 00000002H 000000
+                                                08H "peek" 0AH 03H 00H 02H 5DH 
+                                                00H 00H 00H 00H 00H 01H
+                                          215   CSTRUCTMEM 43H 00000002H 000000
+                                                0AH "flush" 0AH 03H 00H 02H 5EH
+                                                 00H 00H 00H 00H 00H 07H
+                                          216   CSTRUCTMEM 42H 00000002H 000000
+                                                0CH "print" 0AH 03H 00H 02H 5FH
+                                                 00H 00H 00H 00H 00H 01H
+                                          217   CSTRUCTMEM 42H 00000002H 000000
+                                                0EH "println" 0AH 03H 00H 02H 6
+                                                0H 00H 00H 00H 00H 00H 01H
+                                          218   CSTRUCTMEM 42H 00000002H 000000
+                                                10H "print_long" 0AH 03H 00H 02
+                                                H 61H 00H 00H 00H 00H 00H 01H
+                                          219   CSTRUCTMEM 42H 00000002H 000000
+                                                12H "println_long" 0AH 03H 00H 
+                                                02H 62H 00H 00H 00H 00H 00H 01H
+                                          220   CSTRUCTMEM 42H 00000002H 000000
+                                                14H "print_double" 0AH 03H 00H 
+                                                02H 63H 00H 00H 00H 00H 00H 01H
+                                          221   CSTRUCTMEM 42H 00000002H 000000
+                                                16H "println_double" 0AH 03H 00
+                                                H 02H 64H 00H 00H 00H 00H 00H 0
+                                                1H
+                                          222   CSTRUCTMEM 42H 00000002H 000000
+                                                18H "write" 0AH 03H 00H 02H 65H
+                                                 00H 00H 00H 00H 00H 01H
+                                          223   CSTRUCTMEM 42H 00000002H 000000
+                                                1AH "write_byte" 0AH 03H 00H 02
+                                                H 66H 00H 00H 00H 00H 00H 01H
+                                          224   CSTRUCTMEM 43H 00000002H 000000
+                                                1CH "tx_available" 0AH 03H 00H 
+                                                02H 67H 00H 00H 00H 00H 00H 01H
+                                          225   CSTRUCTTAG 0000H 0000H 0000H 00
+                                                08H 00000001H "_Notag"
+                                          226   CSTRUCTMEM 52H 00000001H 000000
+                                                00H "b0" 02H 00H 00H
+                                          227   CSTRUCTMEM 52H 00000001H 000000
+                                                01H "b1" 02H 00H 00H
+                                          228   CSTRUCTMEM 52H 00000001H 000000
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:  11 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                                02H "b2" 02H 00H 00H
+                                          229   CSTRUCTMEM 52H 00000001H 000000
+                                                03H "b3" 02H 00H 00H
+                                          230   CSTRUCTMEM 52H 00000001H 000000
+                                                04H "b4" 02H 00H 00H
+                                          231   CSTRUCTMEM 52H 00000001H 000000
+                                                05H "b5" 02H 00H 00H
+                                          232   CSTRUCTMEM 52H 00000001H 000000
+                                                06H "b6" 02H 00H 00H
+                                          233   CSTRUCTMEM 52H 00000001H 000000
+                                                07H "b7" 02H 00H 00H
+                                          234   CUNIONTAG 0000H 0000H 0012H 000
+                                                3H 00000002H "mac_frame_control
+                                                "
+                                          235   CUNIONMEM 42H 00000002H "fc8" 0
+                                                5H 01H 02H 00H 00H 00H
+                                          236   CUNIONMEM 42H 00000002H "fc16" 
+                                                02H 00H 08H
+                                          237   CUNIONMEM 43H 00000002H "fc_bit
+                                                " 04H 00H 05H 11H 00H
+                                          238   CUNIONTAG 0000H 0000H 0010H 000
+                                                3H 00000008H "_Notag"
+                                          239   CUNIONMEM 42H 00000002H "short_
+                                                addr" 02H 00H 08H
+                                          240   CUNIONMEM 42H 00000002H "lddn_a
+                                                ddr" 02H 00H 08H
+                                          241   CUNIONMEM 42H 00000008H "ieee_a
+                                                ddr" 05H 01H 08H 00H 00H 00H
+                                          242   CUNIONTAG 0000H 0000H 0007H 000
+                                                2H 00000008H "_Notag"
+                                          243   CUNIONMEM 42H 00000008H "_W" 05
+                                                H 01H 04H 00H 00H 08H
+                                          244   CUNIONMEM 43H 00000008H "_D" 02
+                                                H 00H 04H
+                                          245   CENUMTAG 0000H 0000H 0019H 0002
+                                                H "_Notag"
+                                          246   CENUMMEM 00000014H "SUBGHZ_PWR_
+                                                20MW"
+                                          247   CENUMMEM 00000001H "SUBGHZ_PWR_
+                                                1MW"
+                                          248   CENUMTAG 0000H 0000H 0018H 0002
+                                                H "_Notag"
+                                          249   CENUMMEM 00000064H "SUBGHZ_100K
+                                                BPS"
+                                          250   CENUMMEM 00000032H "SUBGHZ_50KB
+                                                PS"
+                                          251   CENUMTAG 0000H 0000H 0017H 0012
+                                                H "_Notag"
+                                          252   CENUMMEM 00000000H "SUBGHZ_OK"
+                                          253   CENUMMEM 00000001H "SUBGHZ_RESE
+                                                T_FAIL"
+                                          254   CENUMMEM 00000002H "SUBGHZ_SETU
+                                                P_FAIL"
+                                          255   CENUMMEM 00000003H "SUBGHZ_SLEE
+                                                P_FAIL"
+                                          256   CENUMMEM 00000004H "SUBGHZ_WAKE
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:  12 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                                UP_FAIL"
+                                          257   CENUMMEM 00000005H "SUBGHZ_MYAD
+                                                DR_FAIL"
+                                          258   CENUMMEM 00000006H "SUBGHZ_SETF
+                                                IL_FAIL"
+                                          259   CENUMMEM 00000007H "SUBGHZ_TX_C
+                                                OMP_FAIL"
+                                          260   CENUMMEM 00000008H "SUBGHZ_TX_F
+                                                AIL"
+                                          261   CENUMMEM 00000009H "SUBGHZ_TX_C
+                                                CA_FAIL"
+                                          262   CENUMMEM 0000000AH "SUBGHZ_TX_A
+                                                CK_FAIL"
+                                          263   CENUMMEM 0000000BH "SUBGHZ_RX_E
+                                                NB_FAIL"
+                                          264   CENUMMEM 0000000CH "SUBGHZ_RX_D
+                                                IS_FAIL"
+                                          265   CENUMMEM 0000000DH "SUBGHZ_RX_C
+                                                OMP_FAIL"
+                                          266   CENUMMEM 0000000EH "SUBGHZ_PANI
+                                                D"
+                                          267   CENUMMEM 0000000FH "SUBGHZ_ERR_
+                                                ADDRTYPE"
+                                          268   CENUMMEM 00000010H "SUBGHZ_TTL_
+                                                SEND_OVR"
+                                          269   CENUMMEM 00000011H "SUBGHZ_DUMM
+                                                Y"
+                                          270   CENUMTAG 0000H 0000H 000BH 000E
+                                                H "_Notag"
+                                          271   CENUMMEM 00000000H "SUBGHZ_ST_T
+                                                X_START"
+                                          272   CENUMMEM 00000001H "SUBGHZ_ST_C
+                                                CA_FAST"
+                                          273   CENUMMEM 00000002H "SUBGHZ_ST_C
+                                                CA_IDLE_DETECT"
+                                          274   CENUMMEM 00000003H "SUBGHZ_ST_C
+                                                CA_ABORT"
+                                          275   CENUMMEM 00000004H "SUBGHZ_ST_C
+                                                CA_RETRY"
+                                          276   CENUMMEM 00000005H "SUBGHZ_ST_C
+                                                CA_FAILURE"
+                                          277   CENUMMEM 00000006H "SUBGHZ_ST_C
+                                                CA_DONE"
+                                          278   CENUMMEM 00000007H "SUBGHZ_ST_T
+                                                X_DONE"
+                                          279   CENUMMEM 00000008H "SUBGHZ_ST_T
+                                                X_ACK_TIMEOUT"
+                                          280   CENUMMEM 00000009H "SUBGHZ_ST_T
+                                                X_ACK_DONE"
+                                          281   CENUMMEM 0000000AH "SUBGHZ_ST_R
+                                                X_START"
+                                          282   CENUMMEM 0000000BH "SUBGHZ_ST_R
+                                                X_DONE"
+                                          283   CENUMMEM 0000000CH "SUBGHZ_ST_R
+                                                X_ACK_DONE"
+                                          284   CENUMMEM 0000000DH "SUBGHZ_ST_N
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:  13 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                                ONE"
+                                          285   CENUMTAG 0000H 0000H 000AH 0005
+                                                H "_Notag"
+                                          286   CENUMMEM 00000000H "CCA_IDLE"
+                                          287   CENUMMEM 00000001H "CCA_FAST"
+                                          288   CENUMMEM 00000002H "IDLE_DETECT
+                                                "
+                                          289   CENUMMEM 00000003H "CCA_RETRY"
+                                          290   CENUMMEM 00000004H "CCA_FAILURE
+                                                "
+                                          291   CENUMTAG 0000H 0000H 0001H 0003
+                                                H "_Notag"
+                                          292   CENUMMEM 00000001H "HALT_I2C1_E
+                                                ND"
+                                          293   CENUMMEM 00000002H "HALT_I2C0_E
+                                                ND"
+                                          294   CENUMMEM 00000003H "HALT_DELAY"
+                                          295   CTYPEDEF 0000H 0000H 43H "SUBGH
+                                                Z_POWER" 04H 00H 0AH 19H 00H
+                                          296   CTYPEDEF 0000H 0000H 01H "_Dcon
+                                                st" 04H 00H 06H 07H 00H
+                                          297   CTYPEDEF 0000H 0000H 43H "SubGH
+                                                z_CTRL" 04H 00H 05H 1DH 00H
+                                          298   CTYPEDEF 0000H 0000H 43H "INT8"
+                                                 02H 00H 00H
+                                          299   CTYPEDEF 0000H 0000H 43H "SPI0C
+                                                lass" 04H 00H 05H 1EH 00H
+                                          300   CTYPEDEF 0000H 0000H 43H "PHY_P
+                                                ARAM" 04H 00H 05H 09H 00H
+                                          301   CTYPEDEF 0000H 0000H 43H "SUBGH
+                                                Z_PARAM" 04H 00H 05H 1BH 00H
+                                          302   CTYPEDEF 0000H 0000H 43H "_Ptrd
+                                                ifft" 02H 00H 01H
+                                          303   CTYPEDEF 0000H 0000H 43H "SUBGH
+                                                Z_MSG" 04H 00H 0AH 17H 00H
+                                          304   CTYPEDEF 0000H 0000H 42H "bool"
+                                                 02H 00H 00H
+                                          305   CTYPEDEF 0000H 0000H 43H "t_pri
+                                                nt" 04H 00H 05H 03H 00H
+                                          306   CTYPEDEF 0000H 0000H 42H "byte"
+                                                 02H 00H 00H
+                                          307   CTYPEDEF 0000H 0000H 43H "INT32
+                                                " 02H 00H 02H
+                                          308   CTYPEDEF 0000H 0000H 43H "INT16
+                                                " 02H 00H 01H
+                                          309   CTYPEDEF 0000H 0000H 42H "_Size
+                                                t" 02H 00H 01H
+                                          310   CTYPEDEF 0000H 0000H 43H "SUBGH
+                                                Z_MAC_STATE" 04H 00H 0AH 0BH 00
+                                                H
+                                          311   CTYPEDEF 0000H 0000H 43H "MACL_
+                                                PARAM" 04H 00H 05H 0CH 00H
+                                          312   CTYPEDEF 0000H 0000H 42H "BOOLE
+                                                AN" 02H 00H 00H
+                                          313   CTYPEDEF 0000H 0000H 43H "SUBGH
+                                                Z_MAC_PARAM" 04H 00H 05H 1CH 00
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:  14 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                                H
+                                          314   CTYPEDEF 0000H 0000H 42H "UCHAR
+                                                " 02H 00H 00H
+                                          315   CTYPEDEF 0000H 0000H 43H "SUBGH
+                                                Z_STATUS" 04H 00H 05H 1AH 00H
+                                          316   CTYPEDEF 0000H 0000H 42H "size_
+                                                t" 02H 00H 01H
+                                          317   CTYPEDEF 0000H 0000H 42H "uint8
+                                                _t" 02H 00H 00H
+                                          318   CTYPEDEF 0000H 0000H 43H "SUBGH
+                                                Z_RATE" 04H 00H 0AH 18H 00H
+                                          319   CTYPEDEF 0000H 0000H 43H "BUFFE
+                                                R" 04H 00H 05H 08H 00H
+                                          320   CTYPEDEF 0000H 0000H 43H "int8_
+                                                t" 02H 00H 00H
+                                          321   CTYPEDEF 0000H 0000H 43H "int16
+                                                _t" 02H 00H 08H
+                                          322   CTYPEDEF 0000H 0000H 43H "int32
+                                                _t" 02H 00H 02H
+                                          323   CTYPEDEF 0000H 0000H 42H "UINT8
+                                                " 02H 00H 00H
+                                          324   CTYPEDEF 0000H 0000H 43H "DATAF
+                                                LASH" 04H 00H 05H 04H 00H
+                                          325   CTYPEDEF 0000H 0000H 43H "FIFO_
+                                                CTRL" 04H 00H 05H 1FH 00H
+                                          326   CTYPEDEF 0000H 0000H 03H "_Cmpf
+                                                un_nf" 08H 02H 84H 00H 00H 00H 
+                                                00H 00H 01H
+                                          327   CTYPEDEF 0000H 0000H 03H "_Cmpf
+                                                un_nn" 08H 02H 83H 00H 00H 00H 
+                                                00H 00H 01H
+                                          328   CTYPEDEF 0000H 0000H 43H "CHAR"
+                                                 02H 00H 00H
+                                          329   CTYPEDEF 0000H 0000H 43H "Hardw
+                                                areSerial" 04H 00H 05H 02H 00H
+                                          330   CTYPEDEF 0000H 0000H 03H "_Cmpf
+                                                un_ff" 08H 02H 86H 00H 00H 00H 
+                                                00H 00H 01H
+                                          331   CTYPEDEF 0000H 0000H 03H "_Cmpf
+                                                un_fn" 08H 02H 85H 00H 00H 00H 
+                                                00H 00H 01H
+                                          332   CTYPEDEF 0000H 0000H 42H "UINT1
+                                                6" 02H 00H 01H
+                                          333   CTYPEDEF 0000H 0000H 42H "UINT3
+                                                2" 02H 00H 02H
+                                          334   CTYPEDEF 0000H 0000H 42H "boole
+                                                an" 02H 00H 00H
+                                          335   CTYPEDEF 0000H 0000H 42H "word"
+                                                 02H 00H 01H
+                                          336   CTYPEDEF 0000H 0000H 42H "BOOL"
+                                                 02H 00H 00H
+                                          337   CTYPEDEF 0000H 0000H 43H "HALT_
+                                                EVENT" 04H 00H 0AH 01H 00H
+                                          338   CTYPEDEF 0000H 0000H 43H "CCA_S
+                                                TATE" 04H 00H 0AH 0AH 00H
+                                          339   CTYPEDEF 0000H 0000H 43H "div_t
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:  15 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                                " 04H 00H 05H 05H 00H
+                                          340   CTYPEDEF 0000H 0000H 43H "ldiv_
+                                                t" 04H 00H 05H 06H 00H
+                                          341   CTYPEDEF 0000H 0000H 42H "uint3
+                                                2_t" 02H 00H 02H
+                                          342   CTYPEDEF 0000H 0000H 43H "_BYTE
+                                                _FIELD" 04H 00H 05H 00H 00H
+                                          343   CTYPEDEF 0000H 0000H 42H "uint1
+                                                6_t" 02H 00H 08H
+                                          344   CGLOBAL 01H 01H 0010H "SPI0" 04
+                                                H 00H 05H 1EH 00H
+                                          345   CSGLOBAL 42H 0002H "_spi0_mod" 
+                                                02H 00H 01H
+                                          346   CFILE 0001H 0000007BH "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\commo
+                                                n.h"
+                                          347   CFILE 0002H 00000F42H "C:\\Lazu
+                                                riteIDE\\bin\\U8Dev\\Inc\\ml620
+                                                504F.h"
+                                          348   CFILE 0003H 000000C9H "C:\\Lazu
+                                                riteIDE\\bin\\U8Dev\\Inc\\strin
+                                                g.h"
+                                          349   CFILE 0004H 0000007AH "C:\\Lazu
+                                                riteIDE\\bin\\U8Dev\\Inc\\yvals
+                                                .h"
+                                          350   CFILE 0005H 00000022H "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\ML620
+                                                Q~1\\MCU_SM~1\\mcu.h"
+                                          351   CFILE 0006H 00000045H "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\ML620
+                                                Q~1\\common\\rdwr_reg.h"
+                                          352   CFILE 0007H 00000047H "C:\\LAZU
+                                                RI~1\\hardware\\lazurite_subghz
+                                                \\SUB_GHZ\\hwif\\spi0.h"
+                                          353   CFILE 0008H 00000042H "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\lazur
+                                                ite\\lazurite.h"
+                                          354   CFILE 0009H 0000002BH "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\lazur
+                                                ite\\analogio.h"
+                                          355   CFILE 000AH 0000002BH "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\lazur
+                                                ite\\digitalio.h"
+                                          356   CFILE 000BH 00000041H "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\lazur
+                                                ite\\pin_assignment.h"
+                                          357   CFILE 000CH 00000051H "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\lazur
+                                                ite\\lazurite_system.h"
+                                          358   CFILE 000DH 00000045H "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\lazur
+                                                ite\\serial.h"
+                                          359   CFILE 000EH 0000002DH "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\lazur
+                                                ite\\print.h"
+                                          360   CFILE 000FH 0000002DH "C:\\LAZU
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:  16 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                                RI~1\\hardware\\LAZURI~2\\lazur
+                                                ite\\wiring_shift.h"
+                                          361   CFILE 0010H 0000002CH "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\lazur
+                                                ite\\wiring_pulse.h"
+                                          362   CFILE 0011H 0000002DH "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\lazur
+                                                ite\\WInterrupts.h"
+                                          363   CFILE 0012H 0000002DH "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\lazur
+                                                ite\\WMath.h"
+                                          364   CFILE 0013H 00000031H "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\lazur
+                                                ite\\flash.h"
+                                          365   CFILE 0014H 0000002DH "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\lazur
+                                                ite\\tone.h"
+                                          366   CFILE 0015H 000000DAH "C:\\Lazu
+                                                riteIDE\\bin\\U8Dev\\Inc\\stdli
+                                                b.h"
+                                          367   CFILE 0016H 0000004FH "C:\\Lazu
+                                                riteIDE\\bin\\U8Dev\\Inc\\math.
+                                                h"
+                                          368   CFILE 0017H 00000082H "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\sub_g
+                                                hz\\subghz_api.h"
+                                          369   CFILE 0018H 0000009EH "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\sub_g
+                                                hz\\mach.h"
+                                          370   CFILE 0019H 00000064H "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\sub_g
+                                                hz\\macl.h"
+                                          371   CFILE 001AH 00000032H "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\sub_g
+                                                hz\\common_subghz.h"
+                                          372   CFILE 001BH 00000062H "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\sub_g
+                                                hz\\phy.h"
+                                          373   CFILE 001CH 0000003DH "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\sub_g
+                                                hz\\endian.h"
+                                          374   CFILE 001DH 00000022H "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\ML620
+                                                Q~1\\lp\\lp_manage.h"
+                                          375   CFILE 001EH 00000053H "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\ML620
+                                                Q~1\\driver_uart.h"
+                                          376   CFILE 001FH 0000006FH "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\ML620
+                                                Q~1\\driver_irq.h"
+                                          377   CFILE 0020H 00000331H "C:\\LAZU
+                                                RI~1\\hardware\\LAZURI~2\\ML620
+                                                Q~1\\irq\\irq.h"
+                                          378   CFILE 0000H 000000DAH "C:\\LAZU
+                                                RI~1\\hardware\\lazurite_subghz
+                                                \\SUB_GHZ\\hwif\\spi0.c"
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:  17 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                          379   
+  --------------------------              380           rseg $$_spi0_transfer$s
+                                                pi0
+                                          381   CFUNCTION 355
+                                          382   
+00:0000                                   383   __spi0_transfer :
+                                          384   CBLOCK 355 1 98
+                                          385   
+                                          386   ;;{
+                                          387   CLINEA 0000H 0001H 0062H 0001H 
+                                                0001H
+                                          388   ;;*****************************
+                                                ************
+                                          389   ;;      register/stack informat
+                                                ion
+                                          390   ;;*****************************
+                                                ************
+                                          391   ;;*****************************
+                                                ************
+                                          392   
+00:0000 CE-F8               [------]      393           push    lr
+                                          394   CBLOCK 355 2 98
+                                          395   CRET 0000H
+                                          396   CARGUMENT 46H 0001H 0014H "_dat
+                                                a" 02H 00H 00H
+                                          397   CLOCAL 46H 0001H 0014H 0002H "r
+                                                es" 02H 00H 00H
+                                          398   
+                                          399   ;;      write_reg8(SIO0BUFL,_da
+                                                ta);
+                                          400   CLINEA 0000H 0001H 0064H 0002H 
+                                                001CH
+00:0002 11-90 00-F7         [------]      401           st      r0,     0f700h
+                                          402   
+                                          403   ;;      set_bit(S0EN);
+                                          404   CLINEA 0000H 0001H 0065H 0002H 
+                                                000FH
+00:0006 80-A0 02-F7         [-Z----]      405           sb      0f702h.0
+                                          406   
+                                          407   ;;      } 
+                                          408   CLINEA 0000H 0000H 006EH 0002H 
+                                                0003H
+00:000A                                   409   _$L1 :
+                                          410   
+                                          411   ;;      while(get_bit(S0EN)==1)
+                                          412   CLINEA 0000H 0000H 0069H 0000H 
+                                                0000H
+00:000A 81-A0 02-F7         [-Z----]      413           tb      0f702h.0
+00:000E 03 C8               [------]      414           bne     _$L3
+                                          415   
+                                          416   ;;      res = SIO0BUFL;
+                                          417   CLINEA 0000H 0001H 0071H 0002H 
+                                                0010H
+00:0010 10-90 00-F7         [-ZS---]      418           l       r0,     0f700h
+                                          419   
+                                          420   ;;      return res;
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:  18 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                          421   CLINEA 0000H 0001H 0072H 0002H 
+                                                000CH
+                                          422   CBLOCKEND 355 2 115
+                                          423   
+                                          424   ;;}
+                                          425   CLINEA 0000H 0000H 0073H 0001H 
+                                                0001H
+00:0014 8E-F2               [------]      426           pop     pc
+                                          427   
+                                          428   ;;      while(get_bit(S0EN)==1)
+                                          429   CLINEA 0000H 0000H 0069H 0002H 
+                                                0018H
+00:0016                                   430   _$L3 :
+                                          431   CBLOCK 355 3 106
+                                          432   
+                                          433   ;;              uart_check_irq(
+                                                );
+                                          434   CLINEA 0000H 0001H 006CH 0003H 
+                                                0013H
+00:0016 01-F0'00-00'        [------]      435           bl      _uart_check_irq
+                                          436   
+                                          437   ;;              continue;
+                                          438   CLINEA 0000H 0001H 006DH 0003H 
+                                                000BH
+00:001A F7 CE               [------]      439           bal     _$L1
+                                          440   CBLOCKEND 355 3 110
+                                          441   CBLOCKEND 355 1 115
+                                          442   CFUNCTIONEND 355
+                                          443   
+                                          444   
+  --------------------------              445           rseg $$_spi0_attachInte
+                                                rrupt$spi0
+                                          446   CFUNCTION 356
+                                          447   
+00:0000                                   448   __spi0_attachInterrupt  :
+                                          449   CBLOCK 356 1 117
+                                          450   
+                                          451   ;;{
+                                          452   CLINEA 0000H 0001H 0075H 0001H 
+                                                0001H
+                                          453   ;;*****************************
+                                                ************
+                                          454   ;;      register/stack informat
+                                                ion
+                                          455   ;;*****************************
+                                                ************
+                                          456   ;;*****************************
+                                                ************
+                                          457   
+                                          458   CBLOCK 356 2 117
+                                          459   CBLOCKEND 356 2 119
+                                          460   
+                                          461   ;;}
+                                          462   CLINEA 0000H 0001H 0077H 0001H 
+                                                0001H
+00:0000 1F-FE               [------]      463           rt
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:  19 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                          464   CBLOCKEND 356 1 119
+                                          465   CFUNCTIONEND 356
+                                          466   
+                                          467   
+  --------------------------              468           rseg $$_spi0_detachInte
+                                                rrupt$spi0
+                                          469   CFUNCTION 357
+                                          470   
+00:0000                                   471   __spi0_detachInterrupt  :
+                                          472   CBLOCK 357 1 121
+                                          473   
+                                          474   ;;{
+                                          475   CLINEA 0000H 0001H 0079H 0001H 
+                                                0001H
+                                          476   ;;*****************************
+                                                ************
+                                          477   ;;      register/stack informat
+                                                ion
+                                          478   ;;*****************************
+                                                ************
+                                          479   ;;*****************************
+                                                ************
+                                          480   
+                                          481   CBLOCK 357 2 121
+                                          482   CBLOCKEND 357 2 123
+                                          483   
+                                          484   ;;}
+                                          485   CLINEA 0000H 0001H 007BH 0001H 
+                                                0001H
+00:0000 1F-FE               [------]      486           rt
+                                          487   CBLOCKEND 357 1 123
+                                          488   CFUNCTIONEND 357
+                                          489   
+                                          490   
+  --------------------------              491           rseg $$_spi0_begin$spi0
+                                          492   CFUNCTION 358
+                                          493   
+00:0000                                   494   __spi0_begin    :
+                                          495   CBLOCK 358 1 125
+                                          496   
+                                          497   ;;{
+                                          498   CLINEA 0000H 0001H 007DH 0001H 
+                                                0001H
+                                          499   ;;*****************************
+                                                ************
+                                          500   ;;      register/stack informat
+                                                ion
+                                          501   ;;*****************************
+                                                ************
+                                          502   ;;*****************************
+                                                ************
+                                          503   
+                                          504   CBLOCK 358 2 125
+                                          505   
+                                          506   ;;      clear_bit(DSIO0);      
+                                                                               
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:  20 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                                  // BLKCON  SPI enable
+                                          507   CLINEA 0000H 0001H 0080H 0002H 
+                                                002CH
+00:0000 82-A0 6A-F0         [-Z----]      508           rb      0f06ah.0
+                                          509   
+                                          510   ;;      write_reg16(SIO0MOD, _s
+                                                pi0_mod);                // 
+                                          511   CLINEA 0000H 0001H 0081H 0002H 
+                                                0026H
+00:0004 12-90 00-00'        [-ZS---]      512           l       er0,    NEAR __
+                                                spi0_mod
+00:0008 13-90 04-F7         [------]      513           st      er0,    0f704h
+                                          514   
+                                          515   ;;      P0DIR &= ~SPI0_GPIO_MAS
+                                                K8;
+                                          516   CLINEA 0000H 0001H 0088H 0002H 
+                                                001BH
+00:000C 10-90 11-F2         [-ZS---]      517           l       r0,     0f211h
+00:0010 F8 20               [-ZS---]      518           and     r0,     #0f8h
+00:0012 11-90 11-F2         [------]      519           st      r0,     0f211h
+                                          520   
+                                          521   ;;      P0DIR |= SPI0_GPIO_DIR;
+                                          522   CLINEA 0000H 0001H 0089H 0002H 
+                                                0018H
+00:0016 90-A0 11-F2         [-Z----]      523           sb      0f211h.1
+                                          524   
+                                          525   ;;      P0CON &= ~SPI0_GPIO_MAS
+                                                K16;
+                                          526   CLINEA 0000H 0001H 008BH 0002H 
+                                                001CH
+00:001A 12-90 12-F2         [-ZS---]      527           l       er0,    0f212h
+00:001E F8 20               [-ZS---]      528           and     r0,     #0f8h
+00:0020 F8 21               [-ZS---]      529           and     r1,     #0f8h
+00:0022 13-90 12-F2         [------]      530           st      er0,    0f212h
+                                          531   
+                                          532   ;;      P0CON |= SPI0_GPIO_CON;
+                                          533   CLINEA 0000H 0001H 008CH 0002H 
+                                                0018H
+00:0026 12-90 12-F2         [-ZS---]      534           l       er0,    0f212h
+00:002A 07 30               [-ZS---]      535           or      r0,     #07h
+00:002C 07 31               [-ZS---]      536           or      r1,     #07h
+00:002E 13-90 12-F2         [------]      537           st      er0,    0f212h
+                                          538   
+                                          539   ;;      P0MOD &= ~SPI0_GPIO_MAS
+                                                K16;
+                                          540   CLINEA 0000H 0001H 008EH 0002H 
+                                                001CH
+00:0032 12-90 14-F2         [-ZS---]      541           l       er0,    0f214h
+00:0036 F8 20               [-ZS---]      542           and     r0,     #0f8h
+00:0038 F8 21               [-ZS---]      543           and     r1,     #0f8h
+00:003A 13-90 14-F2         [------]      544           st      er0,    0f214h
+                                          545   
+                                          546   ;;      P0MOD |= SPI0_GPIO_MOD;
+                                          547   CLINEA 0000H 0001H 008FH 0002H 
+                                                0018H
+00:003E 12-90 14-F2         [-ZS---]      548           l       er0,    0f214h
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:  21 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+00:0042 07 31               [-ZS---]      549           or      r1,     #07h
+00:0044 13-90 14-F2         [------]      550           st      er0,    0f214h
+                                          551   
+                                          552   ;;      SPI0_CSB(HIGH);
+                                          553   CLINEA 0000H 0001H 0093H 0002H 
+                                                0010H
+00:0048 80-A0 18-F2         [-Z----]      554           sb      0f218h.0
+                                          555   
+                                          556   ;;      clear_bit(P11DIR);
+                                          557   CLINEA 0000H 0001H 0094H 0002H 
+                                                0013H
+00:004C 92-A0 19-F2         [-Z----]      558           rb      0f219h.1
+                                          559   
+                                          560   ;;      set_bit(P11C1);
+                                          561   CLINEA 0000H 0001H 0095H 0002H 
+                                                0010H
+00:0050 90-A0 1B-F2         [-Z----]      562           sb      0f21bh.1
+                                          563   
+                                          564   ;;      set_bit(P11C0);
+                                          565   CLINEA 0000H 0001H 0096H 0002H 
+                                                0010H
+00:0054 90-A0 1A-F2         [-Z----]      566           sb      0f21ah.1
+                                          567   CBLOCKEND 358 2 152
+                                          568   
+                                          569   ;;}
+                                          570   CLINEA 0000H 0001H 0098H 0001H 
+                                                0001H
+00:0058 1F-FE               [------]      571           rt
+                                          572   CBLOCKEND 358 1 152
+                                          573   CFUNCTIONEND 358
+                                          574   
+                                          575   
+  --------------------------              576           rseg $$_spi0_end$spi0
+                                          577   CFUNCTION 359
+                                          578   
+00:0000                                   579   __spi0_end      :
+                                          580   CBLOCK 359 1 154
+                                          581   
+                                          582   ;;{
+                                          583   CLINEA 0000H 0001H 009AH 0001H 
+                                                0001H
+                                          584   ;;*****************************
+                                                ************
+                                          585   ;;      register/stack informat
+                                                ion
+                                          586   ;;*****************************
+                                                ************
+                                          587   ;;*****************************
+                                                ************
+                                          588   
+                                          589   CBLOCK 359 2 154
+                                          590   
+                                          591   ;;      SPI0_CSB(HIGH);
+                                          592   CLINEA 0000H 0001H 009BH 0002H 
+                                                0010H
+00:0000 80-A0 18-F2         [-Z----]      593           sb      0f218h.0
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:  22 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                          594   
+                                          595   ;;      set_bit(DSIO0);        
+                                                         // BLKCON  SPI disenab
+                                                le
+                                          596   CLINEA 0000H 0001H 009CH 0002H 
+                                                002BH
+00:0004 80-A0 6A-F0         [-Z----]      597           sb      0f06ah.0
+                                          598   CBLOCKEND 359 2 157
+                                          599   
+                                          600   ;;}
+                                          601   CLINEA 0000H 0001H 009DH 0001H 
+                                                0001H
+00:0008 1F-FE               [------]      602           rt
+                                          603   CBLOCKEND 359 1 157
+                                          604   CFUNCTIONEND 359
+                                          605   
+                                          606   
+  --------------------------              607           rseg $$_spi0_setBitOrde
+                                                r$spi0
+                                          608   CFUNCTION 360
+                                          609   
+00:0000                                   610   __spi0_setBitOrder      :
+                                          611   CBLOCK 360 1 160
+                                          612   
+                                          613   ;;{
+                                          614   CLINEA 0000H 0001H 00A0H 0001H 
+                                                0001H
+                                          615   ;;*****************************
+                                                ************
+                                          616   ;;      register/stack informat
+                                                ion
+                                          617   ;;*****************************
+                                                ************
+                                          618   ;;*****************************
+                                                ************
+                                          619   
+                                          620   CBLOCK 360 2 160
+                                          621   CARGUMENT 46H 0001H 0014H "bo" 
+                                                02H 00H 00H
+                                          622   
+                                          623   ;;      if(bo == LSBFIRST)
+                                          624   CLINEA 0000H 0001H 00A1H 0002H 
+                                                0013H
+00:0000 00 70               [CZSO-H]      625           cmp     r0,     #00h
+00:0002 03 C8               [------]      626           bne     _$L10
+                                          627   CBLOCK 360 3 162
+                                          628   
+                                          629   ;;              _spi0_mod &= (~
+                                                SPI0_MSBFIRST );
+                                          630   CLINEA 0000H 0001H 00A3H 0003H 
+                                                0021H
+00:0004 82-A0'00-00'        [-Z----]      631           rb      NEAR __spi0_mod
+                                                .0
+                                          632   CBLOCKEND 360 3 164
+                                          633   
+                                          634   ;;      else
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:  23 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                          635   CLINEA 0000H 0001H 00A5H 0002H 
+                                                0005H
+00:0008 1F-FE               [------]      636           rt
+00:000A                                   637   _$L10 :
+                                          638   CBLOCK 360 4 166
+                                          639   
+                                          640   ;;              _spi0_mod |= SP
+                                                I0_MSBFIRST ;
+                                          641   CLINEA 0000H 0001H 00A7H 0003H 
+                                                001EH
+00:000A 80-A0'00-00'        [-Z----]      642           sb      NEAR __spi0_mod
+                                                .0
+                                          643   CBLOCKEND 360 4 168
+                                          644   
+                                          645   ;;      }
+                                          646   CLINEA 0000H 0000H 00A8H 0002H 
+                                                0002H
+                                          647   CBLOCKEND 360 2 169
+                                          648   
+                                          649   ;;}
+                                          650   CLINEA 0000H 0001H 00A9H 0001H 
+                                                0001H
+00:000E 1F-FE               [------]      651           rt
+                                          652   CBLOCKEND 360 1 169
+                                          653   CFUNCTIONEND 360
+                                          654   
+                                          655   
+  --------------------------              656           rseg $$_spi0_setDataMod
+                                                e$spi0
+                                          657   CFUNCTION 361
+                                          658   
+00:0000                                   659   __spi0_setDataMode      :
+                                          660   CBLOCK 361 1 172
+                                          661   
+                                          662   ;;{
+                                          663   CLINEA 0000H 0001H 00ACH 0001H 
+                                                0001H
+                                          664   ;;*****************************
+                                                ************
+                                          665   ;;      register/stack informat
+                                                ion
+                                          666   ;;*****************************
+                                                ************
+                                          667   ;;*****************************
+                                                ************
+                                          668   
+                                          669   CBLOCK 361 2 172
+                                          670   CARGUMENT 46H 0001H 0014H "mode
+                                                " 02H 00H 00H
+                                          671   
+                                          672   ;;      _spi0_mod &= (~SPI0_MOD
+                                                E_MASK);
+                                          673   CLINEA 0000H 0001H 00ADH 0002H 
+                                                0020H
+00:0000 82-A0'00-00'        [-Z----]      674           rb      NEAR (__spi0_mo
+                                                d+01h).5
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:  24 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+00:0004 82-A0'00-00'        [-Z----]      675           rb      NEAR (__spi0_mo
+                                                d+01h).4
+                                          676   
+                                          677   ;;      switch(mode)
+                                          678   CLINEA 0000H 0001H 00AEH 0002H 
+                                                000DH
+                                          679   CBLOCK 361 3 175
+00:0008 00 70               [CZSO-H]      680           cmp     r0,     #00h
+00:000A 05 C9               [------]      681           beq     _$L19
+                                          682   
+                                          683   ;;      switch(mode)
+                                          684   CLINEA 0000H 0000H 00AEH 0002H 
+                                                000DH
+00:000C 20 70               [CZSO-H]      685           cmp     r0,     #020h
+00:000E 06 C9               [------]      686           beq     _$L20
+                                          687   
+                                          688   ;;      switch(mode)
+                                          689   CLINEA 0000H 0000H 00AEH 0002H 
+                                                000DH
+00:0010 40 70               [CZSO-H]      690           cmp     r0,     #040h
+00:0012 07 C9               [------]      691           beq     _$L21
+                                          692   
+                                          693   ;;      }
+                                          694   CLINEA 0000H 0000H 00BDH 0002H 
+                                                0002H
+                                          695   CBLOCKEND 361 3 189
+                                          696   CBLOCKEND 361 2 190
+                                          697   
+                                          698   ;;}
+                                          699   CLINEA 0000H 0001H 00BEH 0001H 
+                                                0001H
+00:0014 1F-FE               [------]      700           rt
+                                          701   
+                                          702   ;;      case SPI_MODE0:
+                                          703   CLINEA 0000H 0001H 00B0H 0002H 
+                                                0010H
+00:0016                                   704   _$L19 :
+                                          705   
+                                          706   ;;              _spi0_mod |= SP
+                                                I0_MODE0;
+                                          707   CLINEA 0000H 0001H 00B1H 0003H 
+                                                001AH
+00:0016 80-A0'00-00'        [-Z----]      708           sb      NEAR (__spi0_mo
+                                                d+01h).4
+                                          709   
+                                          710   ;;              break;
+                                          711   CLINEA 0000H 0001H 00B2H 0003H 
+                                                0008H
+00:001A 1F-FE               [------]      712           rt
+                                          713   
+                                          714   ;;      case SPI_MODE1:
+                                          715   CLINEA 0000H 0001H 00B3H 0002H 
+                                                0010H
+00:001C                                   716   _$L20 :
+                                          717   
+                                          718   ;;              _spi0_mod |= SP
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:  25 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                                I0_MODE1;
+                                          719   CLINEA 0000H 0001H 00B4H 0003H 
+                                                001AH
+00:001C 80-A0'00-00'        [-Z----]      720           sb      NEAR (__spi0_mo
+                                                d+01h).5
+                                          721   
+                                          722   ;;              break;
+                                          723   CLINEA 0000H 0001H 00B5H 0003H 
+                                                0008H
+00:0020 1F-FE               [------]      724           rt
+                                          725   
+                                          726   ;;      case SPI_MODE2:
+                                          727   CLINEA 0000H 0001H 00B6H 0002H 
+                                                0010H
+00:0022                                   728   _$L21 :
+                                          729   
+                                          730   ;;              _spi0_mod |= SP
+                                                I0_MODE2;
+                                          731   CLINEA 0000H 0001H 00B7H 0003H 
+                                                001AH
+00:0022 80-A0'00-00'        [-Z----]      732           sb      NEAR (__spi0_mo
+                                                d+01h).5
+00:0026 80-A0'00-00'        [-Z----]      733           sb      NEAR (__spi0_mo
+                                                d+01h).4
+                                          734   
+                                          735   ;;              break;
+                                          736   CLINEA 0000H 0001H 00B8H 0003H 
+                                                0008H
+00:002A 1F-FE               [------]      737           rt
+                                          738   CBLOCKEND 361 1 190
+                                          739   CFUNCTIONEND 361
+                                          740   
+                                          741   
+  --------------------------              742           rseg $$_spi0_setClockDi
+                                                vider$spi0
+                                          743   CFUNCTION 362
+                                          744   
+00:0000                                   745   __spi0_setClockDivider  :
+                                          746   CBLOCK 362 1 194
+                                          747   
+                                          748   ;;{
+                                          749   CLINEA 0000H 0001H 00C2H 0001H 
+                                                0001H
+                                          750   ;;*****************************
+                                                ************
+                                          751   ;;      register/stack informat
+                                                ion
+                                          752   ;;*****************************
+                                                ************
+                                          753   ;;*****************************
+                                                ************
+                                          754   
+00:0000 05-F2               [-ZS---]      755           mov     er2,    er0
+                                          756   CBLOCK 362 2 194
+                                          757   CARGUMENT 46H 0002H 0025H "ckdi
+                                                v" 02H 00H 01H
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:  26 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                          758   
+                                          759   ;;      _spi0_mod &= (~SPI0_CLO
+                                                CK_MASK);
+                                          760   CLINEA 0000H 0001H 00C3H 0002H 
+                                                0021H
+00:0002 12-90 00-00'        [-ZS---]      761           l       er0,    NEAR __
+                                                spi0_mod
+00:0006 F8 21               [-ZS---]      762           and     r1,     #0f8h
+00:0008 13-90 00-00'        [------]      763           st      er0,    NEAR __
+                                                spi0_mod
+                                          764   CBLOCK 362 3 197
+                                          765   
+                                          766   ;;      switch(ckdiv)
+                                          767   CLINEA 0000H 0001H 00C4H 0002H 
+                                                000EH
+00:000C 00 73               [CZSO-H]      768           cmp     r3,     #00h
+00:000E 08 C8               [------]      769           bne     _$L33
+00:0010 01 72               [CZSO-H]      770           cmp     r2,     #01h
+00:0012 0B C9               [------]      771           beq     _$L29
+                                          772   
+                                          773   ;;      switch(ckdiv)
+                                          774   CLINEA 0000H 0000H 00C4H 0002H 
+                                                000EH
+00:0014 02 72               [CZSO-H]      775           cmp     r2,     #02h
+00:0016 09 C9               [------]      776           beq     _$L29
+                                          777   
+                                          778   ;;      switch(ckdiv)
+                                          779   CLINEA 0000H 0000H 00C4H 0002H 
+                                                000EH
+00:0018 04 72               [CZSO-H]      780           cmp     r2,     #04h
+00:001A 0A C9               [------]      781           beq     _$L31
+                                          782   
+                                          783   ;;      switch(ckdiv)
+                                          784   CLINEA 0000H 0000H 00C4H 0002H 
+                                                000EH
+00:001C 08 72               [CZSO-H]      785           cmp     r2,     #08h
+00:001E 0D C9               [------]      786           beq     _$L32
+                                          787   
+                                          788   ;;      case SPI_CLOCK_DIV32:
+                                          789   CLINEA 0000H 0001H 00D0H 0002H 
+                                                0016H
+00:0020                                   790   _$L33 :
+                                          791   
+                                          792   ;;              _spi0_mod |= SP
+                                                I0_CLOCK_DIV32;
+                                          793   CLINEA 0000H 0001H 00D4H 0003H 
+                                                0020H
+00:0020 80-A0'00-00'        [-Z----]      794           sb      NEAR (__spi0_mo
+                                                d+01h).2
+00:0024 80-A0'00-00'        [-Z----]      795           sb      NEAR (__spi0_mo
+                                                d+01h).0
+                                          796   CBLOCKEND 362 3 214
+                                          797   
+                                          798   ;;      }
+                                          799   CLINEA 0000H 0000H 00D6H 0002H 
+                                                0002H
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:  27 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                          800   CBLOCKEND 362 2 215
+                                          801   
+                                          802   ;;}
+                                          803   CLINEA 0000H 0001H 00D7H 0001H 
+                                                0001H
+00:0028 1F-FE               [------]      804           rt
+                                          805   
+                                          806   ;;      case SPI_CLOCK_DIV2:   
+                                                                         // not
+                                                 supported
+                                          807   CLINEA 0000H 0001H 00C6H 0002H 
+                                                0029H
+00:002A                                   808   _$L29 :
+                                          809   
+                                          810   ;;              _spi0_mod |= SP
+                                                I0_CLOCK_DIV4;
+                                          811   CLINEA 0000H 0001H 00C8H 0003H 
+                                                001FH
+00:002A 80-A0'00-00'        [-Z----]      812           sb      NEAR (__spi0_mo
+                                                d+01h).1
+                                          813   
+                                          814   ;;              break;
+                                          815   CLINEA 0000H 0001H 00C9H 0003H 
+                                                0008H
+00:002E 1F-FE               [------]      816           rt
+                                          817   
+                                          818   ;;      case SPI_CLOCK_DIV8:
+                                          819   CLINEA 0000H 0001H 00CAH 0002H 
+                                                0015H
+00:0030                                   820   _$L31 :
+                                          821   
+                                          822   ;;              _spi0_mod |= SP
+                                                I0_CLOCK_DIV8;
+                                          823   CLINEA 0000H 0001H 00CBH 0003H 
+                                                001FH
+00:0030 80-A0'00-00'        [-Z----]      824           sb      NEAR (__spi0_mo
+                                                d+01h).1
+00:0034 80-A0'00-00'        [-Z----]      825           sb      NEAR (__spi0_mo
+                                                d+01h).0
+                                          826   
+                                          827   ;;              break;
+                                          828   CLINEA 0000H 0001H 00CCH 0003H 
+                                                0008H
+00:0038 1F-FE               [------]      829           rt
+                                          830   
+                                          831   ;;      case SPI_CLOCK_DIV16:
+                                          832   CLINEA 0000H 0001H 00CDH 0002H 
+                                                0016H
+00:003A                                   833   _$L32 :
+                                          834   
+                                          835   ;;              _spi0_mod |= SP
+                                                I0_CLOCK_DIV16;
+                                          836   CLINEA 0000H 0001H 00CEH 0003H 
+                                                0020H
+00:003A 80-A0'00-00'        [-Z----]      837           sb      NEAR (__spi0_mo
+                                                d+01h).2
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    assemble list. page:  28 
+ Title : 
+## Loc. Object              [CZSOMH]     Line   Source Statements
+
+                                          838   
+                                          839   ;;              break;
+                                          840   CLINEA 0000H 0001H 00CFH 0003H 
+                                                0008H
+00:003E 1F-FE               [------]      841           rt
+                                          842   CBLOCKEND 362 1 215
+                                          843   CFUNCTIONEND 362
+                                          844   
+                                          845           public _SPI0
+                                          846           extrn code near : _uart
+                                                _check_irq
+                                          847           extrn code near : _main
+                                          848   
+  --------------------------              849           rseg $$NINITTAB
+??:0000 07-12                             850           dw      01207h
+                                          851   
+  --------------------------              852           rseg $$TABSPI0$spi0
+00:0000                                   853   _SPI0 :
+00:0000 00-00'                            854           dw      __spi0_transfer
+00:0002 00-00'                            855           dw      __spi0_attachIn
+                                                terrupt
+00:0004 00-00'                            856           dw      __spi0_detachIn
+                                                terrupt
+00:0006 00-00'                            857           dw      __spi0_begin
+00:0008 00-00'                            858           dw      __spi0_end
+00:000A 00-00'                            859           dw      __spi0_setBitOr
+                                                der
+00:000C 00-00'                            860           dw      __spi0_setDataM
+                                                ode
+00:000E 00-00'                            861           dw      __spi0_setClock
+                                                Divider
+                                          862   
+  --------------------------              863           rseg $$NINITVAR
+00:0000                                   864   __spi0_mod :
+00:0000                                   865           ds      02h
+                                          866   
+                                          867           end
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    C-Ref list.    page:  29
+
+symbol                       lines ( #:definition line)
+---------------------------- --------------------------------------------------
+$$NINITTAB ................. 8# 849
+$$NINITVAR ................. 7# 863
+$$TABSPI0$spi0 ............. 9# 852
+$$_spi0_attachInterrupt$spi0 10# 445
+$$_spi0_begin$spi0 ......... 11# 491
+$$_spi0_detachInterrupt$spi0 12# 468
+$$_spi0_end$spi0 ........... 13# 576
+$$_spi0_setBitOrder$spi0 ... 14# 607
+$$_spi0_setClockDivider$spi0 15# 742
+$$_spi0_setDataMode$spi0 ... 16# 656
+$$_spi0_transfer$spi0 ...... 17# 380
+INTERRUPT ..................
+_$L1 ....................... 409# 439
+_$L10 ...................... 626 637#
+_$L19 ...................... 681 704#
+_$L20 ...................... 686 716#
+_$L21 ...................... 691 728#
+_$L29 ...................... 771 776 808#
+_$L3 ....................... 414 430#
+_$L31 ...................... 781 820#
+_$L32 ...................... 786 833#
+_$L33 ...................... 769 790#
+_SPI0 ...................... 845 853#
+__spi0_attachInterrupt ..... 448# 855
+__spi0_begin ............... 494# 857
+__spi0_detachInterrupt ..... 471# 856
+__spi0_end ................. 579# 858
+__spi0_mod ................. 512 631 642 674 675 708 720 732 733 761 763 794 795 812 824 825 837 864#
+__spi0_setBitOrder ......... 610# 859
+__spi0_setClockDivider ..... 745# 861
+__spi0_setDataMode ......... 659# 860
+__spi0_transfer ............ 383# 854
+_main ...................... 847#
+_uart_check_irq ............ 435 846#
+RASU8(ML620504F)Relocatable Assembler, Ver.1.61.2    symbol list.   page:  30
+
+----- symbol information -----
+
+symbol                       type usgtyp physeg     value    ID
+---------------------------- ---- ------ ------ ----------- ----
+$$NINITTAB ................. seg  TABLE  ANY           0H      2
+$$NINITVAR ................. seg  DATA   #00           0H      1
+$$TABSPI0$spi0 ............. seg  TABLE  #00           0H      3
+$$_spi0_attachInterrupt$spi0 seg  CODE   #00           0H      4
+$$_spi0_begin$spi0 ......... seg  CODE   #00           0H      5
+$$_spi0_detachInterrupt$spi0 seg  CODE   #00           0H      6
+$$_spi0_end$spi0 ........... seg  CODE   #00           0H      7
+$$_spi0_setBitOrder$spi0 ... seg  CODE   #00           0H      8
+$$_spi0_setClockDivider$spi0 seg  CODE   #00           0H      9
+$$_spi0_setDataMode$spi0 ... seg  CODE   #00           0H      A
+$$_spi0_transfer$spi0 ...... seg  CODE   #00           0H      B
+INTERRUPT .................. ***  
+_$L1 ....................... loc  CODE   #00           AH      B
+_$L10 ...................... loc  CODE   #00           AH      8
+_$L19 ...................... loc  CODE   #00          16H      A
+_$L20 ...................... loc  CODE   #00          1CH      A
+_$L21 ...................... loc  CODE   #00          22H      A
+_$L29 ...................... loc  CODE   #00          2AH      9
+_$L3 ....................... loc  CODE   #00          16H      B
+_$L31 ...................... loc  CODE   #00          30H      9
+_$L32 ...................... loc  CODE   #00          3AH      9
+_$L33 ...................... loc  CODE   #00          20H      9
+_SPI0 ...................... pub  TABLE  #00           0H      3
+__spi0_attachInterrupt ..... loc  CODE   #00           0H      4
+__spi0_begin ............... loc  CODE   #00           0H      5
+__spi0_detachInterrupt ..... loc  CODE   #00           0H      6
+__spi0_end ................. loc  CODE   #00           0H      7
+__spi0_mod ................. loc  DATA   #00           0H      1
+__spi0_setBitOrder ......... loc  CODE   #00           0H      8
+__spi0_setClockDivider ..... loc  CODE   #00           0H      9
+__spi0_setDataMode ......... loc  CODE   #00           0H      A
+__spi0_transfer ............ loc  CODE   #00           0H      B
+_main ...................... ext  CODE   #00           0H      2
+_uart_check_irq ............ ext  CODE   #00           0H      1
+
+----- segment information -----
+
+S-ID symbol                       segtyp physeg  size  bound reltype
+---- ---------------------------- ------ ------ ------ ----- -------
+   1 $$NINITVAR ................. DATA   #00        2H WORD  
+   2 $$NINITTAB ................. TABLE  ANY        2H WORD  
+   3 $$TABSPI0$spi0 ............. TABLE  #00       10H WORD  
+   4 $$_spi0_attachInterrupt$spi0 CODE   #00        2H WORD  
+   5 $$_spi0_begin$spi0 ......... CODE   #00       5AH WORD  
+   6 $$_spi0_detachInterrupt$spi0 CODE   #00        2H WORD  
+   7 $$_spi0_end$spi0 ........... CODE   #00        AH WORD  
+   8 $$_spi0_setBitOrder$spi0 ... CODE   #00       10H WORD  
+   9 $$_spi0_setClockDivider$spi0 CODE   #00       40H WORD  
+   A $$_spi0_setDataMode$spi0 ... CODE   #00       2CH WORD  
+   B $$_spi0_transfer$spi0 ...... CODE   #00       1CH WORD  
+
+
+
+  Target       : ML620504F (nX-U8/100)
+  Memory Model : SMALL
+  Data   Model : NEAR
+  ROM WINDOW   : (not specified)
+  Internal RAM : D800H to EFFFH
+
+  Errors   : 0
+  Warnings : 0  (/Wrpeast)
+  Lines    : 867
