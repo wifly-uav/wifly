@@ -1,4 +1,5 @@
 from Communication_unity import Communicator
+#from Communication import Communicator
 import numpy as np
 import random as rd
 import time
@@ -198,25 +199,22 @@ class Environment():
         Args:
             action ([int]): 行動の番号
         """
-        if action == 1:
+        if action == 0:
+            self.params_to_send[RIGHT_WING]=PWM_WING+20
+            self.params_to_send[LEFT_WING]=PWM_WING
+        elif action == 1:
             self.params_to_send[RIGHT_WING]=PWM_WING+10
             self.params_to_send[LEFT_WING]=PWM_WING
         elif action == 2:
             self.params_to_send[RIGHT_WING]=PWM_WING+5
             self.params_to_send[LEFT_WING]=PWM_WING
         elif action == 3:
-            self.params_to_send[RIGHT_WING]=PWM_WING+1
-            self.params_to_send[LEFT_WING]=PWM_WING
-        elif action == 4:
             self.params_to_send[RIGHT_WING]=PWM_WING-5
             self.params_to_send[LEFT_WING]=PWM_WING
+        elif action == 4:
+            self.params_to_send[RIGHT_WING]=PWM_WING-10
+            self.params_to_send[LEFT_WING]=PWM_WING
         elif action == 5:
-            self.params_to_send[RIGHT_WING]=PWM_WING-10
-            self.params_to_send[LEFT_WING]=PWM_WING
-        elif action == 6:
-            self.params_to_send[RIGHT_WING]=PWM_WING-10
-            self.params_to_send[LEFT_WING]=PWM_WING
-        else:
             self.params_to_send[RIGHT_WING]=PWM_WING-20
             self.params_to_send[LEFT_WING]=PWM_WING
 

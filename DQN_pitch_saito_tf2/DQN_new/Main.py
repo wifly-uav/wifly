@@ -77,44 +77,44 @@ if __name__ == "__main__":
         data = True
         env.reset(i=i)
         state_next = env.observe_state()
+        action = 0
         #print("i"+str(i))
         a = time.time()
 
         for j in range(N_FRAMES):
-            print("loop_time:" + str(time.time()-a))
+            #print("loop_time:" + str(time.time()-a))
             a = time.time()
-            terminal = env.observe_terminal()
-            data = terminal
             state_current = state_next
             #action = agent.select_action_limit(state_current)
-            action = agent.choose_action(state_current)
-            if training_flag:
-                agent.epsilon -= 0.1/3000
-            else:
-                agent.epsilon = 0
-            env.excute_action(action)
+            if terminal == True:
+                action = agent.choose_action(state_current)
+                if training_flag:
+                    agent.epsilon -= 0.1/3000
+                else:
+                    agent.epsilon = 0
+                env.excute_action(action)
             if (j != 0 and training_flag == True):
                 #agent.experience_replay()
                 agent.learn()
-            state_next, ti, ti_ = env.observe_update_state()
+            if terminal == True:
+                state_next, ti, ti_ = env.observe_update_state()
             #action, data = env.reaction(state_next)
-            if data == True:
-                reward = env.observe_reward(state_next)
-                terminal = env.observe_terminal()
-                print(i,j,state_next[0], reward, terminal)
-                #agent.store_experience(state_current, action, reward, state_next, terminal)
-                '''
-                print("state_current:"+str(state_current))
-                print("action:"+str(action))
-                print("reward:"+str(reward))
-                print("state_next:"+str(state_next))
-                print("terminal:"+str(terminal))
-                '''
-                agent.store_transition(state_current, action, reward, state_next, terminal)
-                # for loging
-                log.add_log_state_and_action(state_next, action, env.params_to_send, ti, ti_)
-                log.add_log_state(state_next, reward, ti)
-            else:
+            reward = env.observe_reward(state_next)
+            terminal = env.observe_terminal()
+            print(i,j,action,state_next[0], reward, terminal)
+            #agent.store_experience(state_current, action, reward, state_next, terminal)
+            '''
+            print("state_current:"+str(state_current))
+            print("action:"+str(action))
+            print("reward:"+str(reward))
+            print("state_next:"+str(state_next))
+            print("terminal:"+str(terminal))
+            '''
+            agent.store_transition(state_current, action, reward, state_next, terminal)
+            # for loging
+            log.add_log_state_and_action(state_next, action, env.params_to_send, ti, ti_)
+            log.add_log_state(state_next, reward, ti)
+            if terminal == False:
                 print("reset")
                 break
                 #print(state_next)
@@ -128,8 +128,8 @@ if __name__ == "__main__":
 
 
     #agent.save_model()
-    '''
     agent.debug_nn()
+    '''
     agent.debug_memory()
     agent.debug_minibatch()
     agent.debug_q()
