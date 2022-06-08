@@ -133,7 +133,7 @@ class DQNAgent:
         self.batch_size = MINIBATCH_SIZE
 
         #self.replay_memory_size = REPLAY_MEMORY_SIZE
-        self.memory = ReplayBuffer(REPLAY_MEMORY_SIZE,FRAMES)   #ReplayBufferクラスのインスタンス作成
+        #self.memory = ReplayBuffer(REPLAY_MEMORY_SIZE,FRAMES)   #ReplayBufferクラスのインスタンス作成
         self.memory = ReplayBuffer(REPLAY_MEMORY_SIZE,INPUT_DIMS)   #ReplayBufferクラスのインスタンス作成
         self.learning_rate = LEARNING_RATE
         self.discount_factor = DISCOUNT_FACTOR
