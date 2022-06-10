@@ -7,13 +7,17 @@
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
 
+#include <SPI.h>
+
 //#define DEBUG
+//#define sensoer
 
 #define PWM_FREQ 1000
 #define PWM_RANGE 255
 
-
-Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28);
+#ifdef sensor
+  Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28);
+#endif
 
 const int pwm1 = 12;
 const int pwm2 = 13;
@@ -123,27 +127,31 @@ void setup() {
 
   esp_now_register_recv_cb(OnDataRecv);
 
-  if(!bno.begin()){
-    /* There was a problem detecting the BNO055 ... check your connections */
-    #ifdef DEBUG
-      Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
-    #endif
-    digitalWrite(led, HIGH);
-    while(1);
-  }
+  #ifdef sensor
+    if(!bno.begin()){
+      /* There was a problem detecting the BNO055 ... check your connections */
+      #ifdef DEBUG
+        Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+      #endif
+      digitalWrite(led, HIGH);
+      while(1);
+    }
+  #endif
   digitalWrite(led, LOW);
 }
  
 void loop() {
 
-  // Possible vector values can be:
-  // - VECTOR_ACCELEROMETER - m/s^2
-  // - VECTOR_MAGNETOMETER  - uT
-  // - VECTOR_GYROSCOPE     - rad/s
-  // - VECTOR_EULER         - degrees
-  // - VECTOR_LINEARACCEL   - m/s^2
-  // - VECTOR_GRAVITY       - m/s^2
-  imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
+  #ifdef sensor
+    // Possible vector values can be:
+    // - VECTOR_ACCELEROMETER - m/s^2
+    // - VECTOR_MAGNETOMETER  - uT
+    // - VECTOR_GYROSCOPE     - rad/s
+    // - VECTOR_EULER         - degrees
+    // - VECTOR_LINEARACCEL   - m/s^2
+    // - VECTOR_GRAVITY       - m/s^2
+    imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
+  #endif
 
   Ti = millis();
   if ((Ti - lastTime) > timerDelay) {
@@ -152,9 +160,15 @@ void loop() {
     data[1] = command[1];
     data[2] = command[2];
     data[3] = command[3];
-    data[4] = (int)euler.x();
-    data[5] = (int)euler.y();
-    data[6] = (int)euler.z();
+    #ifdef sensor
+      data[4] = (int)euler.x();
+      data[5] = (int)euler.y();
+      data[6] = (int)euler.z();
+    #else
+      data[4] = 0;
+      data[5] = 0;
+      data[6] = 0;
+    #endif
     data[7] = Ti;
 
     esp_now_send(broadcastAddress, (uint8_t *) &data, sizeof(data));
