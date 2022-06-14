@@ -33,7 +33,7 @@ class logger():
 
     def add_log_state(self, state, reward, time):
         state_list_ = list(state)
-        row_ = [state_list_[0][0],state_list_[0][-2],reward,time]
+        row_ = [state_list_[0][1],state_list_[0][-2],reward,time]
         self.log2.append(row_)
 
     def output_log(self):
@@ -57,7 +57,7 @@ class logger():
         angle = []
         time_ = []
         for i in self.log2:
-            angle.append(int(i[1]))
+            angle.append(int(i[0]))
             time_.append(int(i[-2]))
         
         med = statistics.median(time_)

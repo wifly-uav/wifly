@@ -95,7 +95,7 @@ if __name__ == "__main__":
                 env.excute_action(action)
             if (j != 0 and training_flag == True):
                 #agent.experience_replay()
-                agent.learn()
+                agent.learn(j)
             if terminal == True:
                 state_next, ti, ti_ = env.observe_update_state()
             #action, data = env.reaction(state_next)
