@@ -28,7 +28,7 @@ MODEL_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mode
 CHECKPOINT_NAME = "WiflyDual_DQN"
 MINIBATCH_SIZE = 64
 REPLAY_MEMORY_SIZE = 10000
-LEARNING_RATE = 0.01
+LEARNING_RATE = 0.05
 DISCOUNT_FACTOR = 0.95
 EPSILON = 0.1
 EPSILON_DEC=1e-3
@@ -39,8 +39,8 @@ FRAMES = 4
 INPUT_DIMS = 5
 #INPUT_DIMS = FRAMES*1
 #INPUTS = 5
-HIDDEN_1 = 100
-HIDDEN_2 = 50
+HIDDEN_1 = 30
+HIDDEN_2 = 30
 
 #----------------------------------------------------------------------------------------------
 
@@ -123,6 +123,35 @@ def build_dqn(lr, n_actions, input_dims, fc1_dims, fc2_dims):
 
     return model
 
+def build_dqn_target(lr, n_actions, input_dims, fc1_dims, fc2_dims):
+    """
+    NNの作成
+    -NNの入力:4つの状態（Qを求めたい状態sとその3フレーム前までの3つの状態を合わせた合計4つの状態）
+    -NNの出力:状態sにおける各Q
+    -state dequeの先頭に状態sが入っている
+    """
+
+
+
+    model = keras.Sequential([
+
+        #Denseは全結合ユニット
+        #ユニット数、（入力層のユニット数）、活性化関数が引数
+        #入力のユニット数の指定には、input_dim=とinput_shape=があるらしい。
+        keras.layers.Input(shape = (FRAMES,input_dims,)),        #入力の数はinput_dims*4フレーム（shapeでの指定時は順序が逆なので注意）
+        keras.layers.Flatten(),                             #平滑化‼
+        keras.layers.Dense(fc1_dims, activation='relu'),    #中間層1
+        #keras.layers.BatchNormalization(),    #バッチ正規化
+        keras.layers.Dense(fc2_dims, activation='relu'),    #中間層2
+        keras.layers.Dense(n_actions, activation=None)])    #出力層
+    
+    #最適化アルゴリズム、誤差関数を指定する
+    model.compile(optimizer=Adam(learning_rate=lr), loss='mean_squared_error')
+
+    #構築されたモデルの情報を表示
+    model.summary()
+
+    return model
 
 class DQNAgent:
     def __init__(self, folder='log'):
@@ -162,6 +191,7 @@ class DQNAgent:
         
         #NNの構築（初期化)
         self.q_eval = build_dqn(LEARNING_RATE, N_ACTIONS, INPUT_DIMS, HIDDEN_1, HIDDEN_2)
+        self.q_target = build_dqn_target(LEARNING_RATE, N_ACTIONS, INPUT_DIMS, HIDDEN_1, HIDDEN_2)
 
         # create TensorFlow graph (model)(tf1)
         #self.init_model()
@@ -268,7 +298,7 @@ class DQNAgent:
         """
         self.memory.store_transition(state, action, reward, new_state, done)
         
-    def learn(self):
+    def learn(self, step_count=0, rate = 10):
         """
         NNの重みとバイアスを学習
         """
@@ -280,10 +310,12 @@ class DQNAgent:
 
         #Fixed-Targetは未実装
         time_start = time.time()
-        q_eval = self.q_eval.predict(states)
+        #q_eval = self.q_eval.predict(states)
+        q_eval = self.q_target.predict(states)
         #q_eval = self.q_eval(states, training=False)
 
-        q_next = self.q_eval.predict(states_)       
+        #q_next = self.q_eval.predict(states_)
+        q_next = self.q_target.predict(states_)       
         #q_next = self.q_eval(states_, training=False)
         time_start2 = time.time()
 
@@ -297,8 +329,20 @@ class DQNAgent:
 
         time_start3 = time.time()
         #NNのパラメータ更新
-        self.log_loss.append(self.q_eval.train_on_batch(states, q_target))
+        #self.log_loss.append(self.q_eval.train_on_batch(states, q_target))
+        self.log_loss.append(self.q_target.train_on_batch(states, q_target))
         a = time.time()
+
+        if (step_count % rate == 0):
+            print("set_weight")
+            '''
+            self.q_eval.layers[0].set_weights(self.q_target.layers[0].get_weights())
+            self.q_eval.layers[1].set_weights(self.q_target.layers[1].get_weights())
+            self.q_eval.layers[2].set_weights(self.q_target.layers[3].get_weights())
+            self.q_eval.layers[3].set_weights(self.q_target.layers[4].get_weights())
+            '''
+            self.q_eval.set_weights(self.q_target.get_weights())
+
         #print(loss)
         #print("time:" + str(a-time_start) + " , " + str(time_start2-time_start) + " , "  + str(time_start3-time_start2) + " , "  + str(a-time_start3))
         #self.epsilon = self.epsilon - self.eps_dec if self.epsilon > self.eps_min else self.eps_min
