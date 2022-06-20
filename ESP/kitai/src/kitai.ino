@@ -10,7 +10,7 @@
 #include <SPI.h>
 
 //#define DEBUG
-//#define sensoer
+#define sensor
 
 #define PWM_FREQ 1000
 #define PWM_RANGE 255
@@ -30,7 +30,7 @@ Servo cog;
 Servo ladder;
 
 int command[7] = {0};
-uint8_t data[8];
+uint8_t data[7];
 
 // REPLACE WITH RECEIVER MAC Address
 //uint8_t broadcastAddress[] = {0xC8, 0x2B, 0x96, 0xB9, 0x17, 0xC4};
@@ -39,7 +39,8 @@ uint8_t broadcastAddress[] = {0x8C, 0x4B, 0x14, 0x16, 0x63, 0x0C}; //A
 unsigned long lastTime = 0;  
 unsigned long recvTime = 0;  
 unsigned long Ti = 0;  
-unsigned long timerDelay = 100;  // send readings timer
+unsigned long loopTi = 0;  
+unsigned long timerDelay = 20;  // send readings timer
 unsigned long watchdogtime = 200;  // timer
 
 // Callback when data is sent
@@ -139,6 +140,11 @@ void setup() {
   #endif
   digitalWrite(led, LOW);
 }
+
+float mapfloat(float x, long in_min, long in_max, long out_min, long out_max)
+{
+  return (float)(x - in_min) * (out_max - out_min) / (float)(in_max - in_min) + out_min;
+}
  
 void loop() {
 
@@ -154,22 +160,27 @@ void loop() {
   #endif
 
   Ti = millis();
-  if ((Ti - lastTime) > timerDelay) {
+  loopTi = Ti - lastTime;
+  if (loopTi > timerDelay) {
     // Set values to send
     data[0] = command[0];
     data[1] = command[1];
     data[2] = command[2];
     data[3] = command[3];
     #ifdef sensor
-      data[4] = (int)euler.x();
-      data[5] = (int)euler.y();
-      data[6] = (int)euler.z();
+      data[4] = (int)mapfloat(euler.y(), -90, 90, 0, 255);
+      data[5] = (int)mapfloat(euler.z(), -180, 180, 0, 255);
     #else
       data[4] = 0;
       data[5] = 0;
-      data[6] = 0;
     #endif
-    data[7] = Ti;
+    data[6] = loopTi;
+    #ifdef DEBUG
+      Serial.print("y:");
+      Serial.print(euler.y());
+      Serial.print("z:");
+      Serial.println(data[4]);
+    #endif
 
     esp_now_send(broadcastAddress, (uint8_t *) &data, sizeof(data));
     lastTime = millis();

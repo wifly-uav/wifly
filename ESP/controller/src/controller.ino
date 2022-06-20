@@ -9,6 +9,7 @@ unsigned long timerDelay = 100;  // send readings timer
 
 // REPLACE WITH RECEIVER MAC Address
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60}; //1
+//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x3D}; //2
 uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0xE4}; //3
 //uint8_t castAddress[] = {0xEC, 0xFA, 0xBC, 0xBB, 0x56, 0x54}; //4
 
@@ -29,14 +30,22 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     char macStr[18];
     snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
         mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-    Serial.println();
-    Serial.printf("ESP32\n");
-    Serial.printf("Last Packet Recv from: %s\n", macStr);
-    Serial.printf("Last Packet Recv Data(%d): ", data_len);
+    //Serial.println();
+    //Serial.printf("ESP32\n");
+    //Serial.printf("Last Packet Recv from: %s\n", macStr);
+    //Serial.printf("Last Packet Recv Data(%d): ", data_len);
+    //Serial.println();
     for (int i = 0; i < data_len; i++) {
-        Serial.print(data[i]);
-        Serial.print(" ");
+        if(i == 4){
+          Serial.print(map(data[i], 0, 255, -90, 90));
+        }else if(i == 5){
+          Serial.print(map(data[i], 0, 255, -180, 180));
+        }else{
+          Serial.print(data[i]);
+        }
+        Serial.print(",");
     }
+    Serial.println();
 }
 
 void OnDataSent(const uint8_t* mac_addr, esp_now_send_status_t status) {
@@ -81,7 +90,7 @@ void setup() {
       return;
     }
     
-    esp_now_register_send_cb(OnDataSent);
+    //esp_now_register_send_cb(OnDataSent);
     esp_now_register_recv_cb(onReceive);
     
 }
