@@ -43,7 +43,9 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
         }else{
           Serial.print(data[i]);
         }
-        Serial.print(",");
+        if(i != data_len-1){
+          Serial.print(",");
+        }
     }
     Serial.println();
 }
