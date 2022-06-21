@@ -176,7 +176,7 @@ class Communicator():
             #time.sleep(0.005)
 
 
-    def recieve_from_esp(self, byt=7):
+    def recieve_from_esp(self, byt=7, data=[255,254,254,0,0,0]):
         """
         マイコンからデータを受け取る関数
         whileを使っているので抜け出せなくなる可能性あり
@@ -194,17 +194,20 @@ class Communicator():
                 #print(self.__raw_data) 
                 #self.__ser.flushInput()
                 persed_data = self.__raw_data.split(",")                    #__raw_dataを","区切りにしたものを取得
-                #print(str(persed_data) + str(len(persed_data)))
-                recieve_time = str(time.time() - self.time_started)     #受信した時間を記録
-                delta_time = time.time() - self.time_last_receive       #最後の受信との時間間隔を記録
-                self.time_last_receive = time.time()                    #最後の受信時間を更新  
-                recieve_time_ = int(persed_data.pop(-1))    #受信時刻の読み取り（popなので削除もされる）
-                self.dataset_from_laz = persed_data     #受信データとして記録
-                #print(str(self.dataset_from_laz) + ":" + str(recieve_time))
-                self.__fail_counter = 0                 #受信失敗回数をリセット
+                if len(persed_data) == byt:                                 #受信データ長が指定通りならば...
+                    #print(str(persed_data) + str(len(persed_data)))
+                    recieve_time = str(time.time() - self.time_started)     #受信した時間を記録
+                    delta_time = time.time() - self.time_last_receive       #最後の受信との時間間隔を記録
+                    self.time_last_receive = time.time()                    #最後の受信時間を更新  
+                    recieve_time_ = int(persed_data.pop(-1))    #受信時刻の読み取り（popなので削除もされる）
+                    self.dataset_from_laz = persed_data     #受信データとして記録
+                    #print(str(self.dataset_from_laz) + ":" + str(recieve_time))
+                    self.__fail_counter = 0                 #受信失敗回数をリセット
 
-                #受信データ、受信時間、前回受信との間隔を返す
-                return self.dataset_from_laz, recieve_time_, delta_time
+                    #受信データ、受信時間、前回受信との間隔を返す
+                    return self.dataset_from_laz, recieve_time_, delta_time
+            elif self.__fail_counter > 10:              #受信失敗回数が10回を超えているなら…
+                self.send_to_esp([255,254,254,0,0,0])      #データを送ってLazuriteを送信モードにすることを試みる
             elif self.__fail_counter > 20:              #受信失敗回数が20回を超えているなら…
                 print("data receive timeout error!")    #タイムアウト（諦める）
                 return False , 0, 0                     #この場合はFalseを返すことに注意
@@ -268,4 +271,4 @@ if __name__ == "__main__":
     while True:        
         data, ti, _ = communicator.recieve_from_esp(7)
         print(str(data) + " " + str(ti))
-        communicator.send_to_laz([255,254,254,0,0,0])
+        communicator.send_to_esp([255,254,254,0,0,0])
