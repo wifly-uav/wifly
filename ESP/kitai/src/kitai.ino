@@ -41,7 +41,9 @@ unsigned long recvTime = 0;
 unsigned long Ti = 0;  
 unsigned long loopTi = 0;  
 unsigned long timerDelay = 20;  // send readings timer
-unsigned long watchdogtime = 200;  // timer
+unsigned long watchdogtime = 100;  // timer
+
+int i = 0;
 
 // Callback when data is sent
 void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus) {
@@ -60,15 +62,15 @@ void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus) {
 // Callback function that will be executed when data is received
 void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t len) {
   digitalWrite(led, HIGH);
-  char macStr[18];
-  snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
-      mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+  //char macStr[18];
+  //snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
+  //    mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
   #ifdef DEBUG
     Serial.println();
     //Serial.printf("Last Packet Recv from: %s\n", macStr);
     Serial.printf("Last Packet Recv Data(%d): ", len);
   #endif
-  for (int i = 0; i < len; i++) {
+  for (i = 0; i < len; ++i) {
     command[i] = data[i];
     #ifdef DEBUG
       Serial.print(data[i]);
@@ -121,7 +123,7 @@ void setup() {
   // Once ESPNow is successfully Init, we will register for Send CB to
   // get the status of Trasnmitted packet
   esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
-  esp_now_register_send_cb(OnDataSent);
+  //esp_now_register_send_cb(OnDataSent);
   
   // Register peer
   esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
@@ -143,7 +145,8 @@ void setup() {
 
 float mapfloat(float x, long in_min, long in_max, long out_min, long out_max)
 {
-  return (float)(x - in_min) * (out_max - out_min) / (float)(in_max - in_min) + out_min;
+  //return (float)(x - in_min) * (out_max - out_min) / (float)(in_max - in_min) + out_min;
+  return (float)(x - in_min) * (out_max - out_min) *0.003921568627451 + out_min; // 1/255
 }
  
 void loop() {
@@ -197,5 +200,5 @@ void loop() {
   ladder.write(command[2]);
   cog.write(command[3]);
   
-  delay(50);
+  //delay(50);
 }

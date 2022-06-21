@@ -1,5 +1,5 @@
-from Communication_unity import Communicator
-#from Communication import Communicator
+#from Communication_unity import Communicator
+from Communication import Communicator
 import numpy as np
 import random as rd
 import time

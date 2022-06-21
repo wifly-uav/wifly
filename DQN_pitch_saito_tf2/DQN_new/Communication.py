@@ -36,7 +36,7 @@ class Communicator():
         #self.__ser = serial.Serial(port_controller, 115200)
         self.__ser = serial.Serial(                     #SERIAL通信の設定
                         port_controller,                #COMの番号
-                        baudrate = 57600,
+                        baudrate = 460800,
                         parity = serial.PARITY_NONE,
                         bytesize = serial.EIGHTBITS,
                         stopbits = serial.STOPBITS_ONE,
@@ -83,25 +83,6 @@ class Communicator():
         self.time_started = time.time()         #最初に送信した時間を記録
         #self.recieve_from_laz(False, 5)
         self.time_last_receive = time.time()    #未使用?
-
-    def create_log(self, persed_data,  time):
-        """
-        記録をとるための関数
-        Args:
-            persed_data (list): マイコンから送られてきたデータ
-            time ([type]): 時間
-        Returns:
-            list: マイコンのデータと送信したデータ
-        """
-        #try:
-        log_element = [float(i) for i in persed_data[1:-1]]
-        log_element.extend([int(i) for i in self.__data_sent])
-        log_element.append(float(time))
-        return log_element
-        #except:
-        #    print("error")
-        #    print(persed_data)
-        #    sys.exit()
 
     def save_communicate_log(self):
         """
@@ -195,6 +176,42 @@ class Communicator():
             #time.sleep(0.005)
 
 
+    def recieve_from_esp(self, byt=7):
+        """
+        マイコンからデータを受け取る関数
+        whileを使っているので抜け出せなくなる可能性あり
+        Args:
+            byt (int): 受け取るデータの数
+        Returns:
+            list or bool: 通信が成功した場合は、マイコンから送られてきたデータのlist、失敗した場合は、False
+            float: 前回受信してからの時間
+        """
+        self.__ser.flushInput()         #受信キャッシュ内のデータを破棄（初期化）
+        while True:
+            #print(self.__ser.in_waiting)
+            if self.__ser.in_waiting > 0:                                   #in_waitingはキャッシュ内に受信されたデータのbyte数を返す。 
+                self.__raw_data =self.__ser.readline().decode('utf-8')      #受信データを1行分読み取り、文字列に変換したものを取得
+                #print(self.__raw_data) 
+                #self.__ser.flushInput()
+                persed_data = self.__raw_data.split(",")                    #__raw_dataを","区切りにしたものを取得
+                #print(str(persed_data) + str(len(persed_data)))
+                recieve_time = str(time.time() - self.time_started)     #受信した時間を記録
+                delta_time = time.time() - self.time_last_receive       #最後の受信との時間間隔を記録
+                self.time_last_receive = time.time()                    #最後の受信時間を更新  
+                recieve_time_ = int(persed_data.pop(-1))    #受信時刻の読み取り（popなので削除もされる）
+                self.dataset_from_laz = persed_data     #受信データとして記録
+                #print(str(self.dataset_from_laz) + ":" + str(recieve_time))
+                self.__fail_counter = 0                 #受信失敗回数をリセット
+
+                #受信データ、受信時間、前回受信との間隔を返す
+                return self.dataset_from_laz, recieve_time_, delta_time
+            elif self.__fail_counter > 20:              #受信失敗回数が20回を超えているなら…
+                print("data receive timeout error!")    #タイムアウト（諦める）
+                return False , 0, 0                     #この場合はFalseを返すことに注意
+
+            self.__fail_counter += 1                    #受信失敗回数を更新
+            #time.sleep(0.005)
+
     def send_to_laz(self, data_to_send):
         """
         マイコンにデータを送る関数
@@ -207,6 +224,17 @@ class Communicator():
         #print("SENT{0}".format(data_to_send))
         self.__data_sent = data_to_send             #送信済みデータとして記録
         time.sleep(0.001)                           #時間調整?
+    
+    def send_to_esp(self, data_to_send):
+        """
+        マイコンにデータを送る関数
+        Args:
+            data_to_send (list): 送信するデータ
+        """
+        self.__ser.flushOutput()                    #送信用キャッシュのflush
+        for datum in data_to_send:                  #data_to_sendの各要素を...
+            self.__ser.write(bytes([int(datum)]))   #2進数に変換したものを送信
+        self.__data_sent = data_to_send             #送信済みデータとして記録
 
     def termination_switch(self, deta_to_send):
         """
@@ -226,29 +254,6 @@ class Communicator():
                 print("terminal wait")
         #return self.terminal_flag
 
-        """
-        fail_counter = 0
-        self.__ser.flushInput()
-        while True:
-            flag_termination = self.__ser.readline().decode('utf-8')
-            split_data = flag_termination.split(",")
-            if len(split_data) == 3:
-                #print(split_data)
-                if (split_data[0] == "O" or split_data[-1][0] == "N"): # Error check
-                    #print(split_data)
-                    if split_data[1] == "1":
-                        ##通信失敗時に送られる値
-                        print("terminal wait")
-                        #self.send_to_laz(deta_to_send)
-                        time.sleep(0.001)
-                    if split_data[1] == "0":
-                        return True
-                    #return True
-            fail_counter += 1
-            #if fail_counter > 10:
-            #    return False
-        """
-
     def serial_close(self):
         self.__ser.close()
 
@@ -260,11 +265,7 @@ if __name__ == "__main__":
     output_values_to_laz = [255, 10, 20, 30, 40]
     communicator.start_laz(output_values_to_laz)
     print(output_values_to_laz)
-    while True:
-        a = time.time()
-        
-        _, _ = communicator.recieve_from_laz(False, 5)
-        print("test")
-        #data_from_laz , _ = communicator.recieve_from_laz(True, 5)
-        communicator.send_to_laz(output_values_to_laz)
-        print("test")
+    while True:        
+        data, ti, _ = communicator.recieve_from_esp(7)
+        print(str(data) + " " + str(ti))
+        communicator.send_to_laz([255,254,254,0,0,0])

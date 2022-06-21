@@ -5,7 +5,9 @@
 //#define DEBUG
 
 unsigned long lastTime = 0;  
-unsigned long timerDelay = 100;  // send readings timer
+unsigned long timerDelay = 60;  // send readings timer
+size_t data_pc_;
+uint8_t data_pc[5] = {0};
 
 // REPLACE WITH RECEIVER MAC Address
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60}; //1
@@ -62,8 +64,16 @@ void OnDataSent(const uint8_t* mac_addr, esp_now_send_status_t status) {
   }
 }
 
+void recieve_pc(){
+  if(Serial.available()){
+    if((int)Serial.read() == 255){
+      data_pc_ = Serial.readBytesUntil('\n',data_pc,5);
+    }
+  }
+}
+
 void setup() {
-    Serial.begin(115200);    
+    Serial.begin(460800);    
     
     pinMode(stick_lr, INPUT);
     pinMode(stick_ud, INPUT);
@@ -73,13 +83,13 @@ void setup() {
     pinMode(switch_1, INPUT_PULLUP);
     pinMode(switch_2, INPUT_PULLUP);
 
-    Serial.println(WiFi.macAddress()); // ãã®ã¢ãã¬ã¹ãéä¿¡å´ã¸ç»é²ãã¾ã
+    Serial.println(WiFi.macAddress());
 
     
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
     if (esp_now_init() == ESP_OK) {
-        Serial.println("ESP-Now Init Success");
+        //Serial.println("ESP-Now Init Success");
     }
       // Register peer
     memcpy(peerInfo.peer_addr, castAddress, 6);
@@ -99,39 +109,36 @@ void setup() {
 
 void loop() {
   
-  int left_LR = map(analogRead(stick_lr),0,4096,0,255);
-  int left_UD = map(analogRead(stick_ud),0,4096,0,180);
-  int sli_L = map(analogRead(slider_l),0,4096,0,255);
-  int sli_R = map(analogRead(slider_r),0,4096,0,255);
-  int vol = map(analogRead(volume),0,4096,0,255);
+
   int btn_L = digitalRead(switch_1);
-  int btn_R = digitalRead(switch_2);
 
   if ((millis() - lastTime) > timerDelay) {
+    uint8_t data[5];
+    if(btn_L == 1){
+      recieve_pc();
+      for(int i=0;i<5;++i){
+        data[i] = data_pc[i];
+      }
+    }else{  
+      int left_LR = map(analogRead(stick_lr),0,4096,0,255);
+      int left_UD = map(analogRead(stick_ud),0,4096,0,180);
+      int sli_L = map(analogRead(slider_l),0,4096,0,255);
+      int sli_R = map(analogRead(slider_r),0,4096,0,255);
+      int vol = map(analogRead(volume),0,4096,0,255);
+      int btn_R = digitalRead(switch_2);
 
+      if(left_LR<152 && left_LR>102){left_LR = 127;}
+      if(left_UD<105 && left_UD>75){left_UD = 90;}
+
+      data[0] = sli_L;
+      data[1] = sli_R;
+      data[2] = left_UD;
+      data[3] = left_UD;
+      data[4] = btn_R;
+    }
     
-    if(sli_L>240){
-      sli_L = 255;
-    }
-    if(sli_R>240){
-      sli_R = 255;
-    }
-
-    if(left_LR<152 && left_LR>102){
-      left_LR = 127;
-    }
-    if(left_UD<105 && left_UD>75){
-      left_UD = 90;
-    }
-
-    uint8_t data[4];
-    data[0] = sli_L;
-    data[1] = sli_R;
-    data[2] = left_UD;
-    data[3] = left_UD;
-    //data[2] = 511-right_LR;
-    //data[3] = 511-right_UD;
-    //data[4] = sli;
+    if(data[0]>240){data[0] = 255;}
+    if(data[1]>240){data[1] = 255;}
 
     #ifdef DEBUG
       Serial.print("lx:");
@@ -162,7 +169,7 @@ void loop() {
       */
     #endif
 
-    delay(10);
+    //delay(10);
 
     // Send message via ESP-NOW
     esp_now_send(castAddress, (uint8_t *) &data, sizeof(data));
