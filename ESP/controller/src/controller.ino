@@ -10,23 +10,22 @@ size_t data_pc_;
 uint8_t data_pc[5] = {0};
 
 // REPLACE WITH RECEIVER MAC Address
-//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60}; //1
+uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60}; //1
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x3D}; //2
-uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0xE4}; //3
+//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0xE4}; //3
 //uint8_t castAddress[] = {0xEC, 0xFA, 0xBC, 0xBB, 0x56, 0x54}; //4
-
 
 esp_now_peer_info_t peerInfo;
 
+const int controller_num = 2;
 //pin
-const int stick_lr = 34;
-const int stick_ud = 35;
-const int slider_l = 33;
-const int slider_r = 32;
-const int switch_1 = 23;
-const int switch_2 = 13;
-const int volume = 39;
-
+int stick_lr;
+int stick_ud;
+int slider_l;
+int slider_r;
+int switch_1;
+int switch_2;
+int volume;
 
 void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     char macStr[18];
@@ -73,6 +72,28 @@ void recieve_pc(){
 }
 
 void setup() {
+
+  switch(controller_num){
+    case 1:
+      stick_lr = 34;
+      stick_ud = 35;
+      slider_l = 33;
+      slider_r = 32;
+      switch_1 = 23;
+      switch_2 = 13;
+      volume = 39;
+      break;        //忘れずに!
+    case 2:
+      stick_lr = 36;
+      stick_ud = 39;
+      slider_l = 33;
+      slider_r = 32;
+      switch_1 = 23;
+      switch_2 = 13;
+      volume = 39;
+      break;
+    }
+
     Serial.begin(460800);    
     
     pinMode(stick_lr, INPUT);
@@ -107,10 +128,16 @@ void setup() {
     
 }
 
+int left_LR;
+int left_UD;
+int sli_L;
+int sli_R;
+int vol;
+
 void loop() {
   
-
   int btn_L = digitalRead(switch_1);
+  int btn_R = digitalRead(switch_2);
 
   if ((millis() - lastTime) > timerDelay) {
     uint8_t data[5];
@@ -120,21 +147,62 @@ void loop() {
         data[i] = data_pc[i];
       }
     }else{  
-      int left_LR = map(analogRead(stick_lr),0,4096,0,255);
-      int left_UD = map(analogRead(stick_ud),0,4096,0,180);
-      int sli_L = map(analogRead(slider_l),0,4096,0,255);
-      int sli_R = map(analogRead(slider_r),0,4096,0,255);
-      int vol = map(analogRead(volume),0,4096,0,255);
-      int btn_R = digitalRead(switch_2);
+    
+      switch(controller_num){
+        case 1:
+          left_LR = map(analogRead(stick_lr),0,4096,0,255);
+          left_UD = map(analogRead(stick_ud),0,4096,0,180);
+          sli_L = map(analogRead(slider_l),0,4096,0,255);
+          sli_R = map(analogRead(slider_r),0,4096,0,255);
+          vol = map(analogRead(volume),0,4096,0,255);
+          //btn_R = digitalRead(switch_2);
 
-      if(left_LR<152 && left_LR>102){left_LR = 127;}
-      if(left_UD<105 && left_UD>75){left_UD = 90;}
+          if(left_LR<152 && left_LR>102){left_LR = 127;}
+          if(left_UD<105 && left_UD>75){left_UD = 90;}
 
-      data[0] = sli_L;
-      data[1] = sli_R;
-      data[2] = left_UD;
-      data[3] = left_UD;
-      data[4] = btn_R;
+          data[0] = sli_L;
+          data[1] = sli_R;
+          data[2] = left_UD;
+          data[3] = left_UD;
+          data[4] = btn_R;
+          break;
+        
+        case 2:
+          left_LR = map(analogRead(stick_lr),0,4096,0,255); //揚力差
+          left_UD = map(analogRead(stick_ud),0,4096,0,255); //割り当てなし
+          sli_L = map(analogRead(slider_l),0,4096,0,180);   //尾翼サーボ
+          sli_R = map(analogRead(slider_r),0,4096,0,255);   //羽ばたき出力
+          //btn_L = digitalRead(switch_1);
+          //vol = map(analogRead(volume),0,4096,0,255);
+          btn_R = digitalRead(switch_2);
+
+          //スライドボリューム左（尾翼）最小
+          if(sli_L>170){sli_L = 180;}
+          //スライドボリューム右最小
+          if(sli_R>240){sli_R = 255;}
+          //ジョイスティック左右中央
+          if(left_LR<152 && left_LR>102){left_LR = 127;}
+          //ジョイスティック上下中央
+          if(left_UD<152 && left_UD>102){left_UD = 127;}
+
+          /*
+          int left_pwm = abs(sli_R - 255) - (left_LR - 127)/4;  //左（要確認）
+          int right_pwm = abs(sli_R - 255) + (left_LR - 127)/4; //右（要確認）
+          int servo_angle = abs(sli_L-180);                     //尾翼サーボ角
+          */
+          int left_pwm = sli_R - (left_LR - 127)/4;  //左（要確認）
+          int right_pwm = sli_R + (left_LR - 127)/4; //右（要確認）
+          int servo_angle = sli_L;                   //尾翼サーボ角
+          int cog_angle = 70*btn_R;                  //重心移動機構の角度
+
+          data[0] = left_pwm;          
+          data[1] = right_pwm;
+          data[2] = servo_angle;
+          data[3] = cog_angle;
+
+          break;
+      }
+
     }
     
     if(data[0]>240){data[0] = 255;}
