@@ -180,8 +180,8 @@ void loop() {
     #endif
     data[6] = loopTi;
     #ifdef DEBUG
-      Serial.print("y:");
-      Serial.print(euler.y());
+      //Serial.print("y:");
+      //Serial.print(euler.y());
       Serial.print("z:");
       Serial.println(data[4]);
     #endif

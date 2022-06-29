@@ -10,10 +10,12 @@ size_t data_pc_;
 uint8_t data_pc[5] = {0};
 
 // REPLACE WITH RECEIVER MAC Address
-uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60}; //1
+//機体側のマイコンの番号にあったアドレスのみコメントアウトを外す。
+//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60}; //1
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x3D}; //2
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0xE4}; //3
-//uint8_t castAddress[] = {0xEC, 0xFA, 0xBC, 0xBB, 0x56, 0x54}; //4
+//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0xAC}; //4
+uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0x98};   //5
 
 esp_now_peer_info_t peerInfo;
 
@@ -190,6 +192,7 @@ void loop() {
           int right_pwm = abs(sli_R - 255) + (left_LR - 127)/4; //右（要確認）
           int servo_angle = abs(sli_L-180);                     //尾翼サーボ角
           */
+
           int left_pwm = sli_R - (left_LR - 127)/4;  //左（要確認）
           int right_pwm = sli_R + (left_LR - 127)/4; //右（要確認）
           int servo_angle = sli_L;                   //尾翼サーボ角
