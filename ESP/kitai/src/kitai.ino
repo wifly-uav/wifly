@@ -34,13 +34,13 @@ uint8_t data[7];
 
 // REPLACE WITH RECEIVER MAC Address
 //uint8_t broadcastAddress[] = {0xC8, 0x2B, 0x96, 0xB9, 0x17, 0xC4};
-//uint8_t broadcastAddress[] = {0x8C, 0x4B, 0x14, 0x16, 0x63, 0x0C}; //A
-uint8_t broadcastAddress[] = {0xC8, 0x2B, 0x96, 0xB9, 0x69, 0x54}; //B
+uint8_t broadcastAddress[] = {0x8C, 0x4B, 0x14, 0x16, 0x63, 0x0C}; //A
+//uint8_t broadcastAddress[] = {0xC8, 0x2B, 0x96, 0xB9, 0x69, 0x54}; //B
 
-unsigned long lastTime = 0;  
+unsigned long lastTime = 0; 
 unsigned long recvTime = 0;  
-unsigned long Ti = 0;  
-unsigned long loopTi = 0;  
+unsigned long Ti = 0;
+unsigned long loopTi = 0;
 unsigned long timerDelay = 20;  // send readings timer
 unsigned long watchdogtime = 100;  // timer
 
