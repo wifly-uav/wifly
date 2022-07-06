@@ -265,10 +265,10 @@ class Communicator():
 if __name__ == "__main__":
     communicator = Communicator()
     #output_values_to_laz = [255, 0, 0, 0, 0, 0, 0, 0, 0]
-    output_values_to_laz = [255, 10, 20, 30, 40]
+    output_values_to_laz = [255, 10, 20, 30, 40, 50]
     communicator.start_laz(output_values_to_laz)
     print(output_values_to_laz)
     while True:        
-        data, ti, _ = communicator.recieve_from_esp(7)
+        data, ti, _ = communicator.recieve_from_esp(8)
         print(str(data) + " " + str(ti))
         communicator.send_to_esp([255,254,254,0,0,0])

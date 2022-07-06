@@ -2,25 +2,27 @@
 #include <WiFi.h>
 
 #include <SPI.h>
-#define DEBUG
+//#define DEBUG
 
 unsigned long lastTime = 0;  
 unsigned long timerDelay = 60;  // send readings timer
 size_t data_pc_;
 uint8_t data_pc[5] = {0};
+int re_data[5] = {0};
+double re_data_angle[4] = {0};
 
 // REPLACE WITH RECEIVER MAC Address
 //機体側のマイコンの番号にあったアドレスのみコメントアウトを外す。
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60}; //1
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x3D}; //2
-//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0xE4}; //3
+uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0xE4}; //3
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0xAC}; //4
-uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0x98}; //5
+//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0x98}; //5
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA2, 0xBF};   //6
 
 esp_now_peer_info_t peerInfo;
 
-const int controller_num = 2; //1:A 2:B
+const int controller_num = 1; //1:A 2:B
 //pin
 int stick_lr;
 int stick_ud;
@@ -29,6 +31,44 @@ int slider_r;
 int switch_1;
 int switch_2;
 int volume;
+
+double ysqr = 0;
+double t0,t1,t2,t3,t4 = 0;
+int eular[3] = {0};
+void qu2eu(int eular[3], double quotanion[4]){
+  double w = quotanion[0];
+  double x = quotanion[1];
+  double y = quotanion[2];
+  double z = quotanion[3];
+
+
+  double sz = -(2 * x * y - 2 * z * w);  
+  double a = asin(sz);
+  int flag = cos(a) != 0;
+  eular[0] = flag ? atan2(2 * y * z + 2 * x * w, 2 * w * w + 2 * y * y - 1)/PI*180 : atan2(-(2 * y * z - 2 * x * w), 2 * w * w + 2 * z * z - 1)/PI*180;
+  eular[1] = flag ? atan2(2 * x * z + 2 * y * w, 2 * w * w + 2 * x * x - 1)/PI*180 : 0;
+  eular[2] = a/PI*180;
+
+  /*
+  ysqr = y * y;
+
+  // roll (x-axis rotation)
+  t0 = +2.0 * (w * x + y * z);
+  t1 = +1.0 - 2.0 * (x * x + ysqr);
+  eular[0] = atan2(t0, t1)/PI*180;
+
+  // pitch (y-axis rotation)
+  t2 = +2.0 * (w * y - z * x);
+  t2 = t2 > 1.0 ? 1.0 : t2;
+  t2 = t2 < -1.0 ? -1.0 : t2;
+  eular[1] = asin(t2)/PI*180;
+
+  // yaw (z-axis rotation)
+  t3 = +2.0 * (w * z + x * y);
+  t4 = +1.0 - 2.0 * (ysqr + z * z);  
+  eular[2] = atan2(t3, t4)/PI*180;
+  */
+}
 
 void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     char macStr[18];
@@ -39,21 +79,30 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     //Serial.printf("Last Packet Recv from: %s\n", macStr);
     //Serial.printf("Last Packet Recv Data(%d): ", data_len);
     //Serial.println();
-    /*
+    
     for (int i = 0; i < data_len; i++) {
-        if(i == 4){
-          Serial.print(map(data[i], 0, 255, -90, 90));
-        }else if(i == 5){
-          Serial.print(map(data[i], 0, 255, -180, 180));
+        if(i > 4){
+          re_data_angle[i-5] = data[i]*0.01-1;
         }else{
-          Serial.print(data[i]);
-        }
-        if(i != data_len-1){
-          Serial.print(",");
+          re_data[i] = data[i];
         }
     }
+    for (int i = 0; i < 5; i++) {
+      Serial.print(re_data[i]);
+      if(i != 4){
+        Serial.print(",");
+      }
+    }
+    qu2eu(eular,re_data_angle);
+    Serial.print(",");
+    for (int i = 0; i < 3; i++) {
+      Serial.print(eular[i]);
+      if(i != 2){
+        Serial.print(",");
+      }
+    }
     Serial.println();
-    */
+    
 }
 
 void OnDataSent(const uint8_t* mac_addr, esp_now_send_status_t status) {
@@ -148,7 +197,10 @@ void loop() {
     uint8_t data[5];
     if(btn_L == 1){
       recieve_pc();
-      for(int i=0;i<5;++i){
+      for(int i=0;i<2;++i){
+        data[i] = 254 - data_pc[i];
+      }
+      for(int i=2;i<5;++i){
         data[i] = data_pc[i];
       }
     }else{  

@@ -10,9 +10,9 @@
 #include <SPI.h>
 
 //#define DEBUG
-//#define sensor
+#define sensor
 
-int kitai_number = 5;
+int kitai_number = 3;
 //1~5:Pch 6:Nch
 char controller = 'A';
 
@@ -33,8 +33,8 @@ const int led = 15;
 Servo cog;
 Servo ladder;
 
-int command[7] = {0};
-uint8_t data[7];
+int command[8] = {0};
+uint8_t data[9];
 
 unsigned long lastTime = 0; 
 unsigned long recvTime = 0;  
@@ -42,6 +42,8 @@ unsigned long Ti = 0;
 unsigned long loopTi = 0;
 unsigned long timerDelay = 20;  // send readings timer
 unsigned long watchdogtime = 100;  // timer
+
+double w,x,y,z = 0;
 
 int i = 0;
 
@@ -163,8 +165,7 @@ void setup() {
 
 float mapfloat(float x, long in_min, long in_max, long out_min, long out_max)
 {
-  //return (float)(x - in_min) * (out_max - out_min) / (float)(in_max - in_min) + out_min;
-  return (float)(x - in_min) * (out_max - out_min) *0.003921568627451 + out_min; // 1/255
+  return (float)(x - in_min) * (out_max - out_min) / (float)(in_max - in_min) + out_min;
 }
  
 void loop() {
@@ -177,7 +178,8 @@ void loop() {
     // - VECTOR_EULER         - degrees
     // - VECTOR_LINEARACCEL   - m/s^2
     // - VECTOR_GRAVITY       - m/s^2
-    imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
+    //imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
+    imu::Quaternion quaternion = bno.getQuat();
   #endif
 
   Ti = millis();
@@ -189,30 +191,41 @@ void loop() {
     data[2] = command[2];
     data[3] = command[3];
     #ifdef sensor
-      data[4] = (int)mapfloat(euler.y(), -90, 90, 0, 255);
-      data[5] = (int)mapfloat(euler.z(), -180, 180, 0, 255);
+      data[5] = (quaternion.w()+1)*100;
+      data[6] = (quaternion.x()+1)*100;
+      data[7] = (quaternion.y()+1)*100;
+      data[8] = (quaternion.z()+1)*100;
     #else
-      data[4] = 0;
       data[5] = 0;
+      data[6] = 0;
+      data[7] = 0;
+      data[8] = 0;
     #endif
-    data[6] = loopTi;
+    data[4] = loopTi;
     #ifdef DEBUG
       //Serial.print("y:");
       //Serial.print(euler.y());
-      Serial.print("z:");
-      Serial.println(data[4]);
+      //Serial.print("z:");
+      Serial.print(quaternion.w());
+      Serial.print(" , ");
+      Serial.print(quaternion.x());
+      Serial.print(" , ");
+      Serial.print(quaternion.y());
+      Serial.print(" , ");
+      Serial.print(quaternion.z());
+      Serial.println();
     #endif
 
     esp_now_send(broadcastAddress, (uint8_t *) &data, sizeof(data));
     lastTime = millis();
   }
-  
+  /*
   if ((Ti - recvTime) > watchdogtime){
     digitalWrite(led, HIGH);
     analogWrite(pwm1, 0);
     analogWrite(pwm2, 0);
   }
-
+  */
   analogWrite(pwm1, command[0]);
   analogWrite(pwm2, command[1]);
   ladder.write(command[2]);
