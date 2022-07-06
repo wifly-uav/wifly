@@ -6,7 +6,7 @@ import csv
 import msvcrt
 import sys
 
-RECEIVE_BYTE = 8
+RECEIVE_BYTE = 8    #receive_from_espの引数
 
 KEYS_LOG = ["Slope", "Pitch", "R-servo", "L-servo", "R-DC", "L-DC", "time"]
 #[受信データ , 送信データ , time]
