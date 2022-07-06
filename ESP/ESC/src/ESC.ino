@@ -10,7 +10,7 @@ char message[50];  //ã·ãªã¢ã«ã¢ãã¿ã¸è¡¨ç¤�
 Servo esc;  //Servoãªãã¸ã§ã¯ããä½æããï¼ä»åã¯ESCã«PWMä¿¡å·ãéãã®ã§ï¼`esc`ã¨å½åãã¦ããï¼
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("Program begin...");
   Serial.println("This program will calibrate the ESC.");
   Serial.println("Turn on power source, then wait 2 seconds and press any key.");

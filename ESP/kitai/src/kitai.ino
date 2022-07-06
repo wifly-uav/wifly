@@ -12,6 +12,10 @@
 //#define DEBUG
 //#define sensor
 
+int kitai_number = 5;
+//1~5:Pch 6:Nch
+char controller = 'A';
+
 #define PWM_FREQ 1000
 #define PWM_RANGE 255
 
@@ -31,11 +35,6 @@ Servo ladder;
 
 int command[7] = {0};
 uint8_t data[7];
-
-// REPLACE WITH RECEIVER MAC Address
-//uint8_t broadcastAddress[] = {0xC8, 0x2B, 0x96, 0xB9, 0x17, 0xC4};
-uint8_t broadcastAddress[] = {0x8C, 0x4B, 0x14, 0x16, 0x63, 0x0C}; //A
-//uint8_t broadcastAddress[] = {0xC8, 0x2B, 0x96, 0xB9, 0x69, 0x54}; //B
 
 unsigned long lastTime = 0; 
 unsigned long recvTime = 0;  
@@ -82,6 +81,7 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t len) {
   recvTime = millis();
 }
 
+uint8_t broadcastAddress[6];
 void setup() {
   Serial.begin(115200);
   Serial.println();
@@ -92,7 +92,7 @@ void setup() {
   analogWriteFreq(PWM_FREQ);
   analogWriteRange(PWM_RANGE);
 
-  digitalWrite(led, LOW);
+  digitalWrite(led, HIGH);
   analogWrite(pwm1, PWM_RANGE);
   analogWrite(pwm2, PWM_RANGE);
   
@@ -101,6 +101,23 @@ void setup() {
   
   cog.write(0);
   ladder.write(0);
+
+  // REPLACE WITH RECEIVER MAC Address
+  if(controller == 'A'){
+    broadcastAddress[0] = 0x8C;
+    broadcastAddress[1] = 0x4B;
+    broadcastAddress[2] = 0x14;
+    broadcastAddress[3] = 0x16;
+    broadcastAddress[4] = 0x63;
+    broadcastAddress[5] = 0x0C;
+  }else if(controller == 'B'){
+    broadcastAddress[0] = 0xC8;
+    broadcastAddress[1] = 0x2B;
+    broadcastAddress[2] = 0x96;
+    broadcastAddress[3] = 0xB9;
+    broadcastAddress[4] = 0x69;
+    broadcastAddress[5] = 0x54;
+  }
   
   #ifdef DEBUG
     Serial.println("-");
@@ -192,8 +209,8 @@ void loop() {
   
   if ((Ti - recvTime) > watchdogtime){
     digitalWrite(led, HIGH);
-    analogWrite(pwm1, 255);
-    analogWrite(pwm2, 255);
+    analogWrite(pwm1, 0);
+    analogWrite(pwm2, 0);
   }
 
   analogWrite(pwm1, command[0]);
