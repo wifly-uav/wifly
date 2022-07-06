@@ -199,7 +199,8 @@ class Communicator():
                     recieve_time = str(time.time() - self.time_started)     #受信した時間を記録
                     delta_time = time.time() - self.time_last_receive       #最後の受信との時間間隔を記録
                     self.time_last_receive = time.time()                    #最後の受信時間を更新  
-                    recieve_time_ = int(persed_data.pop(-1))    #受信時刻の読み取り（popなので削除もされる）
+                    recieve_time_ = int(persed_data.pop(4))    #受信時刻の読み取り（popなので削除もされる）
+                    persed_data.pop(-1)    #受信時刻の読み取り（popなので削除もされる）
                     self.dataset_from_laz = persed_data     #受信データとして記録
                     #print(str(self.dataset_from_laz) + ":" + str(recieve_time))
                     self.__fail_counter = 0                 #受信失敗回数をリセット
