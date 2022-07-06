@@ -5,12 +5,24 @@ import random as rd
 import time
 from collections import deque
 
+FRAMES = 4      #維持フレーム数
+
+"""
+#もとの設定
 RIGHT_WING = 1  #params_to_sendやdefault_params内での添え字
-LEFT_WING = 3   #
-PWM_WING = 0
-FRAMES = 4
-default_params = [255, PWM_WING, 0, PWM_WING, 0]
+LEFT_WING = 3   #params_to_sendやdefault_params内での添え字
+PWM_WING = 0    #はばたき初期値
+
+default_params = [255, PWM_WING, 0, PWM_WING, 0]    #ここを変更しないといけない気がする。
                 ##header,right,servo,left,controlmode
+"""
+
+#変更後
+RIGHT_WING = 1
+LEFT_WING = 2
+PWM_WING = 0
+default_params = [255, PWM_WING, PWM_WING, 0, 0, 0]
+
 receive_byt = 7
 
 #0:header(255固定)
@@ -30,6 +42,7 @@ class Environment():
         self.params_to_send = default_params
         self.state = deque()
 
+    #未使用
     def reset(self, i=0):
         """
         状態を格納するデックを作る
@@ -41,36 +54,10 @@ class Environment():
         self.params_to_send = default_params
         for i in range(FRAMES):
             self.params_to_send = default_params
-            data, _, _ = self.communicator.recieve_from_laz(byt=receive_byt, mode=False)
+            data, _, _ = self.communicator.receive_from_esp(byt=receive_byt, mode=False)
             self.update(flag=False, data=data)
         #print("state:")
         #print(self.state)
-
-    def reset_pid(self, add=0):
-        """
-        状態を格納するdequeを作成
-        最初にNNの入力に必要なFRAMES個の状態をLazuriteから取得
-        """
-
-
-        #Lazuriteにデータを送り、通信の準備をさせる。
-        #(Lazuriteは何かしらのデータを受け取らないと送信モードにならない。)
-        self.communicator.start_laz(default_params)
-
-        self.state = deque()                        #状態格納用deque
-        self.params_to_send = default_params        #2行下に同じ文がある。
-
-        #NNの入力に必要なFRAMES個の状態をLazuriteから取得する。
-        for i in range(FRAMES):
-            self.params_to_send = default_params    #送信用データを格納（未使用?）
-
-            #Lazuriteからデータを受信
-            #正常に受信できれば、受信データ、受信した時間、前回受信との間隔が返ってくる
-            #正常に受信できなかった場合、False,0,0が返ってくる
-            data, _, _ = self.communicator.recieve_from_laz(byt=receive_byt, mode=False)
-
-            data.append(add)                        #受信データにPgainを付け加える（data=Falseの場合RE?）                                                        
-            self.update(flag=False, data=data)      #受信した状態をstateに加える
 
     def reset_pid_2(self, add=0):
         """
@@ -78,9 +65,9 @@ class Environment():
         最初にNNの入力に必要なFRAMES個の状態をLazuriteから取得
         """
 
-        #Lazuriteにデータを送り、通信の準備をさせる。
+        #ESPにデータを送り、通信の準備をさせる。
         #(Lazuriteは何かしらのデータを受け取らないと送信モードにならない。)
-        self.communicator.start_laz(default_params)
+        self.communicator.start_esp(default_params)
 
         self.state = deque(maxlen = FRAMES)         #状態格納用deque
         self.params_to_send = default_params        #2行下に同じ文がある。
@@ -92,7 +79,7 @@ class Environment():
             #Lazuriteからデータを受信
             #正常に受信できれば、受信データ、受信した時間、前回受信との間隔が返ってくる
             #正常に受信できなかった場合、False,0,0が返ってくる
-            data, _, _ = self.communicator.recieve_from_laz(byt=receive_byt)
+            data, _, _ = self.communicator.receive_from_esp(byt = receive_byt)
 
             data.append(add)                        #受信データにPgainを付け加える（data=Falseの場合RE?）                                                
             #self.update(flag=False, data=data)
@@ -121,22 +108,22 @@ class Environment():
         #self.stateにはmaxlenを設定しているので、格納しきれない古い状態は自動的に削除される。
         self.state.appendleft(data) 
 
-
+    #未使用
     def observe_update_state(self, flag=True):
         """
         状態を更新した上で状態を確認する
         """
-        data, ti, ti_ = self.communicator.recieve_from_laz(byt=receive_byt)
+        data, ti, ti_ = self.communicator.receive_from_laz(byt=receive_byt)
         self.update(flag=flag, data=data)
         return self.state, ti, ti_
     
-    
+    #未使用
     def observe_update_state_pid(self, flag=True, pid=0):
 
         #Lazuriteからデータを受信
         #正常に受信できれば、受信データ、受信した時間、前回受信との間隔が返ってくる
         #正常に受信できなかった場合、False,0,0が返ってくる
-        data, ti, ti_ = self.communicator.recieve_from_laz(byt=receive_byt)
+        data, ti, ti_ = self.communicator.receive_from_laz(byt=receive_byt)
 
         data.append(pid)                    #受信データにPgainを付け加える（pid=0は引数が指定されなかった場合の値なので注意）
         #self.update(flag=flag, data=data)   #stateデックを更新
@@ -145,10 +132,10 @@ class Environment():
 
     def observe_update_state_pid_2(self, flag=True, pid=0):
 
-        #Lazuriteからデータを受信
+        #ESPからデータを受信
         #正常に受信できれば、受信データ、受信した時間、前回受信との間隔が返ってくる
         #正常に受信できなかった場合、False,0,0が返ってくる
-        data, ti, ti_ = self.communicator.recieve_from_laz(byt=receive_byt)
+        data, ti, ti_ = self.communicator.receive_from_esp(byt = rece)
 
         data.append(pid)                    #受信データにPgainを付け加える（pid=0は引数が指定されなかった場合の値なので注意）
         self.update_2(data)
@@ -218,9 +205,10 @@ class Environment():
             self.params_to_send[RIGHT_WING]=PWM_WING-20
             self.params_to_send[LEFT_WING]=PWM_WING
 
-        self.communicator.send_to_laz(self.params_to_send)
+        self.communicator.send_to_esp(self.params_to_send)
         #time.sleep(0.01)
 
+    #未使用
     def execute_action_(self, actions):
         """
         決定した行動に基づくモータ出力の変更を機体に反映（送信）
@@ -244,7 +232,7 @@ class Environment():
         else:
             return 6
     
-    
+    #未使用
     def excute_action_pid(self, action, actions):
         if action == 1:
             self.params_to_send[RIGHT_WING]=actions[0]
@@ -270,6 +258,7 @@ class Environment():
 
         self.communicator.send_to_laz(self.params_to_send)
 
+    #未使用
     def reaction(self, state):
         flag = True
         state_list = list(state)
@@ -288,6 +277,7 @@ class Environment():
             flag = False
         return action, flag
 
+    #未使用
     def get_sentparam(self):
         """
         機体に送った情報を確認する

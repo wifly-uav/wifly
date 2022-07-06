@@ -101,9 +101,6 @@ def build_dqn(lr, n_actions, input_dims, fc1_dims, fc2_dims):
     -NNの出力:状態sにおける各Q
     -state dequeの先頭に状態sが入っている
     """
-
-
-
     model = keras.Sequential([
 
         #Denseは全結合ユニット

@@ -24,10 +24,9 @@ if __name__ == "__main__":
     pid = calc_PID(saturations)     #calc_PIDクラスのインスタンス作成（__init__が呼び出され、初期化が行われる）
     param = [1.5,I_GAIN,D_GAIN,0]   #[P-gain,I-gain,D-gain,Target Yaw angle]
     ti = 10                         #PIDの微積分計算で用いる最小の時間幅
-    actions = [pwm_def, pwm_def]
+    actions = [pwm_def, pwm_def]    #行動ベクトル（両翼のモータ出力）
     pid.update_params(param)        #paramの値をcalc_PIDクラスに反映
 
-    
     path = os.path.dirname(__file__)                        #このスクリプトのディレクトリ名を取得
     print('save folder name:')                              #学習内容を保存するためのフォルダ名の入力を指示
     save_folder = input()                                   
@@ -94,10 +93,11 @@ if __name__ == "__main__":
         Q_max = 0.0                             #行動価値関数最大値
         reward = 0                              #報酬
         p_gain = 1.5                            
-        terminal = True                         #終状態フラグ(どこでFalseにする...?)
+        terminal = False                        #終状態フラグ（もとはTrue）
         data = True                             #?
 
         #状態を格納するdequeを作成
+        #この中でstart_espも行われる。（現在の初期送信データ長は4）
         #最初にNNの入力に必要なFRAMES個の状態をLazuriteから取得し、#state([deque])に格納
         #ver2では、dequeにmaxlenを設定して、古い状態の削除を自動で行っている。
         env.reset_pid_2(add=p_gain)   
@@ -108,8 +108,7 @@ if __name__ == "__main__":
         for j in range(N_FRAMES):
             terminal = env.observe_terminal()               #未使用
             state_current = state_next                      #次状態を現在の状態とする
-            
-            #action = agent.select_action(state_current)     
+                 
             action = agent.choose_action(state_current)     #ε-greedy方策によってactionを決定
             p_gain = env.execute_action_gain(action)        #actionに対応するPgainを取得
             param = [p_gain,I_GAIN,D_GAIN,0]                #paramを更新（Pgainを更新）
@@ -130,6 +129,7 @@ if __name__ == "__main__":
                 actions[0] = pwm_def                
                 actions[1] = pwm_def + diff - ER    #左側のモータ出力を下げる
 
+            #εのスケジューリング
             if training_flag:                       #学習を行う場合…
                 agent.epsilon -= 0.1/3000           #ランダム行動確率を下げていく。
             else:                                   #学習を行わない場合…
