@@ -23,7 +23,7 @@ LEFT_WING = 2
 PWM_WING = 0
 default_params = [255, PWM_WING, PWM_WING, 0, 0, 0]
 
-receive_byt = 7
+receive_byt = 8
 
 #0:header(255固定)
 #1:right wing(0~255)
@@ -135,7 +135,7 @@ class Environment():
         #ESPからデータを受信
         #正常に受信できれば、受信データ、受信した時間、前回受信との間隔が返ってくる
         #正常に受信できなかった場合、False,0,0が返ってくる
-        data, ti, ti_ = self.communicator.receive_from_esp(byt = rece)
+        data, ti, ti_ = self.communicator.receive_from_esp(byt = receive_byt)
 
         data.append(pid)                    #受信データにPgainを付け加える（pid=0は引数が指定されなかった場合の値なので注意）
         self.update_2(data)
@@ -216,7 +216,7 @@ class Environment():
         self.params_to_send[RIGHT_WING]=actions[0]
         self.params_to_send[LEFT_WING]=actions[1]
     
-        self.communicator.send_to_laz(self.params_to_send)
+        self.communicator.send_to_esp(self.params_to_send)
     
     
     def execute_action_gain(self, action):

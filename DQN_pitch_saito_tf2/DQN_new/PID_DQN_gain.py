@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 from Environment import Environment
 from Agent import DQNAgent
 from Logger import logger
@@ -17,7 +18,7 @@ ER = 0
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 
 if __name__ == "__main__":
-
+    tf.compat.v1.disable_eager_execution()
     #PID_param
     saturations = [0,150]           #PID操作量の制限
     pwm_def = 250                   #モーター出力デフォルト値
@@ -100,13 +101,13 @@ if __name__ == "__main__":
         #この中でstart_espも行われる。（現在の初期送信データ長は4）
         #最初にNNの入力に必要なFRAMES個の状態をLazuriteから取得し、#state([deque])に格納
         #ver2では、dequeにmaxlenを設定して、古い状態の削除を自動で行っている。
-        env.reset_pid_2(add=p_gain)   
+        env.reset_pid_2(add = p_gain)   
         #env.reset_pid(add=p_gain)          
 
         state_next = env.observe_state()        #次状態（FRAMES=4個分の初期状態が格納されたstate）を観測
 
         for j in range(N_FRAMES):
-            terminal = env.observe_terminal()               #未使用
+            #terminal = env.observe_terminal()               #未使用
             state_current = state_next                      #次状態を現在の状態とする
                  
             action = agent.choose_action(state_current)     #ε-greedy方策によってactionを決定
@@ -134,7 +135,7 @@ if __name__ == "__main__":
                 agent.epsilon -= 0.1/3000           #ランダム行動確率を下げていく。
             else:                                   #学習を行わない場合…
                 agent.epsilon = 0                   #ランダム行動はさせない。
-            env.execute_action_(actions)            #機体にモータ出力の変更内容を送信
+            env.execute2022_action_(actions)            #機体にモータ出力の変更内容を送信
 
             """
             if (j != 0 and training_flag == True):
@@ -159,8 +160,6 @@ if __name__ == "__main__":
             if (j != 0 and training_flag == True):
                 #agent.experience_replay()           #経験再生(NNパラメータのミニバッチ学習を行う)
                 agent.learn()
-            
-
             
             # for loging
             log.add_log_state_and_action(state_next, action, env.params_to_send, ti, ti_)
