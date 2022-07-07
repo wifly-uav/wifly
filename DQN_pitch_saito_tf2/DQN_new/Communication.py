@@ -179,4 +179,4 @@ if __name__ == "__main__":
     while True:
         data, ti, _ = communicator.receive_from_esp(byt = 8)
         print(str(data) + " " + str(ti))
-        communicator.send_to_esp([255,254,254,0,0,0])
+        communicator.send_to_esp([255,0,0,0,0,0])

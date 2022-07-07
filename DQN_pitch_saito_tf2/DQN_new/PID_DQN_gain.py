@@ -135,7 +135,7 @@ if __name__ == "__main__":
                 agent.epsilon -= 0.1/3000           #ランダム行動確率を下げていく。
             else:                                   #学習を行わない場合…
                 agent.epsilon = 0                   #ランダム行動はさせない。
-            env.execute2022_action_(actions)            #機体にモータ出力の変更内容を送信
+            env.execute_action_(actions)            #機体にモータ出力の変更内容を送信
 
             """
             if (j != 0 and training_flag == True):
