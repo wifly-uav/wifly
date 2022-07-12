@@ -327,7 +327,11 @@ class DQNAgent:
         time_start3 = time.time()
         #NNのパラメータ更新
         #self.log_loss.append(self.q_eval.train_on_batch(states, q_target))
-        self.log_loss.append(self.q_target.train_on_batch(states, q_target))
+        loss = self.q_target.train_on_batch(states, q_target)
+        float_loss = loss.item()
+        print(type(float_loss))
+        self.log_loss.append(float_loss)
+        #print(self.log_loss)
         a = time.time()
 
         if (step_count % rate == 0):
@@ -393,7 +397,7 @@ class DQNAgent:
     def debug_memory(self):
         with open(self.folder + '/debug_memory.csv', 'w') as f:
             writer = csv.writer(f, lineterminator='\n')
-            writer.writerows(self.replay_memory)
+            writer.writerows(self.memory.state_memory)
 
     def debug_minibatch(self):
         #print(self.minibatch_ind)
@@ -410,7 +414,9 @@ class DQNAgent:
     def debug_loss(self):
         with open(self.folder + '/debug_loss.csv', 'w') as f:
             writer = csv.writer(f, lineterminator='\n')
-            writer.writerows(self.log_loss)
+            print(type(self.log_loss))
+            print(self.log_loss)
+            writer.writerows(list(self.log_loss))
 
     def check_loss(self):
         return self.log_loss

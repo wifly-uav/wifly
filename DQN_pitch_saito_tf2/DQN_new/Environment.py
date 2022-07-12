@@ -159,7 +159,7 @@ class Environment():
         #報酬の設定
         #Yaw角の0.0度からのずれに基づいて報酬を与える
         try:
-            err = abs(float(data[0][1])-0.0)
+            err = abs(float(data[0][5])-0.0)
             if err < 10:
                 return 1
             elif err < 20:

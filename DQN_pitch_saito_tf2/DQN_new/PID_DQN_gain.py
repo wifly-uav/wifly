@@ -10,8 +10,8 @@ from visualize_act import visual_act
 from Calc_Control import calc_PID
 import os
 
-N_EPOCHS = 5
-N_FRAMES = 500
+N_EPOCHS = 2
+N_FRAMES = 100
 I_GAIN = 0.0001
 D_GAIN = 0
 ER = 0
@@ -179,7 +179,7 @@ if __name__ == "__main__":
     agent.debug_memory()
     agent.debug_minibatch()
     agent.debug_q()
-    agent.debug_loss()
+    #agent.debug_loss()         #listがfloatと認識されている…
     log.output_log()
 
     
@@ -189,6 +189,6 @@ if __name__ == "__main__":
 
     vi.visualize()
     mi.visualize()
-    ac.visualize()
+    #ac.visualize()
 
     print("finish")
