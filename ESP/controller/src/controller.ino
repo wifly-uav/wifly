@@ -83,7 +83,10 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     for (int i = 0; i < data_len; i++) {
         if(i > 4){
           re_data_angle[i-5] = data[i]*0.01-1;
-        }else{
+        }else if(i < 2){
+          re_data[i] = 255 - data[i];
+        }
+        else{
           re_data[i] = data[i];
         }
     }

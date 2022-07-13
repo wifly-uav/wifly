@@ -9,8 +9,9 @@ from visualize_heatmap import visual_minibach
 from visualize_act import visual_act
 from Calc_Control import calc_PID
 import os
+import time
 
-N_EPOCHS = 2
+N_EPOCHS = 5
 N_FRAMES = 100
 I_GAIN = 0.0001
 D_GAIN = 0
@@ -21,7 +22,7 @@ if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
     #PID_param
     saturations = [0,150]           #PID操作量の制限
-    pwm_def = 250                   #モーター出力デフォルト値
+    pwm_def = 200                   #モーター出力デフォルト値
     pid = calc_PID(saturations)     #calc_PIDクラスのインスタンス作成（__init__が呼び出され、初期化が行われる）
     param = [1.5,I_GAIN,D_GAIN,0]   #[P-gain,I-gain,D-gain,Target Yaw angle]
     ti = 10                         #PIDの微積分計算で用いる最小の時間幅
@@ -84,7 +85,9 @@ if __name__ == "__main__":
     mi = visual_minibach(folder=save_file)
     ac = visual_act(folder=save_file)
     
-    print("press y to start")                   #未実装
+    #print("press y to start")                   #未実装
+    print("Start after 3 seconds")
+    time.sleep(5)
 
 #try:
     for i in range(N_EPOCHS):                   #N_EPOCHSごとに各パラメータを初期化

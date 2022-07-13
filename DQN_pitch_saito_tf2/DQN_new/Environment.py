@@ -81,7 +81,8 @@ class Environment():
             #正常に受信できなかった場合、False,0,0が返ってくる
             data, _, _ = self.communicator.receive_from_esp(byt = receive_byt)
 
-            data.append(add)                        #受信データにPgainを付け加える（data=Falseの場合RE?）                                                
+            data.append(add)                        #受信データにPgainを付け加える（data=Falseの場合RE?)
+            #[モータ出力1,モータ出力2,サーボ1,サーボ2,Pitch,Yaw,Pgain]                                               
             #self.update(flag=False, data=data)
             self.update_2(data)
 
