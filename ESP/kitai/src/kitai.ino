@@ -9,12 +9,17 @@
 
 #include <SPI.h>
 
-//#define DEBUG
-#define sensor
+//#define DEBUG         //シリアルモニタで各スイッチの出力を確認できる。
+//#define sensor        //操縦時はコメントアウト
 
-int kitai_number = 3;
+//int kitai_number = 4;   
 //1~5:Pch 6:Nch
-char controller = 'A';
+
+//コントローラごとにここを切り替える!!!!----------------------------------
+
+char controller = 'A';  //大きいコントローラ：A 小さいコントローラ：B
+
+//---------------------------------------------------------------------
 
 #define PWM_FREQ 1000
 #define PWM_RANGE 255
