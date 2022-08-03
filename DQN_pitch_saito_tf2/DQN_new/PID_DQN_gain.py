@@ -79,30 +79,30 @@ if __name__ == "__main__":
         training_flag = True
     
     #各種log保存先指定
-    log = logger(folder=save_file)
-    env = Environment()                         #Environmentクラスのインスタンス作成
-    vi = visual_nn(folder=save_file)        
-    mi = visual_minibach(folder=save_file)
-    ac = visual_act(folder=save_file)
+    log = logger(folder = save_file)
+    env = Environment(agent.keep_frames)                         #Environmentクラスのインスタンス作成
+    vi = visual_nn(folder = save_file)        
+    mi = visual_minibach(folder = save_file)
+    ac = visual_act(folder = save_file)
     
     #print("press y to start")                   #未実装
     print("Start after 3 seconds")
-    time.sleep(5)
+    time.sleep(3)
 
 #try:
     for i in range(N_EPOCHS):                   #N_EPOCHSごとに各パラメータを初期化
         #init
-        frame = 0                               #未使用                    
+        #frame = 0                               #未使用                    
         loss = 0.0                              #NN損失関数
         Q_max = 0.0                             #行動価値関数最大値
         reward = 0                              #報酬
-        p_gain = 1.5                            
+        p_gain = 1.5                            #初期P gain
         terminal = False                        #終状態フラグ（もとはTrue）
         data = True                             #?
 
         #状態を格納するdequeを作成
         #この中でstart_espも行われる。（現在の初期送信データ長は4）
-        #最初にNNの入力に必要なFRAMES個の状態をLazuriteから取得し、#state([deque])に格納
+        #最初にNNの入力に必要なKEEP_FRAMES個の状態をLazuriteから取得し、#state([deque])に格納
         #ver2では、dequeにmaxlenを設定して、古い状態の削除を自動で行っている。
         env.reset_pid_2(add = p_gain)   
         #env.reset_pid(add=p_gain)          
@@ -124,7 +124,7 @@ if __name__ == "__main__":
             #state_current[0]が最新の状態で、state_current[0][0]が最新の状態におけるYaw角
             #delta_timeは微積分の近似で用いる時間幅
             #modeはSaturationブロック有効化を決めるフラグ
-            diff = pid.calculate_output(current_value=int(state_current[0][0]), delta_time= (int)(ti), mode=True)
+            diff = pid.calculate_output(current_value=int(state_current[0][0]), delta_time = (int)(ti), mode = True)
 
             if diff > 0:                            #操作量が正なら…
                 actions[0] = pwm_def - diff         #右側のモータ出力を下げる
@@ -133,11 +133,6 @@ if __name__ == "__main__":
                 actions[0] = pwm_def                
                 actions[1] = pwm_def + diff - ER    #左側のモータ出力を下げる
 
-            #εのスケジューリング
-            if training_flag:                       #学習を行う場合…
-                agent.epsilon -= 0.1/3000           #ランダム行動確率を下げていく。
-            else:                                   #学習を行わない場合…
-                agent.epsilon = 0                   #ランダム行動はさせない。
             env.execute_action_(actions)            #機体にモータ出力の変更内容を送信
 
             """
@@ -149,45 +144,71 @@ if __name__ == "__main__":
             #state_next:新たな状態が1つ加わり、古い状態が削除されたもの
             #更新されたstateデック、受信した時間、前回受信との間隔が返ってくる
             #state_next, ti, ti_ = env.observe_update_state_pid(pid=p_gain)
-            state_next, ti, ti_ = env.observe_update_state_pid_2(pid=p_gain) 
-
+            state_next, ti, ti_ = env.observe_update_state_pid_2(pid = p_gain) 
             reward = env.observe_reward(state_next)     #Yaw角の0.0度からのずれに基づいた報酬を観測
 
             #経験保存
-
             #agent.store_experience(state_current, action, reward, state_next, terminal)
             agent.store_transition(state_current,action,reward, state_next,terminal)
 
-            print(i,j,state_next[0], reward, pid.I*I_GAIN)
+            #進捗表示
+            print( "Epoch:%d" % i, 
+                    "STEP:%d" % j, 
+                    "Latest state:" + str(state_next[0]), 
+                    "Reward:%d" % reward, 
+                    "I_gain:%6f" % pid.I*I_GAIN)
 
             if (j != 0 and training_flag == True):
                 #agent.experience_replay()           #経験再生(NNパラメータのミニバッチ学習を行う)
                 agent.learn()
             
+            #εのスケジューリング
+            if training_flag:                       #学習を行う場合…
+                agent.epsilon -= 0.1/3000           #ランダム行動確率を下げていく。
+            else:                                   #学習を行わない場合…
+                agent.epsilon = 0                   #ランダム行動はさせない。
+
             # for loging
+            # 次状態、行動、最新の送信データ、最新の受信間隔、前回の受信間隔を格納(log)
+            # 次状態、報酬、最新の受信時刻(log2)
             log.add_log_state_and_action(state_next, action, env.params_to_send, ti, ti_)
             log.add_log_state(state_next, reward, ti)
 
+            #ステップ数のカウント
+            agent.global_step += 1
 #except :
 #except KeyboardInterrupt:
     #print("except finish")
     #print(state_current)
     #print(state_next)
 
+    #学習が終了したら各種出力を0
+    #保険用に3回繰り返し
     env.execute_action_([0,0])
     env.execute_action_([0,0])
     env.execute_action_([0,0])
-    agent.save_model()
-    agent.debug_nn()            #tf1のままなので動かない
-    agent.debug_memory()
-    agent.debug_minibatch()
-    agent.debug_q()
+
+    agent.save_model()          #NNモデルの保存
+    agent.debug_nn()            #q_evalの重みとバイアスをtxtファイルで保存
+    agent.debug_memory()        #リプレイバッファに保存されている遷移のうち、状態のみをcsv出力
+    agent.debug_minibatch()     #minibatch_indexのlogをCSV出力
+    agent.debug_minibatch_2()   #自作ver!
+    agent.debug_q()             #行動価値関数Qと行動aのlogをCSV出力
     #agent.debug_loss()         #listがfloatと認識されている…
+    
+    #以下をCSV出力
+    #次状態、行動、最新の送信データ、最新の受信間隔、前回の受信間隔を格納(log)
+    #次状態、報酬、最新の受信時刻(log2)
     log.output_log()
 
-    
+    #lossのグラフ表示 
     loss = agent.check_loss()
     log.loss_graph(loss)
+
+    #loss_graph自作ver
+    x = list(range(N_EPOCHS*N_FRAMES))
+    log.loss_graph_2(x,loss)
+    
     log.angle_graph()
 
     vi.visualize()

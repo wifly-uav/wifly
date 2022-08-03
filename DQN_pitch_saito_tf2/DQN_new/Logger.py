@@ -2,9 +2,9 @@ import csv
 import datetime
 import copy
 import matplotlib.pyplot as plt
-
+import numpy as np
 import statistics
-
+import datetime as dt
 import os
 from graph import Graph
 
@@ -53,6 +53,31 @@ class logger():
         plt.savefig(self.folder + '/loss.png')
         plt.show()
 
+    def loss_graph_2(x,self,loss):
+        fig=plt.figure()                                    #白紙のグラフの作成
+        #1つのグラフを作成
+        ax = fig.add_subplot(111)
+        N = len(loss)                                       #累計ステップ数
+        running_avg = np.empty(N)                           #移動平均を格納するarray
+        for t in range(N):
+            #t個目のプロットは、その前50個分のlossの平均値（移動平均）
+            running_avg[t] = np.mean(loss[max(0, t-50):(t+1)])
+
+        ax.plot(x, running_avg, label = "Loss" ,color="C3")     #lossの移動平均をプロット
+        ax.set_xlabel("Step")
+        ax.set_ylabel("Loss")
+        ax.tick_params(axis = "x",direction = "in")
+        ax.tick_params(axis = "y",direction = "in")
+        plt.savefig(self.folder + '/loss.png')
+        plt.show()
+
+        """
+        now = dt.datetime.now()             #年月日時間を取得
+        now_str = now.strftime('%m%d%H%M')  #月日時間の文字列（ex.07042244）
+        filename_dt = filename + now_str + ".png"
+        fig.savefig(filename_dt,bbox_inches = "tight")
+        """
+
     def angle_graph(self):
         angle = []
         time_ = []
@@ -71,12 +96,12 @@ class logger():
                 i = med
             sum += i
             time.append(sum/1000)
-                
+        
         plt.plot(time,angle)
         #plt.ylim(-90,90)
         plt.plot([0, time[-1]],[10, 10], "red", linestyle='dashed')
         plt.plot([0, time[-1]],[-10, -10], "red", linestyle='dashed')
         plt.plot([0, time[-1]],[0, 0], "black")
-        plt.title("ANGLE",fontsize=25)
+        plt.title("ANGLE",fontsize = 25)
         plt.savefig(self.folder + '/angle.png')
         plt.show()

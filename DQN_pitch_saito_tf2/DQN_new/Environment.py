@@ -36,11 +36,12 @@ class Environment():
     強化学習をする際の環境を設定するクラス
     状態取得、報酬決定、行動内容の決定をしている
     """
-    def __init__(self):
+    def __init__(self, keep_frames):
         self.communicator = Communicator()
         #self.reset()
         self.params_to_send = default_params
         self.state = deque()
+        self.keep_frames = keep_frames
 
     #未使用
     def reset(self, i=0):
@@ -59,7 +60,7 @@ class Environment():
         #print("state:")
         #print(self.state)
 
-    def reset_pid_2(self, add=0):
+    def reset_pid_2(self, add = 0):
         """
         4フレーム分の状態を格納するdequeを作成
         最初にNNの入力に必要なFRAMES個の状態をLazuriteから取得
@@ -69,11 +70,11 @@ class Environment():
         #(Lazuriteは何かしらのデータを受け取らないと送信モードにならない。)
         self.communicator.start_esp(default_params)
 
-        self.state = deque(maxlen = FRAMES)         #状態格納用deque
+        self.state = deque(maxlen = self.keep_frames)         #状態格納用deque
         self.params_to_send = default_params        #2行下に同じ文がある。
 
         #NNの入力に必要なFRAMES個の状態をLazuriteから取得する。
-        for i in range(FRAMES):
+        for i in range(self.keep_frames):
             self.params_to_send = default_params    #送信用データを格納（未使用?）
 
             #Lazuriteからデータを受信
@@ -81,13 +82,15 @@ class Environment():
             #正常に受信できなかった場合、False,0,0が返ってくる
             data, _, _ = self.communicator.receive_from_esp(byt = receive_byt)
 
-            data.append(add)                        #受信データにPgainを付け加える（data=Falseの場合RE?)
-            #[モータ出力1,モータ出力2,サーボ1,サーボ2,Pitch,Yaw,Pgain]                                               
-            #self.update(flag=False, data=data)
+            data.append(add)    #受信データにPgainを付け加える（data=Falseの場合RE?)
+            #data:[モータ出力1,モータ出力2,サーボ1,サーボ2,Pitch,Yaw,Pgain]                                               
+            #このdataが1つの状態である。
+
+            #状態を保持するdeque(self.state)に格納する。
             self.update_2(data)
+            #self.update(flag=False, data=data)
 
-
-
+    #未使用
     def update(self, flag, data):
         """
         状態を更新する
@@ -209,7 +212,6 @@ class Environment():
         self.communicator.send_to_esp(self.params_to_send)
         #time.sleep(0.01)
 
-    #未使用
     def execute_action_(self, actions):
         """
         決定した行動に基づくモータ出力の変更を機体に反映（送信）
