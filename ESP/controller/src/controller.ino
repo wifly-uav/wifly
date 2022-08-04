@@ -14,10 +14,10 @@ double re_data_angle[4] = {0};
 // REPLACE WITH RECEIVER MAC Address
 //機体側のマイコンの番号にあったアドレスのみコメントアウトを外す。
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60}; //1
-uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x3D}; //2
+//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x3D}; //2
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0xE4}; //3
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0xAC}; //4
-//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0x98}; //5
+uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0x98}; //5
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA2, 0xBF};   //6
 
 esp_now_peer_info_t peerInfo;
@@ -222,7 +222,7 @@ void loop() {
           data[0] = sli_L;
           data[1] = sli_R;
           data[2] = left_UD;
-          data[3] = left_UD;
+          data[3] = btn_R*180;
           data[4] = btn_R;
           break;
         
@@ -268,6 +268,7 @@ void loop() {
     if(data[1]>240){data[1] = 255;}
 
     #ifdef DEBUG
+      /*
       Serial.print("lx:");
       Serial.print(left_LR);
       Serial.print("ly:");
@@ -282,6 +283,7 @@ void loop() {
       Serial.print(btn_R);
       Serial.print("btn2:");
       Serial.print(btn_L);
+      */
       Serial.print(data[0]);
       Serial.print(data[1]);
       Serial.print(data[2]);
