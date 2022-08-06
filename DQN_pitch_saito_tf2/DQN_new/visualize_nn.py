@@ -10,7 +10,7 @@ class visual_nn:
     def visualize(self):
         circle_size = 60
         nn_layer = 4
-        weight_bias = 100
+        weight_bias = 1
         b_bias = 1
 
         th_max = 10000
@@ -162,3 +162,13 @@ class visual_nn:
         if self.flag:
             im.show()
         im.save(self.folder + '/nn.jpg', quality=100)
+
+
+if __name__ == "__main__":    
+    path = os.path.dirname(__file__)
+    print('folder name:')
+    save_folder = input()
+    save_file = os.path.join(path, 'result', save_folder)
+
+    vi = visual_nn(folder=save_file)
+    vi.visualize()

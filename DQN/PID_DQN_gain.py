@@ -1,4 +1,3 @@
-#from Calc_Control import Calc_Control
 import numpy as np
 from Environment import Environment
 from Agent import DQNAgent

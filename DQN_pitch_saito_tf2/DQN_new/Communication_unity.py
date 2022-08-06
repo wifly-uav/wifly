@@ -36,13 +36,13 @@ class Communicator():
 
     def perse_raw_data(self):
         try:
-            self.old_data = [float(i) for i in self.__old_data.split(",")[0:4]]
-            self.new_data = [float(i) for i in self.__raw_data.split(",")[0:4]]
+            self.old_data = [float(i) for i in self.__old_data.split(",")[0:5]]
+            self.new_data = [float(i) for i in self.__raw_data.split(",")[0:5]]
         except:
             print("error_recive")
             self.recieve_from_laz(mode=False)
-            self.old_data = [float(i) for i in self.__old_data.split(",")[0:4]]
-            self.new_data = [float(i) for i in self.__raw_data.split(",")[0:4]]
+            self.old_data = [float(i) for i in self.__old_data.split(",")[0:5]]
+            self.new_data = [float(i) for i in self.__raw_data.split(",")[0:5]]
         #print(self.new_data)
         return self.new_data #order : roll,pitch,yaw,height
 
@@ -52,7 +52,7 @@ class Communicator():
         re = self.conn.recv(1024)
         self.__old_data = self.__raw_data
         self.__raw_data = re.decode('utf-8')
-        print(self.__raw_data)
+        #print(self.__raw_data)
         if self.__raw_data == "":
             print("Not connecting")
             self.conn.close()
@@ -71,10 +71,10 @@ class Communicator():
         b = a.strip("[""]")
         a_utf8 = b.encode("utf-8")
         self.conn.sendall(a_utf8)
-        print("send:" + str(msg))
+        #print("send:" + str(msg))
 
     def termination_switch(self, msg):
-        self.flag_termination = [float(i) for i in self.__raw_data.split(",")[3:4]]
+        self.flag_termination = [float(i) for i in self.__raw_data.split(",")[-1]]
         if self.flag_termination[0] == 0.0:
             return True
         else:

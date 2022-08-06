@@ -18,26 +18,29 @@ import time
 import warnings
 warnings.filterwarnings('ignore')
 
+import time
+
 
 import os
 #--------------------------const, directory name, model name, etc...-------------------------
 MODEL_NAME = "WiflyDual_DQN"# + str(datetime.today())[0:10]
 MODEL_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 CHECKPOINT_NAME = "WiflyDual_DQN"
-MINIBATCH_SIZE = 16
+MINIBATCH_SIZE = 64
 REPLAY_MEMORY_SIZE = 10000
-LEARNING_RATE = 0.02
+LEARNING_RATE = 0.05
 DISCOUNT_FACTOR = 0.95
 EPSILON = 0.1
 EPSILON_DEC=1e-3
 EPSILON_END=0.01
-ENABLE_ACTIONS = [1,2,3,4,5]
+ENABLE_ACTIONS = [0,1,2,3,4,5]
 N_ACTIONS = len(ENABLE_ACTIONS)
 FRAMES = 4
-INPUT_DIMS = FRAMES*1
+INPUT_DIMS = 5
+#INPUT_DIMS = FRAMES*1
 #INPUTS = 5
-HIDDEN_1 = 10
-HIDDEN_2 = 5
+HIDDEN_1 = 30
+HIDDEN_2 = 30
 
 #----------------------------------------------------------------------------------------------
 
@@ -86,7 +89,7 @@ class ReplayBuffer():
         self.new_state_memory[index] = state_
         self.reward_memory[index] = reward
         self.action_memory[index] = action
-        self.terminal_memory[index] = 1 - int(done)
+        self.terminal_memory[index] = int(done)
 
         self.mem_cntr += 1      #保存した経験の数をカウント
 
@@ -120,6 +123,35 @@ def build_dqn(lr, n_actions, input_dims, fc1_dims, fc2_dims):
 
     return model
 
+def build_dqn_target(lr, n_actions, input_dims, fc1_dims, fc2_dims):
+    """
+    NNの作成
+    -NNの入力:4つの状態（Qを求めたい状態sとその3フレーム前までの3つの状態を合わせた合計4つの状態）
+    -NNの出力:状態sにおける各Q
+    -state dequeの先頭に状態sが入っている
+    """
+
+
+
+    model = keras.Sequential([
+
+        #Denseは全結合ユニット
+        #ユニット数、（入力層のユニット数）、活性化関数が引数
+        #入力のユニット数の指定には、input_dim=とinput_shape=があるらしい。
+        keras.layers.Input(shape = (FRAMES,input_dims,)),        #入力の数はinput_dims*4フレーム（shapeでの指定時は順序が逆なので注意）
+        keras.layers.Flatten(),                             #平滑化‼
+        keras.layers.Dense(fc1_dims, activation='relu'),    #中間層1
+        #keras.layers.BatchNormalization(),    #バッチ正規化
+        keras.layers.Dense(fc2_dims, activation='relu'),    #中間層2
+        keras.layers.Dense(n_actions, activation=None)])    #出力層
+    
+    #最適化アルゴリズム、誤差関数を指定する
+    model.compile(optimizer=Adam(learning_rate=lr), loss='mean_squared_error')
+
+    #構築されたモデルの情報を表示
+    model.summary()
+
+    return model
 
 class DQNAgent:
     def __init__(self, folder='log'):
@@ -130,7 +162,8 @@ class DQNAgent:
         self.batch_size = MINIBATCH_SIZE
 
         #self.replay_memory_size = REPLAY_MEMORY_SIZE
-        self.memory = ReplayBuffer(REPLAY_MEMORY_SIZE,FRAMES)   #ReplayBufferクラスのインスタンス作成
+        #self.memory = ReplayBuffer(REPLAY_MEMORY_SIZE,FRAMES)   #ReplayBufferクラスのインスタンス作成
+        self.memory = ReplayBuffer(REPLAY_MEMORY_SIZE,INPUT_DIMS)   #ReplayBufferクラスのインスタンス作成
         self.learning_rate = LEARNING_RATE
         self.discount_factor = DISCOUNT_FACTOR
         self.gamma = DISCOUNT_FACTOR
@@ -158,6 +191,7 @@ class DQNAgent:
         
         #NNの構築（初期化)
         self.q_eval = build_dqn(LEARNING_RATE, N_ACTIONS, INPUT_DIMS, HIDDEN_1, HIDDEN_2)
+        self.q_target = build_dqn_target(LEARNING_RATE, N_ACTIONS, INPUT_DIMS, HIDDEN_1, HIDDEN_2)
 
         # create TensorFlow graph (model)(tf1)
         #self.init_model()
@@ -188,7 +222,8 @@ class DQNAgent:
         ε-greedy方策による行動選択
         """
         if np.random.random() < self.epsilon:
-            action = np.random.choice(self.action_space)
+            action = np.random.choice(self.enable_actions)
+            #print("random" + str(action))  
         else:
             #現在保持している状態のリストをnp.array化
             #これによってNNに入力できる。
@@ -198,7 +233,8 @@ class DQNAgent:
             #NNのモデルに対しpredictメソッドを実行すると、出力される。
             actions = self.q_eval.predict(self.states)
             #print(actions)
-            action = np.argmax(actions)             #行動価値が最大である行動を選択     
+            action = self.enable_actions[np.argmax(actions)]            #行動価値が最大である行動を選択   
+            #print("greedy" + str(action))  
 
         return action
 
@@ -262,7 +298,7 @@ class DQNAgent:
         """
         self.memory.store_transition(state, action, reward, new_state, done)
         
-    def learn(self):
+    def learn(self, step_count=0, rate = 10):
         """
         NNの重みとバイアスを学習
         """
@@ -275,10 +311,13 @@ class DQNAgent:
         #Fixed-Targetは未実装
         time_start = time.time()
         #q_eval = self.q_eval.predict(states)
-        q_eval = self.q_eval(states, training=False)
+        q_eval = self.q_target.predict(states)
+        #q_eval = self.q_eval(states, training=False)
 
-        #q_next = self.q_eval.predict(states_)       
-        q_next = self.q_eval(states_, training=False)
+        #q_next = self.q_eval.predict(states_)
+        q_next = self.q_target.predict(states_)       
+        #q_next = self.q_eval(states_, training=False)
+        time_start2 = time.time()
 
         q_target = np.copy(q_eval)
 
@@ -288,11 +327,24 @@ class DQNAgent:
         #TDターゲットの計算
         q_target[batch_index, actions] = rewards + self.gamma * np.max(q_next, axis=1)*dones
 
+        time_start3 = time.time()
         #NNのパラメータ更新
-        self.q_eval.train_on_batch(states, q_target)
+        #self.log_loss.append(self.q_eval.train_on_batch(states, q_target))
+        self.log_loss.append(self.q_target.train_on_batch(states, q_target))
+        a = time.time()
 
-        time_end = time.time()
-        print(time_end-time_start)
+        if (step_count % rate == 0):
+            print("set_weight")
+            '''
+            self.q_eval.layers[0].set_weights(self.q_target.layers[0].get_weights())
+            self.q_eval.layers[1].set_weights(self.q_target.layers[1].get_weights())
+            self.q_eval.layers[2].set_weights(self.q_target.layers[3].get_weights())
+            self.q_eval.layers[3].set_weights(self.q_target.layers[4].get_weights())
+            '''
+            self.q_eval.set_weights(self.q_target.get_weights())
+
+        #print(loss)
+        #print("time:" + str(a-time_start) + " , " + str(time_start2-time_start) + " , "  + str(time_start3-time_start2) + " , "  + str(a-time_start3))
         #self.epsilon = self.epsilon - self.eps_dec if self.epsilon > self.eps_min else self.eps_min
         
         #logの取得が未実装
