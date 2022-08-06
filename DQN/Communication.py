@@ -6,8 +6,6 @@ import csv
 import msvcrt
 import sys
 
-KEYS_LOG = ["Slope", "Pitch", "R-servo", "L-servo", "R-DC", "L-DC", "time"]
-#[受信データ , 送信データ , time]
 class Communicator():
     """
     マイコンと通信するためのクラス
@@ -64,7 +62,7 @@ class Communicator():
         self.__raw_data = ""
         self.terminal_flag = 1
         self.dataset_from_laz = []
-        self.log = [KEYS_LOG]
+        self.log = []
         self.time_started = None
         self.time_last_receive = time.time()
 
@@ -135,17 +133,37 @@ class Communicator():
                     self.time_last_receive = time.time()
                     if (persed_data.pop(0).startswith('S') and persed_data.pop(-1).startswith('E')):
                         persed_data.pop(0)
-                        if (persed_data[0] != '' or persed_data[0] != '-'):
-                            #print(persed_data[0])
-                            recieve_time_ = persed_data.pop(-1)
-                            #recieve_time_ = 0
-                            #add_log = self.create_log(persed_data, recieve_time)
-                            #if mode == True:
-                            #    self.log.append(add_log)
-                            self.dataset_from_laz = persed_data
-                            #print(str(self.dataset_from_laz) + ":" + str(recieve_time))
-                            self.__fail_counter = 0
-                            return self.dataset_from_laz, recieve_time_, delta_time
+                        if (persed_data[0] != '' or persed_data[0] != '-' or persed_data[1] != '' or persed_data[2] != ''):
+                            try:
+                                a = int(persed_data[0])
+                                recieve_time_ = persed_data.pop(-1)
+<<<<<<< HEAD
+                                #recieve_time_ = 0
+                                #add_log = self.create_log(persed_data, recieve_time)
+                                #if mode == True:
+                                #    self.log.append(add_log)
+                                self.dataset_from_laz = persed_data
+                                #print(str(self.dataset_from_laz) + ":" + str(recieve_time))
+                                self.__fail_counter = 0
+                                if (int(persed_data[1]) > 100 and int(persed_data[2]) > 100):
+                                    return self.dataset_from_laz, recieve_time_, delta_time
+=======
+                                if (abs(int(persed_data[1])-int(persed_data[2])) <= 200):
+                                    #recieve_time_ = 0
+                                    #add_log = self.create_log(persed_data, recieve_time)
+                                    #if mode == True:
+                                    #    self.log.append(add_log)
+                                    self.dataset_from_laz = persed_data
+                                    #print(str(self.dataset_from_laz) + ":" + str(recieve_time))
+                                    self.__fail_counter = 0
+                                    return self.dataset_from_laz, recieve_time_, delta_time
+                                else:
+                                    self.__ser.flushInput()
+>>>>>>> 44d9557a2332597193ffce9bd3afeb4aa33afec1
+                            except:
+                                self.__ser.flushInput()
+                                print("- detected")
+                                self.__ser.flushInput()
                         else:
                             print(persed_data[0])
                             print("no data")
@@ -198,7 +216,7 @@ class Communicator():
                     self.terminal_flag = 1
                 elif key == 'y'.encode('utf-8'):
                     self.terminal_flag = 0
-                    return True
+                    return False
                 print("terminal wait")
         #return self.terminal_flag
 

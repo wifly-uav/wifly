@@ -10,7 +10,7 @@ from graph import Graph
 
 class logger():
     def __init__(self, folder='log'):
-        self.log = [["pitch"], ["yaw"], ["left"], ["right"]]
+        self.log = []
         self.log2 = []
         self.path = os.path.dirname(__file__)
         self.folder = folder
@@ -18,7 +18,7 @@ class logger():
 
     def add_log_state_and_action(self, state, action, sent_param, time, time2):
         state_list = list(state)
-        row = [state_list[0], state_list[1], state_list[2], action, sent_param[3], sent_param[1], time, time2]
+        row = [state_list, action, sent_param[3], sent_param[1], time, time2]
         """
         row = copy.copy(state)
         row.extend(sent_param)

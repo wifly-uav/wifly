@@ -93,15 +93,18 @@ class Environment():
             [int]: 報酬
         """
         ##報酬の設定
-        err = abs(float(data[0][0])-0.0)
-        if err < 10:
+        try:
+            err = abs(float(data[0][0])-0.0)
+            if err < 10:
+                return 1
+            elif err < 20:
+                return 0
+            elif err <45:
+                return -1
+            else:
+                return -10
+        except:
             return 1
-        elif err < 30:
-            return 0
-        elif err <45:
-            return -1
-        else:
-            return -10
 
     def observe_terminal(self):
         """
@@ -154,15 +157,15 @@ class Environment():
     def execute_action_gain(self, action):
 
         if action == 1:
-            return 1
-        elif action == 2:
-            return 1.5
-        elif action == 3:
             return 2
-        elif action == 4:
+        elif action == 2:
+            return 3.5
+        elif action == 3:
             return 4
+        elif action == 4:
+            return 4.5
         else:
-            return 7
+            return 6
     
     
     def excute_action_pid(self, action, actions):

@@ -8,6 +8,7 @@ tf.disable_v2_behavior()
 tf.get_logger().setLevel("ERROR")
 import numpy as np
 import csv
+import math
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -18,7 +19,7 @@ import os
 MODEL_NAME = "WiflyDual_DQN"# + str(datetime.today())[0:10]
 MODEL_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 CHECKPOINT_NAME = "WiflyDual_DQN"
-MINIBATCH_SIZE = 32
+MINIBATCH_SIZE = 16
 REPLAY_MEMORY_SIZE = 10000
 LEARNING_RATE = 0.02
 DISCOUNT_FACTOR = 0.95
@@ -52,6 +53,8 @@ class DQNAgent:
         self.log_q = []
         self.log_act = []
         self.log_loss = []
+        self.epsilon_act = 0
+        self.action_old = 0
 
         self.folder = folder
 
@@ -88,7 +91,7 @@ class DQNAgent:
             return tf.nn.batch_normalization(inputs,
                 pop_mean, pop_var, beta, scale, variance_epsilon)
 
-    def huber_loss(y_true, y_pred, clip_delta=1.0):
+    def huber_loss(self, y_true, y_pred, clip_delta=1.0):
         error = y_true - y_pred
         cond  = tf.keras.backend.abs(error) < clip_delta
 
@@ -96,6 +99,9 @@ class DQNAgent:
         linear_loss  = clip_delta * (tf.keras.backend.abs(error) - 0.5 * clip_delta)
 
         return tf.where(cond, squared_loss, linear_loss)
+
+    def huber_loss_mean(self, y_true, y_pred, clip_delta=1.0):
+        return tf.keras.backend.mean(self.huber_loss(y_true, y_pred, clip_delta))
 
     def init_model(self):
         """
@@ -123,13 +129,15 @@ class DQNAgent:
         with tf.name_scope('output'):
             # output layer (N_ACTIONS)
             self.W_out = tf.Variable(tf.truncated_normal([HIDDEN_2, N_ACTIONS], stddev=0.01), name="W_out")
-            self.b_out = tf.Variable(tf.zeros([N_ACTIONS]), name="b_out")
+            #self.b_out = tf.Variable(tf.zeros([N_ACTIONS]), name="b_out")
+            self.b_out = tf.Variable([10,5,1,0.1,0], name="b_out")
             self.y = tf.matmul(self.h_fc2, self.W_out) + self.b_out
 
         # loss function
         with tf.name_scope('loss'):
             self.y_ = tf.placeholder(tf.float32, [None, N_ACTIONS])
             self.loss = tf.reduce_mean(tf.square(self.y_ - self.y), name="loss")
+            #self.loss = tf.reduce_mean(self.huber_loss_mean(self.y_, self.y), name="loss")
 
         # train operation RMSPropOptimizer
         with tf.name_scope('Optimizer'):
@@ -164,7 +172,6 @@ class DQNAgent:
             [int]: 決定した行動の番号
         """
         a = self.Q_values(state)
-        self.log_q.append(state.copy())
         self.log_q.append(a)
         if np.random.rand() <= self.epsilon:
             # random
@@ -173,7 +180,44 @@ class DQNAgent:
             # max_action Q(state, action)
             act = self.enable_actions[np.argmax(a)]
             
-        self.log_act.append([0, act])
+        self.log_act.append([act])
+        return act
+
+    def select_action_softmax(self, tau, state):
+        """
+            softmax 行動選択
+        """
+        values = self.Q_values(state)
+        sum_exp_values = sum([np.exp(v/tau) for v in values])   # softmax選択の分母の計算
+        p = [np.exp(v/tau)/sum_exp_values for v in values]      # 確率分布の生成
+
+        action = np.random.choice(np.arange(len(values)), p=p)  # 確率分布pに従ってランダムで選択
+        return action
+
+    def select_action_epsilon(self, state, act_count=0):
+        """
+        行動決定(方策)
+        Args:
+            state ([deque]): 状態(nフレーム)
+        Returns:
+            [int]: 決定した行動の番号
+        """
+        a = self.Q_values(state)
+        self.log_q.append(a)
+        if self.epsilon_act == 0:
+            if np.random.rand() <= self.epsilon:
+                # random
+                act = np.random.choice(self.enable_actions)
+                self.action_old = act
+                self.epsilon_act = act_count
+            else:
+                # max_action Q(state, action)
+                act = self.enable_actions[np.argmax(a)]
+        else:
+            act = self.action_old
+            self.epsilon_act -= 1
+            
+        self.log_act.append([act])
         return act
     
     def select_action_limit(self, state):
@@ -185,7 +229,6 @@ class DQNAgent:
             [int]: 決定した行動の番号
         """
         a = self.Q_values(state)
-        self.log_q.append(list(state))
         self.log_q.append(a)
         angle = float(state[0][0])
         if angle<-45:
@@ -199,7 +242,7 @@ class DQNAgent:
             # max_action Q(state, action)
             act = self.enable_actions[np.argmax(a)]
             
-        self.log_act.append([0, act])
+        self.log_act.append([act])
         return act
 
     # store experience to replay memory
