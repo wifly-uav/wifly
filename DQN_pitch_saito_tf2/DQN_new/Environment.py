@@ -165,7 +165,7 @@ class Environment():
         try:
             err = abs(float(data[0][5])-0.0)
             if err < 10:
-                return 1
+                return 10
             elif err < 20:
                 return 0
             elif err <45:
@@ -183,6 +183,7 @@ class Environment():
         """
         return self.communicator.termination_switch(default_params)
 
+    #未使用
     def excute_action(self, action):
         """
         行動内容を定義する
@@ -224,13 +225,13 @@ class Environment():
     
     def execute_action_gain(self, action):
 
-        if action == 1:
+        if action == 0:
             return 2
-        elif action == 2:
+        elif action == 1:
             return 3.5
-        elif action == 3:
+        elif action == 2:
             return 4
-        elif action == 4:
+        elif action == 3:
             return 4.5
         else:
             return 6

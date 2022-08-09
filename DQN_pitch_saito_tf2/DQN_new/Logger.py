@@ -53,15 +53,15 @@ class logger():
         plt.savefig(self.folder + '/loss.png')
         plt.show()
 
-    def loss_graph_2(x,self,loss):
-        fig=plt.figure()                                    #白紙のグラフの作成
+    def loss_graph_2(self,x,loss):
+        fig = plt.figure()                                    #白紙のグラフの作成
         #1つのグラフを作成
         ax = fig.add_subplot(111)
         N = len(loss)                                       #累計ステップ数
         running_avg = np.empty(N)                           #移動平均を格納するarray
         for t in range(N):
             #t個目のプロットは、その前50個分のlossの平均値（移動平均）
-            running_avg[t] = np.mean(loss[max(0, t-50):(t+1)])
+            running_avg[t] = np.mean(loss[max(0, t-20):(t+1)])
 
         ax.plot(x, running_avg, label = "Loss" ,color="C3")     #lossの移動平均をプロット
         ax.set_xlabel("Step")
@@ -104,4 +104,23 @@ class logger():
         plt.plot([0, time[-1]],[0, 0], "black")
         plt.title("ANGLE",fontsize = 25)
         plt.savefig(self.folder + '/angle.png')
+        plt.show()
+
+    def angle_graph_2(self, x, lst_angle):
+        fig = plt.figure()                                              #白紙のグラフの作成
+        #1つのグラフを作成
+        ax = fig.add_subplot(111)
+        N = len(x)                                                      #累計ステップ数
+        running_avg = np.empty(N)                                       #移動平均を格納するarray
+        for t in range(N):
+            #t個目のプロットは、その前50個分のlossの平均値（移動平均）
+            lst_angle_buf = lst_angle[max(0,t-50):(t+1)]
+            running_avg[t] = np.mean(list(lst_angle_buf))
+
+        ax.plot(x, running_avg, label = "Yaw angle" ,color="C3")        #lossの移動平均をプロット
+        ax.set_xlabel("Step")
+        ax.set_ylabel("Yaw angle")
+        ax.tick_params(axis = "x",direction = "in")
+        ax.tick_params(axis = "y",direction = "in")
+        plt.savefig(self.folder + '/Yaw.png')
         plt.show()

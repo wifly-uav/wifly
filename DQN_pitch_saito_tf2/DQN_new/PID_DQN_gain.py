@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from Environment import Environment
-from Agent import DQNAgent
+from Agent import MINIBATCH_SIZE, DQNAgent
 from Logger import logger
 import sys
 from visualize_nn import visual_nn
@@ -13,7 +13,7 @@ import time
 
 N_EPOCHS = 5
 N_FRAMES = 100
-I_GAIN = 0.0001
+I_GAIN = 0.0001 #0.0001
 D_GAIN = 0
 ER = 0
 MODEL_NAME_HEADER = "WiflyDual_DQN"
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
     #PID_param
     saturations = [0,150]           #PID操作量の制限
-    pwm_def = 200                   #モーター出力デフォルト値
+    pwm_def = 180                   #モーター出力デフォルト値
     pid = calc_PID(saturations)     #calc_PIDクラスのインスタンス作成（__init__が呼び出され、初期化が行われる）
     param = [1.5,I_GAIN,D_GAIN,0]   #[P-gain,I-gain,D-gain,Target Yaw angle]
     ti = 10                         #PIDの微積分計算で用いる最小の時間幅
@@ -105,14 +105,14 @@ if __name__ == "__main__":
         #最初にNNの入力に必要なKEEP_FRAMES個の状態をLazuriteから取得し、#state([deque])に格納
         #ver2では、dequeにmaxlenを設定して、古い状態の削除を自動で行っている。
         env.reset_pid_2(add = p_gain)   
-        #env.reset_pid(add=p_gain)          
+        #env.reset_pid(add=p_gain)      
 
         state_next = env.observe_state()        #次状態（FRAMES=4個分の初期状態が格納されたstate）を観測
 
         for j in range(N_FRAMES):
             #terminal = env.observe_terminal()               #未使用
             state_current = state_next                      #次状態を現在の状態とする
-                 
+            agent.get_angle(state_current)
             action = agent.choose_action(state_current)     #ε-greedy方策によってactionを決定
             p_gain = env.execute_action_gain(action)        #actionに対応するPgainを取得
             param = [p_gain,I_GAIN,D_GAIN,0]                #paramを更新（Pgainを更新）
@@ -121,10 +121,10 @@ if __name__ == "__main__":
             
             #操作量をPID計算
             #state_currentはFRAMES個の状態を保持
-            #state_current[0]が最新の状態で、state_current[0][0]が最新の状態におけるYaw角
+            #state_current[0]が最新の状態で、state_current[0][5]が最新の状態におけるYaw角
             #delta_timeは微積分の近似で用いる時間幅
             #modeはSaturationブロック有効化を決めるフラグ
-            diff = pid.calculate_output(current_value=int(state_current[0][0]), delta_time = (int)(ti), mode = True)
+            diff = pid.calculate_output(current_value = int(state_current[0][5]), delta_time = (int)(ti), mode = True)
 
             if diff > 0:                            #操作量が正なら…
                 actions[0] = pwm_def - diff         #右側のモータ出力を下げる
@@ -152,13 +152,17 @@ if __name__ == "__main__":
             agent.store_transition(state_current,action,reward, state_next,terminal)
 
             #進捗表示
+            u_i = pid.I*I_GAIN  #Igainによる操作量（=I_gain*偏差の蓄積（積分））
             print( "Epoch:%d" % i, 
                     "STEP:%d" % j, 
                     "Latest state:" + str(state_next[0]), 
-                    "Reward:%d" % reward, 
-                    "I_gain:%6f" % pid.I*I_GAIN)
+                    "Yaw angle:%f" % agent.log_yaw_angle[-1],
+                    "Reward:%d" % reward,
+                    "Epsilon:%4f" % agent.epsilon, 
+                    "u_I:%6f" % u_i)
 
-            if (j != 0 and training_flag == True):
+            #if (j != 0 and training_flag == True):
+            if training_flag == True:
                 #agent.experience_replay()           #経験再生(NNパラメータのミニバッチ学習を行う)
                 agent.learn()
             
@@ -206,10 +210,17 @@ if __name__ == "__main__":
     log.loss_graph(loss)
 
     #loss_graph自作ver
-    x = list(range(N_EPOCHS*N_FRAMES))
+    #x = list(range(N_EPOCHS*N_FRAMES))
+    x = list(range(agent.batch_size, agent.batch_size + len(agent.log_loss)))
+    #print(len(x))
     log.loss_graph_2(x,loss)
     
     log.angle_graph()
+
+    x = list(range(len(agent.log_yaw_angle)))
+    #print(agent.log_yaw_angle)
+    #print(type(agent.log_yaw_angle))
+    log.angle_graph_2(x,agent.log_yaw_angle)
 
     vi.visualize()
     mi.visualize()

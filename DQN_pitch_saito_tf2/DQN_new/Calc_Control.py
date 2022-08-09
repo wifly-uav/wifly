@@ -55,7 +55,7 @@ class calc_PID():
         error = self.__target - current_value
         #self.__error_D = (self.__error_P - error)/ delta_time
         self.__error_P = error
-        self.__error_I = self.__error_I + error*delta_time
+        self.__error_I = self.__error_I + error*delta_time      #偏差の蓄積
         self.I = self.__error_I
         out = int(self.__param_P * self.__error_P + self.__param_I * self.__error_I)# + self.__param_D * self.__error_D)
         if mode == True:

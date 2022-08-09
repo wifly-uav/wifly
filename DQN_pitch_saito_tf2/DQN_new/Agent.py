@@ -7,6 +7,7 @@ from tensorflow.keras.optimizers import Adam
 #from tensorflow.keras.models import load_model
 from collections import deque
 from datetime import datetime
+from matplotlib import pyplot as plt
 
 #import tensorflow.compat.v1 as tf
 #tf.disable_v2_behavior()
@@ -31,11 +32,11 @@ DUELING = False
 DOUBLE = False
 
 #行動空間設定
-ENABLE_ACTIONS = [0,1,2,3,4,5]
-N_ACTIONS = len(ENABLE_ACTIONS)
+N_ACTIONS = 5
+ENABLE_ACTIONS = [i for i in range(N_ACTIONS)]
 
 #hyperparameter各種
-LEARNING_RATE = 0.05
+LEARNING_RATE = 0.02
 DISCOUNT_FACTOR = 0.95
 MINIBATCH_SIZE = 64
 REPLAY_MEMORY_SIZE = 10000
@@ -44,7 +45,7 @@ EPSILON_DEC = 1e-3
 EPSILON_END = 0.01
 KEEP_FRAMES = 4
 STATE_VARIABLES = 7     #状態変数の数
-COPY_PERIOD = 50
+COPY_PERIOD = 20
 HIDDEN_1 = 30           
 HIDDEN_2 = 30
 
@@ -115,12 +116,12 @@ def build_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
         #入力のユニット数の指定には、"input_dim="と"input_shape="があるらしい。
         keras.layers.Input(shape = (keep_frames,input_dims,)),  #入力の数はinput_dims*4フレーム（shapeでの指定時は順序が逆なので注意）
         keras.layers.Flatten(),                                 #平滑化‼
-        keras.layers.Dense(fc1_dims, activation='relu'),        #中間層1
-        keras.layers.Dense(fc2_dims, activation='relu'),        #中間層2
-        keras.layers.Dense(n_actions, activation=None)])        #出力層
+        keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層1
+        keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層2
+        keras.layers.Dense(n_actions, activation = None, kernel_initializer = "he_normal")])       #出力層
     
     #最適化アルゴリズム、誤差関数を指定する
-    model.compile(optimizer=Adam(learning_rate=lr), loss ='huber_loss')
+    model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
 
     model.summary()     #構築されたモデルの情報を表示
     return model,0,0    #Dueling_Networkと返り値の数を合わせている。
@@ -214,6 +215,7 @@ class DQNAgent:
 
         #log用
         self.log_states = []                    #状態のlog
+        self.log_yaw_angle = []
         self.minibatch_index_log = np.empty(0)  
         self.log_q = []                         #行動価値関数Qのlog
         self.log_act = []                       #行動aのlog
@@ -229,11 +231,11 @@ class DQNAgent:
         #NNの構築
         #Dueling or Normal
         if self.dueling:
-            self.q_eval,self.v_eval,self.adv_eval = build_dueling_dqn(LEARNING_RATE, N_ACTIONS, STATE_VARIABLES,KEEP_FRAMES,HIDDEN_1, HIDDEN_2)
-            self.q_target, self.v_target, self.adv_target = build_dueling_dqn(LEARNING_RATE, N_ACTIONS, STATE_VARIABLES,KEEP_FRAMES,HIDDEN_1, HIDDEN_2)
+            self.q_eval,self.v_eval,self.adv_eval = build_dueling_dqn(LEARNING_RATE, N_ACTIONS, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+            self.q_target, self.v_target, self.adv_target = build_dueling_dqn(LEARNING_RATE, N_ACTIONS, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
         else:
-            self.q_eval, self.v_eval,self.adv_eval = build_dqn(LEARNING_RATE, N_ACTIONS, STATE_VARIABLES, HIDDEN_1, HIDDEN_2)
-            self.q_target, self.target, self.adv_target = build_dqn(LEARNING_RATE, N_ACTIONS, STATE_VARIABLES, HIDDEN_1, HIDDEN_2)
+            self.q_eval, self.v_eval,self.adv_eval = build_dqn(LEARNING_RATE, N_ACTIONS, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+            self.q_target, self.target, self.adv_target = build_dqn(LEARNING_RATE, N_ACTIONS, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
         # create TensorFlow graph (model)(tf1)
         #self.init_model()
 
@@ -410,11 +412,10 @@ class DQNAgent:
         else:
             q_target[batch_index, actions] = rewards + self.gamma * np.max(q_next, axis=1)* dones
 
-
         time_start3 = time.time()
         #NNのパラメータ更新
         #self.log_loss.append(self.q_eval.train_on_batch(states, q_target))
-        loss = self.q_target.train_on_batch(states, q_target)
+        loss = self.q_eval.train_on_batch(states, q_target)
         self.log_loss.append(loss)
         """
         float_loss = loss.item()
@@ -432,12 +433,14 @@ class DQNAgent:
             self.q_eval.layers[2].set_weights(self.q_target.layers[3].get_weights())
             self.q_eval.layers[3].set_weights(self.q_target.layers[4].get_weights())
             '''
-            self.target.set_weights(self.q_eval.get_weights())
+            self.q_target.set_weights(self.q_eval.get_weights())
 
         #print(loss)
         #print("time:" + str(a-time_start) + " , " + str(time_start2-time_start) + " , "  + str(time_start3-time_start2) + " , "  + str(a-time_start3))
         #self.epsilon = self.epsilon - self.eps_dec if self.epsilon > self.eps_min else self.eps_min
 
+    def get_angle(self,states):
+        self.log_yaw_angle.append(float(states[0][5]))
 
     def create_checkpoint(self):
         #self.saver.save(self.sess, os.path.join(self.model_dir, self.checkpoint_name + datetime.now().strftime('%H%M%S')))

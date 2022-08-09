@@ -113,7 +113,7 @@ class Communicator():
                 #self.__ser.flushInput()
                 persed_data = self.__raw_data.split(",")
 
-                print(persed_data)                    #__raw_dataを","区切りにしたものを取得
+                #print(persed_data)                    #__raw_dataを","区切りにしたものを取得----------------------------------------------------
                 #出力:[モータ1出力,モータ2出力,サーボ1,サーボ2,受信時刻,Pitch,Yaw]
 
                 if len(persed_data) == byt:                                 #受信データ長が指定通りならば...
