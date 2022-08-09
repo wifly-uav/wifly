@@ -18,6 +18,8 @@ class logger():
 
     def add_log_state_and_action(self, state, action, sent_param, time, time2):
         state_list = list(state)
+        
+        #要修正(env.default_paramsを修正→sent_paramの添え字を修正の流れ！！！)
         row = [state_list, action, sent_param[3], sent_param[1], time, time2]
         """
         row = copy.copy(state)

@@ -77,6 +77,8 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t len) {
     //Serial.printf("Last Packet Recv from: %s\n", macStr);
     Serial.printf("Last Packet Recv Data(%d): ", len);
   #endif
+
+  //データ受信
   for (i = 0; i < len; ++i) {
     command[i] = data[i];
     #ifdef DEBUG
@@ -90,26 +92,27 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t len) {
 
 uint8_t broadcastAddress[6];
 void setup() {
-  Serial.begin(115200);
-  Serial.println();
+  Serial.begin(115200);               //シリアル通信開始（速度指定）
+  Serial.println();                   //改行出力
 
-  pinMode(pwm1, OUTPUT);
-  pinMode(pwm2, OUTPUT);
-  pinMode(led, OUTPUT);
-  analogWriteFreq(PWM_FREQ);
-  analogWriteRange(PWM_RANGE);
+  pinMode(pwm1, OUTPUT);              //羽ばたきモータ出力1に対応するピンを出力モードにする。
+  pinMode(pwm2, OUTPUT);              //羽ばたきモータ出力2に対応するピンを出力モードにする。
+  pinMode(led, OUTPUT);               //LEDに対応するピンを出力モードにする。
+  analogWriteFreq(PWM_FREQ);          //アナログ出力の周波数を指定
+  analogWriteRange(PWM_RANGE);        //アナログ出力の範囲を指定
 
-  digitalWrite(led, HIGH);
-  analogWrite(pwm1, PWM_RANGE);
-  analogWrite(pwm2, PWM_RANGE);
+  digitalWrite(led, HIGH);            //LED点灯
+  analogWrite(pwm1, PWM_RANGE);       //羽ばたきを止める
+  analogWrite(pwm2, PWM_RANGE);       //羽ばたきを止める
   
-  cog.attach(cog_pin,900,1900);
-  ladder.attach(ladder_pin,900,1900);
+  cog.attach(cog_pin,900,1900);       //重心移動機構サーボ出力の上限下限を設定
+  ladder.attach(ladder_pin,900,1900); //尾翼サーボ出力の上限下限を設定
   
-  cog.write(0);
+  cog.write(0);                       //サーボの角度をリセット（0°）
   ladder.write(0);
 
   // REPLACE WITH RECEIVER MAC Address
+  //各コントローラのMACアドレス
   if(controller == 'A'){
     broadcastAddress[0] = 0x8C;
     broadcastAddress[1] = 0x4B;
@@ -153,6 +156,7 @@ void setup() {
   // Register peer
   esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
 
+  //受信コールバック関数の指定
   esp_now_register_recv_cb(OnDataRecv);
 
   #ifdef sensor
@@ -165,9 +169,12 @@ void setup() {
       while(1);
     }
   #endif
+
+  //通信の初期設定に成功したら、LED(オレンジ?)を消す。
   digitalWrite(led, LOW);
 }
 
+//float型用のmap関数を自作
 float mapfloat(float x, long in_min, long in_max, long out_min, long out_max)
 {
   return (float)(x - in_min) * (out_max - out_min) / (float)(in_max - in_min) + out_min;
@@ -187,8 +194,8 @@ void loop() {
     imu::Quaternion quaternion = bno.getQuat();
   #endif
 
-  Ti = millis();
-  loopTi = Ti - lastTime;
+  Ti = millis();              //現在時刻
+  loopTi = Ti - lastTime;     //前回受信からの時間差
   if (loopTi > timerDelay) {
     // Set values to send
     data[0] = command[0];

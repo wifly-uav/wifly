@@ -86,17 +86,17 @@ if __name__ == "__main__":
     ac = visual_act(folder = save_file)
     
     #print("press y to start")                   #未実装
-    print("Start after 3 seconds")
-    time.sleep(3)
+    #print("Start after 3 seconds")
+    #stime.sleep(3)
 
 #try:
     for i in range(N_EPOCHS):                   #N_EPOCHSごとに各パラメータを初期化
         #init
-        #frame = 0                               #未使用                    
+        #frame = 0                              #未使用                    
         loss = 0.0                              #NN損失関数
         Q_max = 0.0                             #行動価値関数最大値
         reward = 0                              #報酬
-        p_gain = 1.5                            #初期P gain
+        p_gain = 1.5                            #初期Pgain
         terminal = False                        #終状態フラグ（もとはTrue）
         data = True                             #?
 
@@ -110,9 +110,9 @@ if __name__ == "__main__":
         state_next = env.observe_state()        #次状態（FRAMES=4個分の初期状態が格納されたstate）を観測
 
         for j in range(N_FRAMES):
-            #terminal = env.observe_terminal()               #未使用
+            #terminal = env.observe_terminal()              #未使用
             state_current = state_next                      #次状態を現在の状態とする
-            agent.get_angle(state_current)
+            agent.get_angle(state_current)                  #現在の状態から、Yaw角を取得して記録する(log用)
             action = agent.choose_action(state_current)     #ε-greedy方策によってactionを決定
             p_gain = env.execute_action_gain(action)        #actionに対応するPgainを取得
             param = [p_gain,I_GAIN,D_GAIN,0]                #paramを更新（Pgainを更新）
@@ -126,6 +126,7 @@ if __name__ == "__main__":
             #modeはSaturationブロック有効化を決めるフラグ
             diff = pid.calculate_output(current_value = int(state_current[0][5]), delta_time = (int)(ti), mode = True)
 
+            #出力を変えるモータが逆な気がする…
             if diff > 0:                            #操作量が正なら…
                 actions[0] = pwm_def - diff         #右側のモータ出力を下げる
                 actions[1] = pwm_def - ER           #ER=0なので気にしなくて良い
@@ -173,7 +174,7 @@ if __name__ == "__main__":
                 agent.epsilon = 0                   #ランダム行動はさせない。
 
             # for loging
-            # 次状態、行動、最新の送信データ、最新の受信間隔、前回の受信間隔を格納(log)
+            # 次状態、行動、最新の送信データ（の一部）、最新の受信間隔、前回の受信間隔を格納(log)
             # 次状態、報酬、最新の受信時刻(log2)
             log.add_log_state_and_action(state_next, action, env.params_to_send, ti, ti_)
             log.add_log_state(state_next, reward, ti)
@@ -195,13 +196,13 @@ if __name__ == "__main__":
     agent.save_model()          #NNモデルの保存
     agent.debug_nn()            #q_evalの重みとバイアスをtxtファイルで保存
     agent.debug_memory()        #リプレイバッファに保存されている遷移のうち、状態のみをcsv出力
-    agent.debug_minibatch()     #minibatch_indexのlogをCSV出力
+    agent.debug_minibatch()     #minibatch_indexのlogをCSV出力(未実装)
     agent.debug_minibatch_2()   #自作ver!
     agent.debug_q()             #行動価値関数Qと行動aのlogをCSV出力
     #agent.debug_loss()         #listがfloatと認識されている…
     
     #以下をCSV出力
-    #次状態、行動、最新の送信データ、最新の受信間隔、前回の受信間隔を格納(log)
+    #次状態、行動、最新の送信データ(の一部)、最新の受信間隔、前回の受信間隔を格納(log)
     #次状態、報酬、最新の受信時刻(log2)
     log.output_log()
 
@@ -216,7 +217,8 @@ if __name__ == "__main__":
     log.loss_graph_2(x,loss)
     
     log.angle_graph()
-
+    
+    #自作
     x = list(range(len(agent.log_yaw_angle)))
     #print(agent.log_yaw_angle)
     #print(type(agent.log_yaw_angle))

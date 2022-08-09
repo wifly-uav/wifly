@@ -496,7 +496,7 @@ class DQNAgent:
         np.savetxt(self.folder + '/debug_minibatch.csv', self.minibatch_index_log, delimiter=',', fmt='%s')
 
     def debug_minibatch_2(self):
-        with open(self.folder + "minibatch_index_log.csv", mode = "w", newline = "") as f1:
+        with open(self.folder + "/minibatch_index_log.csv", mode = "w", newline = "") as f1:
             writer = csv.writer(f1)
             writer.writerows(self.log_minibatch_index)
 

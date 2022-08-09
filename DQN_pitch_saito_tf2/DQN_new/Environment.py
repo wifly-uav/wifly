@@ -21,7 +21,16 @@ default_params = [255, PWM_WING, 0, PWM_WING, 0]    #ここを変更しないと
 RIGHT_WING = 1
 LEFT_WING = 2
 PWM_WING = 0
-default_params = [255, PWM_WING, PWM_WING, 0, 0, 0]
+default_params = [255, PWM_WING, PWM_WING, 0, 0, 0]    
+
+"""
+#変更提案(2022/08/09/22:47)
+#現在のESPの通信にはヘッダがない。
+RIGHT_WING = 0
+LEFT_WING = 1
+default_params = [PWM_WING, PWM_WING, 0, 0, 0]
+
+"""
 
 receive_byt = 8
 
@@ -67,11 +76,11 @@ class Environment():
         """
 
         #ESPにデータを送り、通信の準備をさせる。
-        #(Lazuriteは何かしらのデータを受け取らないと送信モードにならない。)
+        #(ESPは何かしらのデータを受け取らないと送信モードにならない。)
         self.communicator.start_esp(default_params)
 
         self.state = deque(maxlen = self.keep_frames)         #状態格納用deque
-        self.params_to_send = default_params        #2行下に同じ文がある。
+        self.params_to_send = default_params                  #2行下に同じ文がある。
 
         #NNの入力に必要なFRAMES個の状態をLazuriteから取得する。
         for i in range(self.keep_frames):
@@ -86,7 +95,7 @@ class Environment():
             #data:[モータ出力1,モータ出力2,サーボ1,サーボ2,Pitch,Yaw,Pgain]                                               
             #このdataが1つの状態である。
 
-            #状態を保持するdeque(self.state)に格納する。
+            #4つの状態を保持するdeque(self.state)に格納する。
             self.update_2(data)
             #self.update(flag=False, data=data)
 

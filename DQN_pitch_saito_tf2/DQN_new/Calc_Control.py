@@ -52,11 +52,11 @@ class calc_PID():
         """
         if delta_time < 0 or delta_time > 100:
             delta_time = 50
-        error = self.__target - current_value
-        #self.__error_D = (self.__error_P - error)/ delta_time
-        self.__error_P = error
-        self.__error_I = self.__error_I + error*delta_time      #偏差の蓄積
-        self.I = self.__error_I
+        error = self.__target - current_value                   #偏差
+        #self.__error_D = (self.__error_P - error)/ delta_time  #D制御はしない（振動が大きすぎて上手く効かないため）
+        self.__error_P = error                                  #偏差（__は関数の内部でのみ呼び出されることを意味する。）
+        self.__error_I = self.__error_I + error*delta_time      #偏差の蓄積（偏差の積分を長方形の面積を使って近似）
+        self.I = self.__error_I                                 #進捗表示の際に、Igainによる操作量を計算するために使う変数
         out = int(self.__param_P * self.__error_P + self.__param_I * self.__error_I)# + self.__param_D * self.__error_D)
         if mode == True:
             out = self.saturation_block(out)
