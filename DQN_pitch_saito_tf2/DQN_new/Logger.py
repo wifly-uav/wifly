@@ -20,7 +20,8 @@ class logger():
         state_list = list(state)
         
         #要修正(env.default_paramsを修正→sent_paramの添え字を修正の流れ！！！)
-        row = [state_list, action, sent_param[3], sent_param[1], time, time2]
+        #row:[4フレームを1セットとした状態,行動番号,羽ばたき出力1,羽ばたき出力2,受信間隔(機体計測), 受信間隔(PC計測)]
+        row = [state_list, action, sent_param[1], sent_param[2], time, time2]
         """
         row = copy.copy(state)
         row.extend(sent_param)
@@ -35,7 +36,11 @@ class logger():
 
     def add_log_state(self, state, reward, time):
         state_list_ = list(state)
-        row_ = [state_list_[0][1],state_list_[0][-2],reward,time]
+
+        #row_ = [state_list_[0][1],state_list_[0][-2],reward,time]
+        
+        #row_:[Yaw角,報酬,時間？]
+        row_ = [state_list_[0][5],reward,time]
         self.log2.append(row_)
 
     def output_log(self):

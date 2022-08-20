@@ -110,6 +110,7 @@ if __name__ == "__main__":
         state_next = env.observe_state()        #次状態（FRAMES=4個分の初期状態が格納されたstate）を観測
 
         for j in range(N_FRAMES):
+            t_start = time.time()
             #terminal = env.observe_terminal()              #未使用
             state_current = state_next                      #次状態を現在の状態とする
             agent.get_angle(state_current)                  #現在の状態から、Yaw角を取得して記録する(log用)
@@ -124,6 +125,9 @@ if __name__ == "__main__":
             #state_current[0]が最新の状態で、state_current[0][5]が最新の状態におけるYaw角
             #delta_timeは微積分の近似で用いる時間幅
             #modeはSaturationブロック有効化を決めるフラグ
+            t_1 = time.time() - t_start
+            print("t_1:", end = "")
+            print(t_1)
             diff = pid.calculate_output(current_value = int(state_current[0][5]), delta_time = (int)(ti), mode = True)
 
             #出力を変えるモータが逆な気がする…
@@ -134,6 +138,7 @@ if __name__ == "__main__":
                 actions[0] = pwm_def                
                 actions[1] = pwm_def + diff - ER    #左側のモータ出力を下げる
 
+            print(actions)
             env.execute_action_(actions)            #機体にモータ出力の変更内容を送信
 
             """
@@ -141,16 +146,32 @@ if __name__ == "__main__":
                 agent.experience_replay()           #経験再生
             """
 
+            t_2 = time.time() - t_start
+            print("t_2:", end = "")
+            print(t_2)
+
             #新たな状態を観測
             #state_next:新たな状態が1つ加わり、古い状態が削除されたもの
-            #更新されたstateデック、受信した時間、前回受信との間隔が返ってくる
+            #更新されたstateデック、受信間隔（機体計測）、受信側（PC計測）が返ってくる
             #state_next, ti, ti_ = env.observe_update_state_pid(pid=p_gain)
             state_next, ti, ti_ = env.observe_update_state_pid_2(pid = p_gain) 
+            t_20 = time.time() - t_start
+            print("t_20:", end = "")
+            print(t_20)
+
             reward = env.observe_reward(state_next)     #Yaw角の0.0度からのずれに基づいた報酬を観測
+
+            t_21 = time.time() - t_start
+            print("t_21:", end = "")
+            print(t_21)
 
             #経験保存
             #agent.store_experience(state_current, action, reward, state_next, terminal)
             agent.store_transition(state_current,action,reward, state_next,terminal)
+
+            t_3 = time.time() - t_start
+            print("t_3:", end = "")
+            print(t_3)
 
             #進捗表示
             u_i = pid.I*I_GAIN  #Igainによる操作量（=I_gain*偏差の蓄積（積分））
@@ -167,6 +188,10 @@ if __name__ == "__main__":
                 #agent.experience_replay()           #経験再生(NNパラメータのミニバッチ学習を行う)
                 agent.learn()
             
+            t_4 = time.time() - t_start
+            print("t_4:", end = "")
+            print(t_4)
+
             #εのスケジューリング
             if training_flag:                       #学習を行う場合…
                 agent.epsilon -= 0.1/3000           #ランダム行動確率を下げていく。
@@ -174,13 +199,17 @@ if __name__ == "__main__":
                 agent.epsilon = 0                   #ランダム行動はさせない。
 
             # for loging
-            # 次状態、行動、最新の送信データ（の一部）、最新の受信間隔、前回の受信間隔を格納(log)
-            # 次状態、報酬、最新の受信時刻(log2)
+            # 次状態、行動、最新の送信データ（の一部）、受信間隔（機体計測）、受信間隔（PC計測）を格納(log)
+            # 次状態、報酬、受信間隔（機体計測）(log2)
             log.add_log_state_and_action(state_next, action, env.params_to_send, ti, ti_)
             log.add_log_state(state_next, reward, ti)
 
             #ステップ数のカウント
             agent.global_step += 1
+
+            t_5 = time.time() - t_start
+            print("t_5:", end = "")
+            print(t_5)
 #except :
 #except KeyboardInterrupt:
     #print("except finish")

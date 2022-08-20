@@ -114,22 +114,22 @@ class Communicator():
                 persed_data = self.__raw_data.split(",")                    #__raw_dataを","区切りにしたものを取得
 
                 #print(persed_data)                    
-                #出力:[モータ1出力,モータ2出力,サーボ1,サーボ2,受信時刻,Pitch,Yaw]
+                #出力:[モータ1出力,モータ2出力,サーボ1,サーボ2,受信間隔,Pitch,Yaw,]  確認！
 
                 if len(persed_data) == byt:                                     #受信データ長が指定通りならば...
                     if persed_data[0] != " " or persed_data[0] !="":            #先頭の文字抜けが無ければ…
                         #print(str(persed_data) + str(len(persed_data)))
-                        receive_time = str(time.time() - self.time_started)     #受信した時間を記録
-                        delta_time = time.time() - self.time_last_receive       #最後の受信との時間間隔を記録
-                        self.time_last_receive = time.time()                    #最後の受信時間を更新  
-                        receive_time_ = int(persed_data.pop(4))                 #受信時刻の読み取り（popなので削除もされる）
-                        persed_data.pop(-1)                                     #受信時刻の読み取り（popなので削除もされる）
+                        #receive_time = str(time.time() - self.time_started)    #受信した時間を記録
+                        delta_time = time.time() - self.time_last_receive       #最後の受信との時間間隔をPC側で記録
+                        self.time_last_receive = time.time()                    #最後の受信時刻を更新  
+                        receive_time_ = int(persed_data.pop(4))                 #機体側のマイコンで計測された受信間隔の読み取り（popなので削除もされる）
+                        persed_data.pop(-1)                                     #受信時刻の読み取り（popなので削除もされる）要確認!
                         
                         self.dataset_from_esp = persed_data                     #受信データとして記録
                         #dataset_from_esp:[モータ出力1,モータ出力2,尾翼サーボ,重心移動機構サーボ,Pitch,Yaw]
                         self.__fail_counter = 0                                 #受信失敗回数をリセット
 
-                        #受信データ、受信時間、前回受信との間隔を返す
+                        #受信データ、受信間隔（機体計測）、受信間隔(PC)を返す。
                         return self.dataset_from_esp, receive_time_, delta_time
 
             elif 10 <= self.__fail_counter <= 20:       #受信失敗回数が10回以上20回以下なら

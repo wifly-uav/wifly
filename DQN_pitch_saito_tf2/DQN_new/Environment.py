@@ -17,21 +17,22 @@ default_params = [255, PWM_WING, 0, PWM_WING, 0]    #ここを変更しないと
                 ##header,right,servo,left,controlmode
 """
 
+
 #変更後
 RIGHT_WING = 1
 LEFT_WING = 2
 PWM_WING = 0
 default_params = [255, PWM_WING, PWM_WING, 0, 0, 0]    
 
+
 """
-#変更提案(2022/08/09/22:47)
+#変更提案(2022/08/09/22:47)→没!(2022/08/20/18:24)
 #現在のESPの通信にはヘッダがない。
 RIGHT_WING = 0
 LEFT_WING = 1
-default_params = [PWM_WING, PWM_WING, 0, 0, 0]
-
+PWM_WING = 0
+default_params = [PWM_WING, PWM_WING, 0, 0, 0]  #[羽ばたき1, 羽ばたき2, tail_servo, cog, 0]
 """
-
 receive_byt = 8
 
 #0:header(255固定)
@@ -226,9 +227,11 @@ class Environment():
         """
         決定した行動に基づくモータ出力の変更を機体に反映（送信）
         """
-        self.params_to_send[RIGHT_WING]=actions[0]
-        self.params_to_send[LEFT_WING]=actions[1]
-    
+        #各送信時にparams_to_sendを書き換えて送信していく。
+        self.params_to_send[RIGHT_WING] = actions[0]
+        self.params_to_send[LEFT_WING] = actions[1]
+        print("params_to_send:", end = "")
+        print(self.params_to_send)
         self.communicator.send_to_esp(self.params_to_send)
     
     
