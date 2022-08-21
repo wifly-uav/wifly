@@ -23,7 +23,9 @@ uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0xE4}; //3
 esp_now_peer_info_t peerInfo;
 
 const int controller_num = 1; //1:A 2:B
+
 //pin
+//各ボタンのピン番号
 int stick_lr;
 int stick_ud;
 int slider_l;
@@ -35,12 +37,13 @@ int volume;
 double ysqr = 0;
 double t0,t1,t2,t3,t4 = 0;
 int eular[3] = {0};
+
+//quotanion（四元数）をEuler角に変換する関数
 void qu2eu(int eular[3], double quotanion[4]){
   double w = quotanion[0];
   double x = quotanion[1];
   double y = quotanion[2];
   double z = quotanion[3];
-
 
   double sz = -(2 * x * y - 2 * z * w);  
   double a = asin(sz);
@@ -70,8 +73,13 @@ void qu2eu(int eular[3], double quotanion[4]){
   */
 }
 
+//受信時コールバック関数（データを受信すると実行される）
+//引数:送信元macアドレス情報,受信データ,受信データ長
 void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     char macStr[18];
+
+    //データの送信元のmacアドレスを表示する
+    //%02Xは2桁以上の16進数で表示することを指定（桁が足りない場合、上位の桁が0埋めされる。）
     snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
         mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
     //Serial.println();
@@ -82,22 +90,32 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     
     for (int i = 0; i < data_len; i++) {
         if(i > 4){
+          //受信データの5番目以降（quotanion）は、処理してre_data_angleに格納していく。
           re_data_angle[i-5] = data[i]*0.01-1;
         }else if(i < 2){
+          //受信データの先頭2つ（羽ばたき出力）は、0~255を反転してre_dataに格納
           re_data[i] = 255 - data[i];
         }
         else{
+          //残りはそのままre_dataに格納
           re_data[i] = data[i];
         }
     }
+
+    //カンマ区切りでre_dataの中身を表示
     for (int i = 0; i < 5; i++) {
       Serial.print(re_data[i]);
       if(i != 4){
         Serial.print(",");
       }
     }
+
+    //受信したquotanionをEuler角に変換
     qu2eu(eular,re_data_angle);
+
     Serial.print(",");
+
+    //Euler角を表示（角度の順番を要確認!）
     for (int i = 0; i < 3; i++) {
       Serial.print(eular[i]);
       if(i != 2){
@@ -107,6 +125,8 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     Serial.println();
 }
 
+//送信時コールバック関数
+//送信が成功したかどうかを表示する。
 void OnDataSent(const uint8_t* mac_addr, esp_now_send_status_t status) {
   Serial.println();
   Serial.printf("ESP32\n");
@@ -119,16 +139,18 @@ void OnDataSent(const uint8_t* mac_addr, esp_now_send_status_t status) {
   }
 }
 
+//PCからの情報を受信する関数
 void recieve_pc(){
-  if(Serial.available()){
-    if((int)Serial.read() == 255){
-      data_pc_ = Serial.readBytesUntil('\n',data_pc,5);
+  if(Serial.available()){                               //シリアルポートにデータが来ている場合
+    if((int)Serial.read() == 255){                      //データの先頭が255である場合
+      data_pc_ = Serial.readBytesUntil('\n',data_pc,5); //5つのデータを読み取り、data_pc_に格納
     }
   }
 }
 
 void setup() {
 
+  //各コントローラごとのピン番号
   switch(controller_num){
     case 1:
       stick_lr = 34;
@@ -150,21 +172,22 @@ void setup() {
       break;
     }
 
+    //シリアル通信開始
     Serial.begin(460800);    
     
+    //ピンモードの設定
     pinMode(stick_lr, INPUT);
     pinMode(stick_ud, INPUT);
     pinMode(slider_l, INPUT);
     pinMode(slider_r, INPUT);
     pinMode(volume, INPUT);
-    pinMode(switch_1, INPUT_PULLUP);
+    pinMode(switch_1, INPUT_PULLUP);  //トグルスイッチのプルアップ、ダウンはここで設定
     pinMode(switch_2, INPUT_PULLUP);
 
     Serial.println(WiFi.macAddress());
-
-    
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
+
     if (esp_now_init() == ESP_OK) {
         //Serial.println("ESP-Now Init Success");
     }
@@ -184,6 +207,7 @@ void setup() {
     
 }
 
+//各アナログスイッチ入力値格納用
 int left_LR;
 int left_UD;
 int sli_L;
@@ -192,19 +216,24 @@ int vol;
 
 void loop() {
   
+  //トグルスイッチの入力値読み取り
   int btn_L = digitalRead(switch_1);
   int btn_R = digitalRead(switch_2);
 
-  if ((millis() - lastTime) > timerDelay) {
+  if ((millis() - lastTime) > timerDelay) { //受信間隔がtimerDelay以内であれば、
     uint8_t data[5];
+
+    //PCモード
     if(btn_L == 1){
-      recieve_pc();
+      recieve_pc();                         //PCからデータ受信
       for(int i=0;i<2;++i){
-        data[i] = 254 - data_pc[i];
+        data[i] = 254 - data_pc[i];         //受信データの先頭2つ（羽ばたき出力）は反転
       }
       for(int i=2;i<5;++i){
         data[i] = data_pc[i];
       }
+    
+    //コントローラモード
     }else{  
     
       switch(controller_num){
@@ -237,7 +266,7 @@ void loop() {
 
           //スライドボリューム左（尾翼）最小
           if(sli_L>170){sli_L = 180;}
-          //スライドボリューム右最小
+          //スライドボリューム右（羽ばたき出力）最小
           if(sli_R>240){sli_R = 255;}
           //ジョイスティック左右中央
           if(left_LR<152 && left_LR>102){left_LR = 127;}

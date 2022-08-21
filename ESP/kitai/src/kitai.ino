@@ -28,6 +28,7 @@ char controller = 'A';  //大きいコントローラ：A 小さいコントロ�
   Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28);
 #endif
 
+//各種ピン番号設定
 const int pwm1 = 12;
 const int pwm2 = 13;
 const int pwmch = 0;
@@ -35,16 +36,17 @@ const int cog_pin = 16;
 const int ladder_pin = 14;
 const int led = 15;
 
+//Servoクラスの作成
 Servo cog;
 Servo ladder;
 
 int command[8] = {0};
 uint8_t data[9];
 
-unsigned long lastTime = 0; 
-unsigned long recvTime = 0;  
+unsigned long lastTime = 0;     //最新の受信時刻
+unsigned long recvTime = 0;     //受信時刻(未使用)
 unsigned long Ti = 0;
-unsigned long loopTi = 0;
+unsigned long loopTi = 0;       //受信間隔
 unsigned long timerDelay = 20;  // send readings timer
 unsigned long watchdogtime = 100;  // timer
 
@@ -53,6 +55,7 @@ double w,x,y,z = 0;
 int i = 0;
 
 // Callback when data is sent
+//DEBUG時には送信が成功したかどうかを表示する。
 void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus) {
   #ifdef DEBUG_SENT
     Serial.println();
@@ -68,7 +71,7 @@ void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus) {
 
 // Callback function that will be executed when data is received
 void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t len) {
-  digitalWrite(led, HIGH);
+  digitalWrite(led, HIGH);  //LED点灯
   //char macStr[18];
   //snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
   //    mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
@@ -86,7 +89,7 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t len) {
       Serial.print(" ");
     #endif
   }
-  digitalWrite(led, LOW);
+  digitalWrite(led, LOW); //LED消灯（受信を繰り返すことでLEDが高速点滅）
   recvTime = millis();
 }
 
@@ -198,10 +201,11 @@ void loop() {
   loopTi = Ti - lastTime;     //前回受信からの時間差
   if (loopTi > timerDelay) {
     // Set values to send
-    data[0] = command[0];
-    data[1] = command[1];
-    data[2] = command[2];
-    data[3] = command[3];
+    //送信データを準備
+    data[0] = command[0];     //羽ばたき出力1     
+    data[1] = command[1];     //羽ばたき出力2
+    data[2] = command[2];     //尾翼サーボ角度
+    data[3] = command[3];     //受信移動機構角度
     #ifdef sensor
       data[5] = (quaternion.w()+1)*100;
       data[6] = (quaternion.x()+1)*100;
@@ -213,7 +217,7 @@ void loop() {
       data[7] = 0;
       data[8] = 0;
     #endif
-    data[4] = loopTi;
+    data[4] = loopTi;         //受信間隔
     #ifdef DEBUG
       //Serial.print("y:");
       //Serial.print(euler.y());
@@ -238,6 +242,7 @@ void loop() {
     analogWrite(pwm2, 0);
   }
   */
+  //受信データに基づき各出力を変更
   analogWrite(pwm1, command[0]);
   analogWrite(pwm2, command[1]);
   ladder.write(command[2]);
