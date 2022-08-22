@@ -514,6 +514,30 @@ class DQNAgent:
             with open(self.folder + '/debug_adv.csv', 'w') as f:
                 writer = csv.writer(f, lineterminator = '\n')
                 writer.writerows(self.log_adv)
+    
+    def debug_yaw(self):
+        with open(self.folder + '/debug_yaw.csv', 'w') as f:
+            writer = csv.writer(f, lineterminator ='\n')
+            writer.writerow(list(self.log_yaw_angle))
+
+    def hyper_params(self):
+        with open(self.folder + "hyper_param.txt", mode = "w") as name:
+            print("dueling:" + str(DUELING), file = name)
+            print("double:" + str(DOUBLE), file = name)
+            print("lr:%f" % LEARNING_RATE, file = name)
+            print("df:%f" % DISCOUNT_FACTOR, file = name)
+            print("ep:%f" % EPSILON, file = name)
+            print("ep_end:%f" % EPSILON_END, file = name)
+            print("ep_dec:%f" % EPSILON_DEC, file = name)
+            print("RM_size:%d" % REPLAY_MEMORY_SIZE, file = name)
+            print("MB_size:%d" % MINIBATCH_SIZE, file = name)
+            print("CP:%d" % COPY_PERIOD, file = name)
+            print("hidden_1:%d" % HIDDEN_1, file = name)
+            print("hidden_2:%d" % HIDDEN_2, file = name)
+            #print("alpha:%f" % ALPHA, file = name)
+            #print("beta:%f" % BETA, file = name)
+            #print("beta_increment:%f" % BETA_INCREMENT, file = name)
+            #print("lp:%d" % LEARNING_PERIOD, file = name)
 
     def debug_loss(self):
         with open(self.folder + '/debug_loss.csv', 'w') as f:
