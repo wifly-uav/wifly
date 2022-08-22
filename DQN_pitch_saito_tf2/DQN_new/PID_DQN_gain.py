@@ -222,12 +222,14 @@ if __name__ == "__main__":
     env.execute_action_([0,0])
     env.execute_action_([0,0])
 
+    agent.hyper_params()
     agent.save_model()          #NNモデルの保存
     agent.debug_nn()            #q_evalの重みとバイアスをtxtファイルで保存
     agent.debug_memory()        #リプレイバッファに保存されている遷移のうち、状態のみをcsv出力
     agent.debug_minibatch()     #minibatch_indexのlogをCSV出力(未実装)
     agent.debug_minibatch_2()   #自作ver!
     agent.debug_q()             #行動価値関数Qと行動aのlogをCSV出力
+    agent.debug_yaw()           #Yaw角のlogをCSV出力
     #agent.debug_loss()         #listがfloatと認識されている…
     
     #以下をCSV出力
