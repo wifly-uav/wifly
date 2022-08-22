@@ -151,6 +151,7 @@ class Communicator():
         self.__ser.flushOutput()                    #送信用キャッシュのflush
         for datum in data_to_send:                  #data_to_sendの各要素を...
             self.__ser.write(bytes([int(datum)]))   #2進数に変換したものを送信
+            time.sleep(0.001)                       #時間調整（これがないと羽ばたき出力の変更が反映されない） 
         self.__data_sent = data_to_send             #送信済みデータとして記録
         time.sleep(0.001)                           #時間調整(超重要!!!これがないとデータ受信ができない)
 
