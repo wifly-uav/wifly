@@ -11,7 +11,7 @@ from Calc_Control import calc_PID
 import os
 import time
 
-N_EPOCHS = 5
+N_EPOCHS = 1
 N_FRAMES = 100
 I_GAIN = 0.0001 #0.0001
 D_GAIN = 0
@@ -126,8 +126,8 @@ if __name__ == "__main__":
             #delta_timeは微積分の近似で用いる時間幅
             #modeはSaturationブロック有効化を決めるフラグ
             t_1 = time.time() - t_start
-            print("t_1:", end = "")
-            print(t_1)
+            #print("t_1:", end = "")
+            #print(t_1)
             diff = pid.calculate_output(current_value = int(state_current[0][5]), delta_time = (int)(ti), mode = True)
 
             #出力を変えるモータが逆な気がする…
@@ -147,8 +147,8 @@ if __name__ == "__main__":
             """
 
             t_2 = time.time() - t_start
-            print("t_2:", end = "")
-            print(t_2)
+            #print("t_2:", end = "")
+            #print(t_2)
 
             #新たな状態を観測
             #state_next:新たな状態が1つ加わり、古い状態が削除されたもの
@@ -156,23 +156,23 @@ if __name__ == "__main__":
             #state_next, ti, ti_ = env.observe_update_state_pid(pid=p_gain)
             state_next, ti, ti_ = env.observe_update_state_pid_2(pid = p_gain) 
             t_20 = time.time() - t_start
-            print("t_20:", end = "")
-            print(t_20)
+            #print("t_20:", end = "")
+            #print(t_20)
 
             reward = env.observe_reward(state_next)     #Yaw角の0.0度からのずれに基づいた報酬を観測
 
             t_21 = time.time() - t_start
-            print("t_21:", end = "")
-            print(t_21)
+            #print("t_21:", end = "")
+            #print(t_21)
 
             #経験保存
             #agent.store_experience(state_current, action, reward, state_next, terminal)
             #agent.store_transition(state_current,action,reward, state_next,terminal)
-            agent.store_transition_with_priority(states_current, action, reward, states_next, done, step, total_step)
+            agent.store_transition_with_priority(state_current, action, reward, state_next, terminal)
             
             t_3 = time.time() - t_start
-            print("t_3:", end = "")
-            print(t_3)
+            #print("t_3:", end = "")
+            #print(t_3)
 
             #進捗表示
             u_i = pid.I*I_GAIN  #Igainによる操作量（=I_gain*偏差の蓄積（積分））
@@ -190,8 +190,8 @@ if __name__ == "__main__":
                 agent.learn()
             
             t_4 = time.time() - t_start
-            print("t_4:", end = "")
-            print(t_4)
+            #print("t_4:", end = "")
+            #print(t_4)
 
             #εのスケジューリング
             if training_flag:                       #学習を行う場合…
@@ -209,8 +209,8 @@ if __name__ == "__main__":
             agent.global_step += 1
 
             t_5 = time.time() - t_start
-            print("t_5:", end = "")
-            print(t_5)
+            #print("t_5:", end = "")
+            #print(t_5)
 #except :
 #except KeyboardInterrupt:
     #print("except finish")

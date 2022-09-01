@@ -117,7 +117,7 @@ class Communicator():
                 #出力:[モータ1出力,モータ2出力,サーボ1,サーボ2,受信間隔,Pitch,Yaw,]  確認！
 
                 if len(persed_data) == byt:                                     #受信データ長が指定通りならば...
-                    if persed_data[0] != " " or persed_data[0] !="":            #先頭の文字抜けが無ければ…
+                    if persed_data[0] != " " and persed_data[0] != "":            #先頭の文字抜けが無ければ…
                         #print(str(persed_data) + str(len(persed_data)))
                         #receive_time = str(time.time() - self.time_started)    #受信した時間を記録
                         delta_time = time.time() - self.time_last_receive       #最後の受信との時間間隔をPC側で記録
@@ -131,6 +131,8 @@ class Communicator():
 
                         #受信データ、受信間隔（機体計測）、受信間隔(PC)を返す。
                         return self.dataset_from_esp, receive_time_, delta_time
+                else:
+                    self.__ser.flushInput()         #受信キャッシュ内のデータを破棄（初期化）
 
             elif 10 <= self.__fail_counter <= 20:       #受信失敗回数が10回以上20回以下なら
                 self.send_to_esp(try_data)              #データを送ってLazuriteを送信モードにすることを試みる
@@ -141,6 +143,7 @@ class Communicator():
 
             self.__fail_counter += 1                    #受信失敗回数を更新
             #time.sleep(0.005)
+            time.sleep(0.001)
 
     def send_to_esp(self, data_to_send):
         """

@@ -15,6 +15,7 @@ tf.get_logger().setLevel("ERROR")
 import numpy as np
 import csv
 import time
+import random
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -306,19 +307,20 @@ class DQNAgent:
         self.mem_size = REPLAY_MEMORY_SIZE
         self.num_in_buffer = 0
         self.keep_frames = KEEP_FRAMES
+        self.state_variables = STATE_VARIABLES
         self.copy_period = COPY_PERIOD
         self.hidden_1 = HIDDEN_1
         self.hidden_2 = HIDDEN_2
         
         #PER
-        self.memory_per = ReplayBuffer_PER(mem_size,input_dims,keep_frames)    
+        self.memory_per = ReplayBuffer_PER(self.mem_size,self.state_variables,self.keep_frames)    
         self.p_initial = 1                                          #経験を保存する際の優先度（最大値）
         self.margin = MARGIN                                        #サンプリング確率が0になることを防ぐ定数
         self.alpha = ALPHA                                          #サンプリング確率に対する優先度の重視度を表すパラメータ
         self.beta = BETA                                          #優先度付きサンプリングによるバイアスの修正具合を表すパラメータ
         self.beta_increment = BETA_INCREMENT                        #betaを増加させる量
         self.is_weight = np.power(self.mem_size,-self.beta)         #重点サンプリング重みの初期値
-        self.learning_period = lp
+        self.learning_period = LEARNING_RATE
         self.past_states = 0
         self.past_q_target = 0
 
@@ -334,6 +336,7 @@ class DQNAgent:
         self.log_loss = []                      #損失関数のlog
         self.log_v = []                         #NNの状態価値関数Vのlog
         self.log_adv = []                       #NNのアドバンテージ関数Aのlog
+        self.log_p = []
         #self.epsilon_act = 0
         #self.action_old = 0
 
@@ -396,7 +399,7 @@ class DQNAgent:
         """
         ε-greedy方策による行動選択
         """
-
+        print(keep_states)
         #行動log用変数
         log_action_buffer = []      #(行動番号, 行動の選び方)のtupleを作成
         random_action_flag = 0      #random行動が選択された場合は1,argmaxQ行動が選択された場合は0
@@ -430,7 +433,7 @@ class DQNAgent:
             self.log_adv.append(*Adv_value)
 
         #状態log格納
-        self.log_states.append(keep_states)
+        self.log_states.append(list(keep_states))
         
         #行動log格納
         log_action_buffer.append(action)
@@ -498,11 +501,11 @@ class DQNAgent:
         """
         self.memory.store_transition(state, action, reward, new_state, done)
     
-    def store_transition_with_priority(self, state, action, reward, state_, done, step, total_step):
+    def store_transition_with_priority(self, state, action, reward, state_, done):
 
         #一番最初の遷移を保存する際は、優先度をp_initial(=1)とする。
         #それ以降は、保存されているもののうち、最大のものとする。
-        if step == 0 and total_step == 0:
+        if self.global_step == 0:
             print("Initial storing")
             priority = self.p_initial
         else:
@@ -630,11 +633,11 @@ class DQNAgent:
         clipped_error = np.where(abs_td_error_list < 1, abs_td_error_list, 1)
         p_list = np.power(clipped_error, self.alpha)
         #print(p_list)
-        self.update_priorities(p_list,idxes)
+        self.update_priorities(p_list,batch_idxes)
 
         time_start3 = time.time()
         #NNのパラメータ更新
-        if step_count % self.learning_period == 0 or self.num_in_buffer == self.batch_size:
+        if self.global_step % self.learning_period == 0 or self.num_in_buffer == self.batch_size:
             loss = self.q_eval.train_on_batch(states, q_target)
             self.log_loss.append(loss)
             self.past_states = np.copy(states)
@@ -717,8 +720,8 @@ class DQNAgent:
 
     def debug_memory(self):
         with open(self.folder + '/debug_memory.csv', 'w') as f:
-            writer = csv.writer(f, lineterminator='\n')
-            writer.writerows(self.memory.state_memory)
+            writer = csv.writer(f, lineterminator ='\n')
+            writer.writerows(self.log_states)
 
     def debug_minibatch(self):
         #print(self.minibatch_ind)
@@ -744,6 +747,11 @@ class DQNAgent:
                 writer = csv.writer(f, lineterminator = '\n')
                 writer.writerows(self.log_adv)
     
+    def debug_p(self):
+        with open(self.folder + '/debug_p.csv', 'w') as f:
+            writer = csv.writer(f, lineterminator ='\n')
+            writer.writerows(self.log_p)
+
     def debug_yaw(self):
         with open(self.folder + '/debug_yaw.csv', 'w') as f:
             writer = csv.writer(f, lineterminator ='\n')
