@@ -15,14 +15,15 @@ double re_data_angle[4] = {0};
 //機体側のマイコンの番号にあったアドレスのみコメントアウトを外す。
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60}; //1
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x3D}; //2
-uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0xE4}; //3
+//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0xE4}; //3
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0xAC}; //4
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0x98}; //5
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA2, 0xBF};   //6
+uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA3, 0x2D};   //7
 
 esp_now_peer_info_t peerInfo;
 
-const int controller_num = 1; //1:A 2:B
+const int controller_num = 2; //1:A 2:B
 
 //pin
 //各ボタンのピン番号
@@ -226,6 +227,7 @@ void loop() {
     //PCモード
     if(btn_L == 1){
       recieve_pc();                         //PCからデータ受信
+      Serial.print("PC_mode");
       for(int i=0;i<2;++i){
         data[i] = 254 - data_pc[i];         //受信データの先頭2つ（羽ばたき出力）は反転
       }
@@ -262,7 +264,7 @@ void loop() {
           sli_R = map(analogRead(slider_r),0,4096,0,255);   //羽ばたき出力
           //btn_L = digitalRead(switch_1);
           //vol = map(analogRead(volume),0,4096,0,255);
-          btn_R = digitalRead(switch_2);
+          //btn_R = digitalRead(switch_2);
 
           //スライドボリューム左（尾翼）最小
           if(sli_L>170){sli_L = 180;}
@@ -318,6 +320,7 @@ void loop() {
       Serial.print(data[2]);
       Serial.print(data[3]);
       Serial.println();
+      Serial.print(btn_R);
       /*
       Serial.print("rx:");
       Serial.print(right_LR);
