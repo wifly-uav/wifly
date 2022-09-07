@@ -231,6 +231,7 @@ if __name__ == "__main__":
     agent.debug_minibatch_2()   #自作ver!
     agent.debug_q()             #行動価値関数Qと行動aのlogをCSV出力
     agent.debug_yaw()           #Yaw角のlogをCSV出力
+    agent.debug_p()             #選択した遷移の優先度の履歴をCSV出力
     #agent.debug_loss()         #listがfloatと認識されている…
     
     #以下をCSV出力

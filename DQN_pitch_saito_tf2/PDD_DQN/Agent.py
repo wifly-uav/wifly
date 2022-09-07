@@ -758,7 +758,7 @@ class DQNAgent:
             writer.writerow(list(self.log_yaw_angle))
 
     def hyper_params(self):
-        with open(self.folder + "hyper_param.txt", mode = "w") as name:
+        with open(self.folder + "/hyper_param.txt", mode = "w") as name:
             print("dueling:" + str(DUELING), file = name)
             print("double:" + str(DOUBLE), file = name)
             print("lr:%f" % LEARNING_RATE, file = name)
@@ -771,10 +771,11 @@ class DQNAgent:
             print("CP:%d" % COPY_PERIOD, file = name)
             print("hidden_1:%d" % HIDDEN_1, file = name)
             print("hidden_2:%d" % HIDDEN_2, file = name)
-            #print("alpha:%f" % ALPHA, file = name)
-            #print("beta:%f" % BETA, file = name)
-            #print("beta_increment:%f" % BETA_INCREMENT, file = name)
-            #print("lp:%d" % LEARNING_PERIOD, file = name)
+            if self.per:
+                print("alpha:%f" % ALPHA, file = name)
+                print("beta:%f" % BETA, file = name)
+                print("beta_increment:%f" % BETA_INCREMENT, file = name)
+                print("lp:%d" % LEARNING_PERIOD, file = name)
 
     def debug_loss(self):
         with open(self.folder + '/debug_loss.csv', 'w') as f:
