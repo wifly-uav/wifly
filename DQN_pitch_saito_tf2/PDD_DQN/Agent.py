@@ -399,7 +399,7 @@ class DQNAgent:
         """
         ε-greedy方策による行動選択
         """
-        print(keep_states)
+        #print(keep_states)
         #行動log用変数
         log_action_buffer = []      #(行動番号, 行動の選び方)のtupleを作成
         random_action_flag = 0      #random行動が選択された場合は1,argmaxQ行動が選択された場合は0

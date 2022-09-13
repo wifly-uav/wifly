@@ -12,7 +12,7 @@ import os
 import time
 
 N_EPOCHS = 1
-N_FRAMES = 100
+N_FRAMES = 500
 I_GAIN = 0.0001 #0.0001
 D_GAIN = 0
 ER = 0
@@ -89,6 +89,7 @@ if __name__ == "__main__":
     #print("Start after 3 seconds")
     #stime.sleep(3)
 
+    Time_start = time.time()
 #try:
     for i in range(N_EPOCHS):                   #N_EPOCHSごとに各パラメータを初期化
         #init
@@ -99,6 +100,7 @@ if __name__ == "__main__":
         p_gain = 1.5                            #初期Pgain
         terminal = False                        #終状態フラグ（もとはTrue）
         data = True                             #?
+        com_fail = False                        #通信に失敗した場合にTrueにする。
 
         #状態を格納するdequeを作成
         #この中でstart_espも行われる。（現在の初期送信データ長は4）
@@ -154,7 +156,11 @@ if __name__ == "__main__":
             #state_next:新たな状態が1つ加わり、古い状態が削除されたもの
             #更新されたstateデック、受信間隔（機体計測）、受信側（PC計測）が返ってくる
             #state_next, ti, ti_ = env.observe_update_state_pid(pid=p_gain)
-            state_next, ti, ti_ = env.observe_update_state_pid_2(pid = p_gain) 
+            try:
+                state_next, ti, ti_ = env.observe_update_state_pid_2(pid = p_gain)
+            except:
+                com_fail = True
+                break 
             t_20 = time.time() - t_start
             #print("t_20:", end = "")
             #print(t_20)
@@ -211,6 +217,11 @@ if __name__ == "__main__":
             t_5 = time.time() - t_start
             #print("t_5:", end = "")
             #print(t_5)
+        if com_fail:
+            break
+    
+    Time = time.time() - Time_start
+
 #except :
 #except KeyboardInterrupt:
     #print("except finish")
@@ -256,9 +267,11 @@ if __name__ == "__main__":
     #print(agent.log_yaw_angle)
     #print(type(agent.log_yaw_angle))
     log.angle_graph_2(x,agent.log_yaw_angle)
+    
 
     vi.visualize()
     mi.visualize()
     #ac.visualize()
 
     print("finish")
+    print("Time:%2f" % Time)
