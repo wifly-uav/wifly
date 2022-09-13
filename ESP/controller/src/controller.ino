@@ -284,7 +284,7 @@ void loop() {
           int left_pwm = max(0,sli_R - max(0, (left_LR - 127)/4 ));  //左（要確認）
           int right_pwm = max(0,sli_R - max(0, (127 - left_LR)/4)); //右（要確認）
           int servo_angle = sli_L;                   //尾翼サーボ角
-          int cog_angle = 180*btn_R;                 //重心移動機構の角度
+          int cog_angle = 90*btn_R;                 //重心移動機構の角度
 
           data[0] = left_pwm;          
           data[1] = right_pwm;
