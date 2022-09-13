@@ -220,8 +220,9 @@ if __name__ == "__main__":
         if com_fail:
             break
     
+    #時間計測用
     Time = time.time() - Time_start
-
+    
 #except :
 #except KeyboardInterrupt:
     #print("except finish")
