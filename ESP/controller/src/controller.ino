@@ -23,7 +23,7 @@ uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA3, 0x2D};   //7
 
 esp_now_peer_info_t peerInfo;
 
-const int controller_num = 2; //1:A 2:B
+const int controller_num = 1; //1:A 2:B
 
 //pin
 //各ボタンのピン番号
