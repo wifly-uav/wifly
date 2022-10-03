@@ -12,7 +12,7 @@ import os
 import time
 
 N_EPOCHS = 5
-N_FRAMES = 100
+N_FRAMES = 500
 I_GAIN = 0.0001 #0.0001
 D_GAIN = 0
 ER = 0
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
     #PID_param
     saturations = [0,150]           #PID操作量の制限
-    pwm_def = 180                   #モーター出力デフォルト値
+    pwm_def = 150                   #モーター出力デフォルト値
     pid = calc_PID(saturations)     #calc_PIDクラスのインスタンス作成（__init__が呼び出され、初期化が行われる）
     param = [1.5,I_GAIN,D_GAIN,0]   #[P-gain,I-gain,D-gain,Target Yaw angle]
     ti = 10                         #PIDの微積分計算で用いる最小の時間幅
@@ -90,6 +90,9 @@ if __name__ == "__main__":
     #stime.sleep(3)
 
 #try:
+    print("Loop start")
+    Time_start = time.time()
+
     for i in range(N_EPOCHS):                   #N_EPOCHSごとに各パラメータを初期化
         #init
         #frame = 0                              #未使用                    
@@ -99,6 +102,7 @@ if __name__ == "__main__":
         p_gain = 1.5                            #初期Pgain
         terminal = False                        #終状態フラグ（もとはTrue）
         data = True                             #?
+        com_fail = False
 
         #状態を格納するdequeを作成
         #この中でstart_espも行われる。（現在の初期送信データ長は4）
@@ -107,7 +111,11 @@ if __name__ == "__main__":
         env.reset_pid_2(add = p_gain)   
         #env.reset_pid(add=p_gain)      
 
+        #print("reset_pid_2 success")
+
         state_next = env.observe_state()        #次状態（FRAMES=4個分の初期状態が格納されたstate）を観測
+
+        print("Loop start")
 
         for j in range(N_FRAMES):
             t_start = time.time()
@@ -115,6 +123,7 @@ if __name__ == "__main__":
             state_current = state_next                      #次状態を現在の状態とする
             agent.get_angle(state_current)                  #現在の状態から、Yaw角を取得して記録する(log用)
             action = agent.choose_action(state_current)     #ε-greedy方策によってactionを決定
+            #print("Action chosen")
             p_gain = env.execute_action_gain(action)        #actionに対応するPgainを取得
             param = [p_gain,I_GAIN,D_GAIN,0]                #paramを更新（Pgainを更新）
             pid.update_params(param)                        #calc_PIDクラスにparamの変更を反映
@@ -125,9 +134,9 @@ if __name__ == "__main__":
             #state_current[0]が最新の状態で、state_current[0][5]が最新の状態におけるYaw角
             #delta_timeは微積分の近似で用いる時間幅
             #modeはSaturationブロック有効化を決めるフラグ
-            t_1 = time.time() - t_start
-            print("t_1:", end = "")
-            print(t_1)
+            #t_1 = time.time() - t_start
+            #print("t_1:", end = "")
+            #print(t_1)
             diff = pid.calculate_output(current_value = int(state_current[0][5]), delta_time = (int)(ti), mode = True)
 
             #出力を変えるモータが逆な気がする…
@@ -138,7 +147,7 @@ if __name__ == "__main__":
                 actions[0] = pwm_def                
                 actions[1] = pwm_def + diff - ER    #左側のモータ出力を下げる
 
-            print(actions)
+            #print(actions)
             env.execute_action_(actions)            #機体にモータ出力の変更内容を送信
 
             """
@@ -146,32 +155,36 @@ if __name__ == "__main__":
                 agent.experience_replay()           #経験再生
             """
 
-            t_2 = time.time() - t_start
-            print("t_2:", end = "")
-            print(t_2)
+            #t_2 = time.time() - t_start
+            #print("t_2:", end = "")
+            #print(t_2)
 
             #新たな状態を観測
             #state_next:新たな状態が1つ加わり、古い状態が削除されたもの
             #更新されたstateデック、受信間隔（機体計測）、受信側（PC計測）が返ってくる
             #state_next, ti, ti_ = env.observe_update_state_pid(pid=p_gain)
-            state_next, ti, ti_ = env.observe_update_state_pid_2(pid = p_gain) 
-            t_20 = time.time() - t_start
-            print("t_20:", end = "")
-            print(t_20)
+            try:
+                state_next, ti, ti_ = env.observe_update_state_pid_2(pid = p_gain)
+            except:
+                com_fail = True
+                break
+            #t_20 = time.time() - t_start
+            #print("t_20:", end = "")
+            #print(t_20)
 
             reward = env.observe_reward(state_next)     #Yaw角の0.0度からのずれに基づいた報酬を観測
 
-            t_21 = time.time() - t_start
-            print("t_21:", end = "")
-            print(t_21)
+            #t_21 = time.time() - t_start
+            #print("t_21:", end = "")
+            #print(t_21)
 
             #経験保存
             #agent.store_experience(state_current, action, reward, state_next, terminal)
             agent.store_transition(state_current,action,reward, state_next,terminal)
 
-            t_3 = time.time() - t_start
-            print("t_3:", end = "")
-            print(t_3)
+            #t_3 = time.time() - t_start
+            #print("t_3:", end = "")
+            #print(t_3)
 
             #進捗表示
             u_i = pid.I*I_GAIN  #Igainによる操作量（=I_gain*偏差の蓄積（積分））
@@ -188,9 +201,9 @@ if __name__ == "__main__":
                 #agent.experience_replay()           #経験再生(NNパラメータのミニバッチ学習を行う)
                 agent.learn()
             
-            t_4 = time.time() - t_start
-            print("t_4:", end = "")
-            print(t_4)
+            #t_4 = time.time() - t_start
+            #print("t_4:", end = "")
+            #print(t_4)
 
             #εのスケジューリング
             if training_flag:                       #学習を行う場合…
@@ -207,9 +220,14 @@ if __name__ == "__main__":
             #ステップ数のカウント
             agent.global_step += 1
 
-            t_5 = time.time() - t_start
-            print("t_5:", end = "")
-            print(t_5)
+            #t_5 = time.time() - t_start
+            #print("t_5:", end = "")
+            #print(t_5)
+        if com_fail:
+            break
+    
+    Time = time.time() - Time_start
+
 #except :
 #except KeyboardInterrupt:
     #print("except finish")
@@ -224,7 +242,10 @@ if __name__ == "__main__":
 
     agent.hyper_params()
     agent.save_model()          #NNモデルの保存
-    agent.debug_nn()            #q_evalの重みとバイアスをtxtファイルで保存
+    try:
+        agent.debug_nn()            #q_evalの重みとバイアスをtxtファイルで保存
+    except:
+        print("debug_nn_error")
     agent.debug_memory()        #リプレイバッファに保存されている遷移のうち、状態のみをcsv出力
     agent.debug_minibatch()     #minibatch_indexのlogをCSV出力(未実装)
     agent.debug_minibatch_2()   #自作ver!
@@ -260,3 +281,4 @@ if __name__ == "__main__":
     #ac.visualize()
 
     print("finish")
+    print("Time:%2f" % Time)

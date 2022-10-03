@@ -269,7 +269,6 @@ if __name__ == "__main__":
     #print(type(agent.log_yaw_angle))
     log.angle_graph_2(x,agent.log_yaw_angle)
     
-
     vi.visualize()
     mi.visualize()
     #ac.visualize()

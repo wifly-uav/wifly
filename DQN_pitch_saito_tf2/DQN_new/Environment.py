@@ -52,6 +52,7 @@ class Environment():
         self.params_to_send = default_params
         self.state = deque()
         self.keep_frames = keep_frames
+        print("Initialize Envirionmnet")
 
     #未使用
     def reset(self, i=0):
@@ -230,8 +231,8 @@ class Environment():
         #各送信時にparams_to_sendを書き換えて送信していく。
         self.params_to_send[RIGHT_WING] = actions[0]
         self.params_to_send[LEFT_WING] = actions[1]
-        print("params_to_send:", end = "")
-        print(self.params_to_send)
+        #print("params_to_send:", end = "")
+        #print(self.params_to_send)
         self.communicator.send_to_esp(self.params_to_send)
     
     

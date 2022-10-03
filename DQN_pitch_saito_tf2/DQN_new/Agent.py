@@ -28,8 +28,8 @@ MODEL_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mode
 CHECKPOINT_NAME = "WiflyDual_DQN"
 
 #適用手法選択
-DUELING = False
-DOUBLE = False
+DUELING = True
+DOUBLE = True
 
 #行動空間設定
 N_ACTIONS = 5
