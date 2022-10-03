@@ -227,7 +227,7 @@ void loop() {
     //PCモード
     if(btn_L == 1){
       recieve_pc();                         //PCからデータ受信
-      Serial.print("PC_mode");
+      //Serial.print("PC_mode");
       for(int i=0;i<2;++i){
         data[i] = 254 - data_pc[i];         //受信データの先頭2つ（羽ばたき出力）は反転
       }
@@ -253,7 +253,7 @@ void loop() {
           data[0] = sli_L;
           data[1] = sli_R;
           data[2] = left_UD;
-          data[3] = btn_R*180;
+          data[3] = btn_R*40;
           data[4] = btn_R;
           break;
         
@@ -284,7 +284,7 @@ void loop() {
           int left_pwm = max(0,sli_R - max(0, (left_LR - 127)/4 ));  //左（要確認）
           int right_pwm = max(0,sli_R - max(0, (127 - left_LR)/4)); //右（要確認）
           int servo_angle = sli_L;                   //尾翼サーボ角
-          int cog_angle = 90*btn_R;                 //重心移動機構の角度
+          int cog_angle = 40*btn_R;                 //重心移動機構の角度
 
           data[0] = left_pwm;          
           data[1] = right_pwm;
