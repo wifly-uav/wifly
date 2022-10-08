@@ -12,7 +12,7 @@ import os
 import time
 
 N_EPOCHS = 1
-N_FRAMES = 500
+N_FRAMES = 50
 I_GAIN = 0.0001 #0.0001
 D_GAIN = 0
 ER = 0
@@ -32,11 +32,11 @@ if __name__ == "__main__":
     path = os.path.dirname(__file__)                        #このスクリプトのディレクトリ名を取得
     print('save folder name:')                              #学習内容を保存するためのフォルダ名の入力を指示
     save_folder = input()                                   
-    save_file = os.path.join(path, 'result', save_folder)   #･･･/result/save_folderのpath取得
-    print(save_file)
+    save_dir = os.path.join(path, 'result', save_folder)   #･･･/result/save_folderのpath取得
+    print(save_dir)
 
-    if not os.path.exists(save_file):                       #ディレクトリが存在しない場合、ディレクトリを作成する
-        os.makedirs(save_file)                              
+    if not os.path.exists(save_dir):                       #ディレクトリが存在しない場合、ディレクトリを作成する
+        os.makedirs(save_dir)                              
     else:
         print('The folder exists.') 
         print('override? y/n')                              #上書きの確認
@@ -48,18 +48,54 @@ if __name__ == "__main__":
             sys.exit()
     
     #DQNAgentクラスのインスタンス作成（NNの初期化やReplayMemoryの用意がされる）
-    agent = DQNAgent(folder=save_file)                      
+    agent = DQNAgent(folder = save_dir)                      
     
-    print('Use saved model? y/n')               #既存のモデル（学習済みNN）を使うか?
+    print('Use saved progress? y/n')               #既存のモデル（学習済みNN）を使うか?
     ans_yn = input()
     if (ans_yn == 'y'):                         #既存のモデルを使用する場合…                      
         print('use model folder name:')         #使用するフォルダ名の入力を指示
-        use_folder = input()                                   
+        fldr_name = input()
+        saved_dir = save_dir + "/../" + fldr_name + "/"
+        print("Loading NN model")
+        agent.load_saved_NN(saved_dir)
+        agent.NN_avoid_overhead()
+        
+        print("Loading parameters")
+        with open(saved_dir + "trained_episode.txt") as f:
+            agent.episode_in_advance = int(f.read())
+            print("episode in advance:%d" % agent.episode_in_advance)
+        with open(saved_dir + "trained_step.txt") as f:
+            agent.global_step = int(f.read()) -1 
+            print("trained step:%d" % agent.global_step)
+        with open(saved_dir + "epsilon.txt") as f:
+            agent.epsilon = float(f.read())
+        with open(saved_dir + "num_in_buffer.txt") as f:
+            agent.num_in_buffer = int(f.read())
+        if agent.per:
+            with open(saved_dir + "beta.txt") as f:
+                agent.beta = float(f.read())
 
+        print("Loading replay buffer")
+        agent.memory_per.tree = np.load(file = saved_dir + "tree.npy")
+        agent.memory_per.data = np.load(file = saved_dir + "data.npy", allow_pickle = True)
+        print("buffer_data_length:")
+        #print(agent.memory_per.data[:60])
+        #print(list(agent.memory_per.data).count(0))
+
+        print('training? y/n')              #学習を行うか?（training_flag）
+        ans = input()
+        if (ans == 'y'):
+            training_flag = True                
+            print('training')
+        else:
+            training_flag = False
+            print('test')
+
+        """
+        use_folder = input()                                   
         #指定フォルダの存在確認とデータの読み込み
         #データがあればload_flagはTrueになり、データが読み込まれる。
         load_flag = agent.load_model(model_path= use_folder)
-
         if load_flag:                           #データが存在している場合…
             print('Model load has been done')
             print('training? y/n')              #学習を行うか?（training_flag）
@@ -73,17 +109,19 @@ if __name__ == "__main__":
         else:                                   #データが存在していない場合…
             print('No model data')
             sys.exit()                          #終了
+        """
+
 
     else:                                       #既存のモデルを使わない場合…
         print('Progam starts without loading a model')
         training_flag = True
     
     #各種log保存先指定
-    log = logger(folder = save_file)
+    log = logger(folder = save_dir)
     env = Environment(agent.keep_frames)                         #Environmentクラスのインスタンス作成
-    vi = visual_nn(folder = save_file)        
-    mi = visual_minibach(folder = save_file)
-    ac = visual_act(folder = save_file)
+    vi = visual_nn(folder = save_dir)        
+    mi = visual_minibach(folder = save_dir)
+    ac = visual_act(folder = save_dir)
     
     #print("press y to start")                   #未実装
     #print("Start after 3 seconds")
@@ -182,8 +220,10 @@ if __name__ == "__main__":
 
             #進捗表示
             u_i = pid.I*I_GAIN  #Igainによる操作量（=I_gain*偏差の蓄積（積分））
-            print( "Epoch:%d" % i, 
-                    "STEP:%d" % j, 
+            epoch = i + agent.episode_in_advance
+            print( "Epoch:%d" % epoch, 
+                    "STEP:%d" % j,
+                    "Grobal_STEP:%d" % agent.global_step, 
                     "Latest state:" + str(state_next[0]), 
                     "Yaw angle:%f" % agent.log_yaw_angle[-1],
                     "Reward:%d" % reward,
@@ -215,10 +255,20 @@ if __name__ == "__main__":
             agent.global_step += 1
 
             t_5 = time.time() - t_start
+
+        agent.episode += 1    
             #print("t_5:", end = "")
             #print(t_5)
         if com_fail:
             break
+        #NNの保存
+        #エピソードごとに保存しておく。(Wiflyの通信が切れたときを想定)
+        #agent.save_model(filepath = save_dir)
+        agent.save_NN_model(filepath = save_dir)
+
+        #エピソード終了時の変数の値を保持しておく。
+        #テキスト等への書き出しは、学習終了後に行う。
+        agent.buffer_param(save_dir)
     
     #時間計測用
     Time = time.time() - Time_start
@@ -272,6 +322,9 @@ if __name__ == "__main__":
     vi.visualize()
     mi.visualize()
     #ac.visualize()
+
+    agent.save_param(filepath = save_dir)
+
 
     print("finish")
     print("Time:%2f" % Time)
