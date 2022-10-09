@@ -1,9 +1,11 @@
 #tensorflow 2
 
+from msilib.schema import tables
 import os
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.models import load_model
 #from tensorflow.keras.models import load_model
 from collections import deque
 from datetime import datetime
@@ -19,10 +21,9 @@ import random
 
 import warnings
 warnings.filterwarnings('ignore')
-
 import time
-
 import os
+
 #--------------------------const, directory name, model name, etc...-------------------------
 MODEL_NAME = "WiflyDual_DQN"# + str(datetime.today())[0:10]
 MODEL_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
@@ -55,7 +56,7 @@ HIDDEN_2 = 30
 ALPHA = 0.4
 BETA = 0
 BETA_INCREMENT = 0
-LERANING_PERIOD = 1
+LEARNING_PERIOD = 1
 MARGIN = 0.0001     #優先度が0になるのを防ぐための定数
 
 #----------------------------------------------------------------------------------------------
@@ -312,15 +313,28 @@ class DQNAgent:
         self.hidden_1 = HIDDEN_1
         self.hidden_2 = HIDDEN_2
         
+        #各ネットワークのモデル保存名
+        self.q_eval_model_file = "q_eval.h5"
+        self.q_target_model_file = "q_target.h5"
+        self.v_eval_model_file = "v_eval.h5"
+        self.v_target_model_file = "v_target.h5"
+        self.adv_eval_model_file = "adv_eval.h5"
+        self.adv_target_model_file = "adv_target.h5"
+
         #PER
         self.memory_per = ReplayBuffer_PER(self.mem_size,self.state_variables,self.keep_frames)    
         self.p_initial = 1                                          #経験を保存する際の優先度（最大値）
         self.margin = MARGIN                                        #サンプリング確率が0になることを防ぐ定数
         self.alpha = ALPHA                                          #サンプリング確率に対する優先度の重視度を表すパラメータ
-        self.beta = BETA                                          #優先度付きサンプリングによるバイアスの修正具合を表すパラメータ
-        self.beta_increment = BETA_INCREMENT                        #betaを増加させる量
+        if self.per:
+            self.beta = BETA                                          #優先度付きサンプリングによるバイアスの修正具合を表すパラメータ
+            self.beta_increment = BETA_INCREMENT                        #betaを増加させる量
+        else:
+            self.beta = 0
+            self.beta_increment = 0
+        
         self.is_weight = np.power(self.mem_size,-self.beta)         #重点サンプリング重みの初期値
-        self.learning_period = LEARNING_RATE
+        self.learning_period = LEARNING_PERIOD
         self.past_states = 0
         self.past_q_target = 0
 
@@ -358,18 +372,15 @@ class DQNAgent:
 
         #ダミーデータ処理
         #predict_on_batchやtrain_on_batchの初回呼び出しが遅いので、先に呼び出しておく。
-        data_dummy = np.array([[[0]*STATE_VARIABLES]*self.keep_frames]*self.batch_size)
-        buf1 = self.q_eval.predict_on_batch(data_dummy)
-        buf2 = self.q_target.predict_on_batch(data_dummy)
-        buf3 = np.copy(self.q_eval)
-        self.q_eval.train_on_batch(data_dummy, buf1)
-        self.q_eval.set_weights(self.q_eval.get_weights())
-        self.q_target.set_weights(self.q_target.get_weights())
-        buf4 = self.memory_per.total_p()
-        buf5 = np.empty((self.batch_size,1))
-        if self.dueling:
-            buf6 = self.v_eval.predict_on_batch(data_dummy)
-            buf7 = self.adv_eval.predict_on_batch(data_dummy)
+        self.NN_avoid_overhead()
+
+        #学習の経過を記録
+        self.episode = 0                #episode
+        self.episode_in_advance = 0     #事前に学習済みのエピソード数
+        self.trained_episode = 0        #学習済みのエピソード数の合計
+        self.trained_step = 0           #学習済みのステップ数
+
+
     """
     def build_dqn(lr, n_actions, input_dims, fc1_dims, fc2_dims):
         
@@ -389,6 +400,20 @@ class DQNAgent:
 
         return model
     """
+
+    def NN_avoid_overhead(self):
+        data_dummy = np.array([[[0]*self.state_variables]*self.keep_frames]*self.batch_size)
+        buf1 = self.q_eval.predict_on_batch(data_dummy)
+        buf2 = self.q_target.predict_on_batch(data_dummy)
+        buf3 = np.copy(self.q_eval)
+        self.q_eval.train_on_batch(data_dummy, buf1)
+        self.q_eval.set_weights(self.q_eval.get_weights())
+        self.q_target.set_weights(self.q_target.get_weights())
+        buf4 = self.memory_per.total_p()
+        buf5 = np.empty((self.batch_size,1))
+        if self.dueling:
+            buf6 = self.v_eval.predict_on_batch(data_dummy)
+            buf7 = self.adv_eval.predict_on_batch(data_dummy)
 
     def _per_loss(self, y_target, y_pred):
         #return tf.reduce_mean(self.is_weight * tf.math.squared_difference(y_target, y_pred))
@@ -570,6 +595,7 @@ class DQNAgent:
             #idxes_batch = np.random.choice(self.num_in_buffer, batch_size, replace = False)
             idxes_batch = random.sample(range(self.num_in_buffer), batch_size)
             transitions = self.memory_per.data[idxes_batch]
+            print(transitions.shape)
             for tran in transitions:
                 states.append(tran[0])
                 actions.append(tran[1])
@@ -599,7 +625,7 @@ class DQNAgent:
         """
         #保存された経験が足りない場合は学習しない
         if self.num_in_buffer < self.batch_size:
-            self.global_step += 1
+            #self.global_step += 1
             return
         #各種ミニバッチ作成
         #states, actions, rewards, states_, dones, batch_idxes = self.memory.sample_buffer(self.batch_size)
@@ -717,6 +743,48 @@ class DQNAgent:
         np.savetxt(self.folder + '/debug_b_fc2.csv', l3.get_weights()[1], delimiter=',')
         np.savetxt(self.folder + '/debug_W_out.csv', l4.get_weights()[0], delimiter=',')
         np.savetxt(self.folder + '/debug_b_out.csv', l4.get_weights()[1], delimiter=',')
+
+    def load_saved_NN(self, save_dir):
+        self.q_eval = load_model(save_dir + self.q_eval_model_file, custom_objects = {"_per_loss": self._per_loss})
+        self.q_target = load_model(save_dir + self.q_target_model_file, custom_objects = {"_per_loss":self._per_loss})
+        if self.dueling:
+            self.v_eval = load_model(save_dir  + self.v_eval_model_file, custom_objects = {"_per_loss":self._per_loss})
+            self.v_target = load_model(save_dir + self.v_target_model_file, custom_objects = {"_per_loss":self._per_loss})
+            self.adv_eval = load_model(save_dir + self.adv_eval_model_file, custom_objects = {"_per_loss":self._per_loss})
+            self.adv_target = load_model(save_dir + self.adv_target_model_file, custom_objects = {"_per_loss":self._per_loss})
+
+    def save_NN_model(self, filepath):
+        self.q_eval.save(filepath + "/" + self.q_eval_model_file)
+        self.q_target.save(filepath + "/" + self.q_target_model_file)
+        if self.dueling:
+            self.v_eval.save(filepath + "/" +self.v_eval_model_file)
+            self.v_target.save(filepath + "/"+  self.v_target_model_file)
+            self.adv_eval.save(filepath + "/" + self.adv_eval_model_file)
+            self.adv_target.save(filepath + "/" + self.adv_target_model_file)
+
+    def save_param(self,filepath):
+        with open(filepath + "/trained_episode.txt", mode = "w") as name:
+            print(self.trained_episode, file = name)
+        with open(filepath + "/trained_step.txt", mode = "w") as name:
+            print(self.trained_step, file = name)
+        with open(filepath + "/epsilon.txt", mode = "w") as name:
+            print(self.last_epsilon, file = name)
+        with open(filepath + "/num_in_buffer.txt", mode = "w") as name:
+            print(self.num_in_buffer, file = name)
+        if self.per:
+            with open(filepath + "/beta.txt", mode  = "w") as name:
+                print(self.last_beta, file = name)
+
+    def buffer_param(self, filepath):
+        #最新のエピソード終了時の変数を記録
+        self.last_epsilon = self.epsilon
+        self.trained_episode = self.episode + self.episode_in_advance
+        self.trained_step = self.global_step
+        self.last_num_in_buffer = self.num_in_buffer
+        if self.per:
+            self.last_beta = self.beta
+        np.save(filepath + "/tree", self.memory_per.tree)
+        np.save(filepath + "/data", self.memory_per.data)
 
     def debug_memory(self):
         with open(self.folder + '/debug_memory.csv', 'w') as f:
