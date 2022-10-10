@@ -111,9 +111,8 @@ class ReplayBuffer():
         self.mem_cntr += 1      #保存した経験の数をカウント
 
 class ReplayBuffer_PER():
-    write = 0   #葉ノード追加の回数
-    
     def __init__(self, capacity,input_dims,keep_frames):
+        self.write = 0                                   #葉ノード追加の回数
         self.capacity = capacity                         #Sumtreeの葉の最大数（格納できる要素の数）
         self.tree = np.zeros(2*capacity - 1)             #葉を含む全ノードの値を保持
         self.data = np.zeros(capacity, dtype = object)   #葉に対応する要素を保持
@@ -280,7 +279,7 @@ def build_dueling_dqn(lr, n_actions, input_dims, keep_frames, fc1_dims, fc2_dims
 
 
 class DQNAgent:
-    def __init__(self, folder='log'):
+    def __init__(self, folder ='log'):
         #ファイル関係
         self.name = os.path.splitext(os.path.basename(__file__))[0] #このスクリプトの拡張子を含まないファイル名を取得
         self.path = os.path.dirname(__file__)                       #このスクリプトのディレクトリを取得
@@ -379,7 +378,7 @@ class DQNAgent:
         self.episode_in_advance = 0     #事前に学習済みのエピソード数
         self.trained_episode = 0        #学習済みのエピソード数の合計
         self.trained_step = 0           #学習済みのステップ数
-
+        self.buffer_param(filepath = folder)
 
     """
     def build_dqn(lr, n_actions, input_dims, fc1_dims, fc2_dims):
@@ -762,6 +761,17 @@ class DQNAgent:
             self.adv_eval.save(filepath + "/" + self.adv_eval_model_file)
             self.adv_target.save(filepath + "/" + self.adv_target_model_file)
 
+    def load_param(self, filepath):
+        with open(filepath + "trained_episode.txt") as f:
+            self.episode_in_advance = int(f.read())
+        with open(filepath + "trained_step.txt") as f:
+            self.global_step = int(f.read())
+        with open(filepath + "epsilon.txt") as f:
+            self.epsilon = float(f.read())
+        if self.per:
+            with open(filepath + "beta.txt") as f:
+                self.beta = float(f.read())
+
     def save_param(self,filepath):
         with open(filepath + "/trained_episode.txt", mode = "w") as name:
             print(self.trained_episode, file = name)
@@ -771,6 +781,8 @@ class DQNAgent:
             print(self.last_epsilon, file = name)
         with open(filepath + "/num_in_buffer.txt", mode = "w") as name:
             print(self.num_in_buffer, file = name)
+        with open(filepath + "/write.txt", mode = "w") as name:
+            print(self.last_write, file = name)
         if self.per:
             with open(filepath + "/beta.txt", mode  = "w") as name:
                 print(self.last_beta, file = name)
@@ -781,10 +793,19 @@ class DQNAgent:
         self.trained_episode = self.episode + self.episode_in_advance
         self.trained_step = self.global_step
         self.last_num_in_buffer = self.num_in_buffer
+        self.last_write = self.memory_per.write
         if self.per:
             self.last_beta = self.beta
         np.save(filepath + "/tree", self.memory_per.tree)
         np.save(filepath + "/data", self.memory_per.data)
+
+    def load_replay_buffer(self, filepath):
+        with open(filepath + "num_in_buffer.txt") as f:
+            self.num_in_buffer = int(f.read())
+        with open(filepath + "write.txt") as f:
+            self.memory_per.write = int(f.read())
+        self.memory_per.tree = np.load(file = filepath + "tree.npy")
+        self.memory_per.data = np.load(file = filepath + "data.npy", allow_pickle = True)
 
     def debug_memory(self):
         with open(self.folder + '/debug_memory.csv', 'w') as f:

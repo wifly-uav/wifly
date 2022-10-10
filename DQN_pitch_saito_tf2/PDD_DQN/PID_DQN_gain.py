@@ -12,7 +12,7 @@ import os
 import time
 
 N_EPOCHS = 1
-N_FRAMES = 50
+N_FRAMES = 100
 I_GAIN = 0.0001 #0.0001
 D_GAIN = 0
 ER = 0
@@ -22,13 +22,12 @@ if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
     #PID_param
     saturations = [0,150]           #PID操作量の制限
-    pwm_def = 180                   #モーター出力デフォルト値
+    pwm_def = 190                   #モーター出力デフォルト値(Environmemtのdefault_paramsもチェック)
     pid = calc_PID(saturations)     #calc_PIDクラスのインスタンス作成（__init__が呼び出され、初期化が行われる）
     param = [1.5,I_GAIN,D_GAIN,0]   #[P-gain,I-gain,D-gain,Target Yaw angle]
     ti = 10                         #PIDの微積分計算で用いる最小の時間幅
     actions = [pwm_def, pwm_def]    #行動ベクトル（両翼のモータ出力）
     pid.update_params(param)        #paramの値をcalc_PIDクラスに反映
-
     path = os.path.dirname(__file__)                        #このスクリプトのディレクトリ名を取得
     print('save folder name:')                              #学習内容を保存するためのフォルダ名の入力を指示
     save_folder = input()                                   
@@ -61,26 +60,12 @@ if __name__ == "__main__":
         agent.NN_avoid_overhead()
         
         print("Loading parameters")
-        with open(saved_dir + "trained_episode.txt") as f:
-            agent.episode_in_advance = int(f.read())
-            print("episode in advance:%d" % agent.episode_in_advance)
-        with open(saved_dir + "trained_step.txt") as f:
-            agent.global_step = int(f.read()) -1 
-            print("trained step:%d" % agent.global_step)
-        with open(saved_dir + "epsilon.txt") as f:
-            agent.epsilon = float(f.read())
-        with open(saved_dir + "num_in_buffer.txt") as f:
-            agent.num_in_buffer = int(f.read())
-        if agent.per:
-            with open(saved_dir + "beta.txt") as f:
-                agent.beta = float(f.read())
-
+        agent.load_param(filepath = saved_dir)
         print("Loading replay buffer")
-        agent.memory_per.tree = np.load(file = saved_dir + "tree.npy")
-        agent.memory_per.data = np.load(file = saved_dir + "data.npy", allow_pickle = True)
-        print("buffer_data_length:")
+        agent.load_replay_buffer(filepath = saved_dir)
         #print(agent.memory_per.data[:60])
         #print(list(agent.memory_per.data).count(0))
+        
 
         print('training? y/n')              #学習を行うか?（training_flag）
         ans = input()
@@ -110,7 +95,6 @@ if __name__ == "__main__":
             print('No model data')
             sys.exit()                          #終了
         """
-
 
     else:                                       #既存のモデルを使わない場合…
         print('Progam starts without loading a model')
@@ -165,7 +149,7 @@ if __name__ == "__main__":
             #state_current[0]が最新の状態で、state_current[0][5]が最新の状態におけるYaw角
             #delta_timeは微積分の近似で用いる時間幅
             #modeはSaturationブロック有効化を決めるフラグ
-            t_1 = time.time() - t_start
+            #t_1 = time.time() - t_start
             #print("t_1:", end = "")
             #print(t_1)
             diff = pid.calculate_output(current_value = int(state_current[0][5]), delta_time = (int)(ti), mode = True)
@@ -178,7 +162,7 @@ if __name__ == "__main__":
                 actions[0] = pwm_def                
                 actions[1] = pwm_def + diff - ER    #左側のモータ出力を下げる
 
-            print(actions)
+            #print(actions)
             env.execute_action_(actions)            #機体にモータ出力の変更内容を送信
 
             """
@@ -186,7 +170,7 @@ if __name__ == "__main__":
                 agent.experience_replay()           #経験再生
             """
 
-            t_2 = time.time() - t_start
+            #t_2 = time.time() - t_start
             #print("t_2:", end = "")
             #print(t_2)
 
@@ -199,13 +183,13 @@ if __name__ == "__main__":
             except:
                 com_fail = True
                 break 
-            t_20 = time.time() - t_start
+            #t_20 = time.time() - t_start
             #print("t_20:", end = "")
             #print(t_20)
 
             reward = env.observe_reward(state_next)     #Yaw角の0.0度からのずれに基づいた報酬を観測
 
-            t_21 = time.time() - t_start
+            #t_21 = time.time() - t_start
             #print("t_21:", end = "")
             #print(t_21)
 
@@ -214,7 +198,7 @@ if __name__ == "__main__":
             #agent.store_transition(state_current,action,reward, state_next,terminal)
             agent.store_transition_with_priority(state_current, action, reward, state_next, terminal)
             
-            t_3 = time.time() - t_start
+            #t_3 = time.time() - t_start
             #print("t_3:", end = "")
             #print(t_3)
 
@@ -235,7 +219,7 @@ if __name__ == "__main__":
                 #agent.experience_replay()           #経験再生(NNパラメータのミニバッチ学習を行う)
                 agent.learn()
             
-            t_4 = time.time() - t_start
+            #t_4 = time.time() - t_start
             #print("t_4:", end = "")
             #print(t_4)
 
@@ -254,13 +238,18 @@ if __name__ == "__main__":
             #ステップ数のカウント
             agent.global_step += 1
 
-            t_5 = time.time() - t_start
+            #t_5 = time.time() - t_start
+
+        if com_fail:
+            print(com_fail)
+            agent.save_NN_model(filepath = save_dir)
+            agent.buffer_param(save_dir)
+            break
 
         agent.episode += 1    
             #print("t_5:", end = "")
             #print(t_5)
-        if com_fail:
-            break
+
         #NNの保存
         #エピソードごとに保存しておく。(Wiflyの通信が切れたときを想定)
         #agent.save_model(filepath = save_dir)
@@ -286,7 +275,7 @@ if __name__ == "__main__":
     env.execute_action_([0,0])
 
     agent.hyper_params()
-    agent.save_model()          #NNモデルの保存
+    #agent.save_NN_model()      #NNモデルの保存
     agent.debug_nn()            #q_evalの重みとバイアスをtxtファイルで保存
     agent.debug_memory()        #リプレイバッファに保存されている遷移のうち、状態のみをcsv出力
     agent.debug_minibatch()     #minibatch_indexのlogをCSV出力(未実装)
@@ -324,7 +313,6 @@ if __name__ == "__main__":
     #ac.visualize()
 
     agent.save_param(filepath = save_dir)
-
 
     print("finish")
     print("Time:%2f" % Time)

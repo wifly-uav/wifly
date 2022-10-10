@@ -21,7 +21,7 @@ default_params = [255, PWM_WING, 0, PWM_WING, 0]    #ここを変更しないと
 #変更後
 RIGHT_WING = 1
 LEFT_WING = 2
-PWM_WING = 0
+PWM_WING = 200
 default_params = [255, PWM_WING, PWM_WING, 0, 0, 0]    
 
 
@@ -228,13 +228,13 @@ class Environment():
         決定した行動に基づくモータ出力の変更を機体に反映（送信）
         """
         #各送信時にparams_to_sendを書き換えて送信していく。
+        #
         self.params_to_send[RIGHT_WING] = actions[0]
         self.params_to_send[LEFT_WING] = actions[1]
-        print("params_to_send:", end = "")
-        print(self.params_to_send)
+        #print("params_to_send:", end = "")
+        #print(self.params_to_send)
         self.communicator.send_to_esp(self.params_to_send)
-    
-    
+     
     def execute_action_gain(self, action):
 
         if action == 0:
