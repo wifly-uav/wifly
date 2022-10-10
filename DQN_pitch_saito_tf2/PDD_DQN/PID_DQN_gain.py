@@ -11,18 +11,20 @@ from Calc_Control import calc_PID
 import os
 import time
 
-N_EPOCHS = 1
-N_FRAMES = 100
+N_EPOCHS = 1            #学習epoch数
+N_FRAMES = 100          #1epochあたりのステップ数
 I_GAIN = 0.0001 #0.0001
 D_GAIN = 0
+PWM_DEF = 189           #kitai側では+1されて190になる。
 ER = 0
 MODEL_NAME_HEADER = "WiflyDual_DQN"
+YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain]
 
 if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
     #PID_param
     saturations = [0,150]           #PID操作量の制限
-    pwm_def = 190                   #モーター出力デフォルト値(Environmemtのdefault_paramsもチェック)
+    pwm_def = PWM_DEF                   #モーター出力デフォルト値(Environmemtのdefault_paramsもチェック)
     pid = calc_PID(saturations)     #calc_PIDクラスのインスタンス作成（__init__が呼び出され、初期化が行われる）
     param = [1.5,I_GAIN,D_GAIN,0]   #[P-gain,I-gain,D-gain,Target Yaw angle]
     ti = 10                         #PIDの微積分計算で用いる最小の時間幅
@@ -146,13 +148,13 @@ if __name__ == "__main__":
             
             #操作量をPID計算
             #state_currentはFRAMES個の状態を保持
-            #state_current[0]が最新の状態で、state_current[0][5]が最新の状態におけるYaw角
+            #state_current[0]が最新の状態で、state_current[0][YAW_INDEX]が最新の状態におけるYaw角
             #delta_timeは微積分の近似で用いる時間幅
             #modeはSaturationブロック有効化を決めるフラグ
             #t_1 = time.time() - t_start
             #print("t_1:", end = "")
             #print(t_1)
-            diff = pid.calculate_output(current_value = int(state_current[0][5]), delta_time = (int)(ti), mode = True)
+            diff = pid.calculate_output(current_value = int(state_current[0][YAW_INDEX]), delta_time = (int)(ti), mode = True)
 
             #出力を変えるモータが逆な気がする…
             if diff > 0:                            #操作量が正なら…
@@ -193,6 +195,10 @@ if __name__ == "__main__":
             #print("t_21:", end = "")
             #print(t_21)
 
+            #EPOCHの最後ならば、terminalをTrueにする。
+            if j == N_EPOCHS - 1:
+                terminal = True
+
             #経験保存
             #agent.store_experience(state_current, action, reward, state_next, terminal)
             #agent.store_transition(state_current,action,reward, state_next,terminal)
@@ -224,8 +230,10 @@ if __name__ == "__main__":
             #print(t_4)
 
             #εのスケジューリング
+            
             if training_flag:                       #学習を行う場合…
-                agent.epsilon -= 0.1/3000           #ランダム行動確率を下げていく。
+                #agent.epsilon -= 0.1/3000          #ランダム行動確率を下げていく。
+                pass                                #モデルの変化を考慮して、探索させる確率を下げない。
             else:                                   #学習を行わない場合…
                 agent.epsilon = 0                   #ランダム行動はさせない。
 

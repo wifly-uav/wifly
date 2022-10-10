@@ -10,6 +10,7 @@ from tensorflow.keras.models import load_model
 from collections import deque
 from datetime import datetime
 from matplotlib import pyplot as plt
+from PID_DQN_gain import YAW_INDEX
 
 #import tensorflow.compat.v1 as tf
 #tf.disable_v2_behavior()
@@ -43,20 +44,20 @@ LEARNING_RATE = 0.02
 DISCOUNT_FACTOR = 0.95
 MINIBATCH_SIZE = 32
 REPLAY_MEMORY_SIZE = 10000
-EPSILON = 0.1
+EPSILON = 0.1           #モデルの変化を考慮して、スケジューリングをしない。
 EPSILON_DEC = 1e-3
 EPSILON_END = 0.01
 KEEP_FRAMES = 4
-STATE_VARIABLES = 7     #状態変数の数
-COPY_PERIOD = 20
-HIDDEN_1 = 30           
-HIDDEN_2 = 30
+STATE_VARIABLES = 4     #状態変数の数(PWM,PWM,Yaw,Pgain)
+COPY_PERIOD = 50
+HIDDEN_1 = 10           
+HIDDEN_2 = 10
 
 #for PER
 ALPHA = 0.4
 BETA = 0
 BETA_INCREMENT = 0
-LEARNING_PERIOD = 1
+LEARNING_PERIOD = 1 #
 MARGIN = 0.0001     #優先度が0になるのを防ぐための定数
 
 #----------------------------------------------------------------------------------------------
@@ -600,7 +601,7 @@ class DQNAgent:
                 actions.append(tran[1])
                 rewards.append(tran[2])
                 states_.append(tran[3])
-                terminal.append(1 - tran[4])
+                terminal.append(1 - tran[4])    #（1-True or 1-False）
             p_in_tree = self.memory_per.tree[-self.memory_per.capacity:]
             p_sampled = p_in_tree[idxes_batch]
             is_weights = [[1] for i in range(batch_size)]
@@ -697,7 +698,7 @@ class DQNAgent:
         #self.epsilon = self.epsilon - self.eps_dec if self.epsilon > self.eps_min else self.eps_min
 
     def get_angle(self,states):
-        self.log_yaw_angle.append(float(states[0][5]))
+        self.log_yaw_angle.append(float(states[0][YAW_INDEX]))
 
     def create_checkpoint(self):
         #self.saver.save(self.sess, os.path.join(self.model_dir, self.checkpoint_name + datetime.now().strftime('%H%M%S')))

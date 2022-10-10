@@ -114,7 +114,7 @@ class Communicator():
                 persed_data = self.__raw_data.split(",")                    #__raw_dataを","区切りにしたものを取得
 
                 #print(persed_data)                    
-                #出力:[モータ1出力,モータ2出力,サーボ1,サーボ2,受信間隔,Pitch,Yaw,]  確認！
+                #出力:[モータ1出力,モータ2出力,サーボ1,サーボ2,受信間隔,Pitch,Yaw,時間?]  確認！
 
                 if len(persed_data) == byt:                                     #受信データ長が指定通りならば...
                     if persed_data[0] != " " and persed_data[0] != "":            #先頭の文字抜けが無ければ…
@@ -124,9 +124,16 @@ class Communicator():
                         self.time_last_receive = time.time()                    #最後の受信時刻を更新  
                         receive_time_ = int(persed_data.pop(4))                 #機体側のマイコンで計測された受信間隔の読み取り（popなので削除もされる）
                         persed_data.pop(-1)                                     #受信時刻の読み取り（popなので削除もされる）要確認!
+                        #persed_data:[モータ出力1,モータ出力2,尾翼サーボ,重心移動機構サーボ,Pitch,Yaw]
                         
+                        #状態の整形
+                        for i in range(3):
+                            persed_data.pop(-2)
+
+                        #persed_data:[モータ出力1,モータ出力2,Yaw]
+
                         self.dataset_from_esp = persed_data                     #受信データとして記録
-                        #dataset_from_esp:[モータ出力1,モータ出力2,尾翼サーボ,重心移動機構サーボ,Pitch,Yaw]
+                        
                         self.__fail_counter = 0                                 #受信失敗回数をリセット
 
                         #受信データ、受信間隔（機体計測）、受信間隔(PC)を返す。

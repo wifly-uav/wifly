@@ -4,7 +4,7 @@ import numpy as np
 import random as rd
 import time
 from collections import deque
-
+from PID_DQN_gain import YAW_INDEX
 FRAMES = 4      #維持フレーム数
 
 """
@@ -21,9 +21,8 @@ default_params = [255, PWM_WING, 0, PWM_WING, 0]    #ここを変更しないと
 #変更後
 RIGHT_WING = 1
 LEFT_WING = 2
-PWM_WING = 200
-default_params = [255, PWM_WING, PWM_WING, 0, 0, 0]    
-
+PWM_WING = 189
+default_params = [255, PWM_WING, PWM_WING, 0, 0, 0]
 
 """
 #変更提案(2022/08/09/22:47)→没!(2022/08/20/18:24)
@@ -173,7 +172,7 @@ class Environment():
         #報酬の設定
         #Yaw角の0.0度からのずれに基づいて報酬を与える
         try:
-            err = abs(float(data[0][5])-0.0)
+            err = abs(float(data[0][YAW_INDEX])-0.0)
             if err < 10:
                 return 10
             elif err < 20:
