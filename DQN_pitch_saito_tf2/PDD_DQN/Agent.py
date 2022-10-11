@@ -348,6 +348,7 @@ class DQNAgent:
         self.log_act = []                       #行動aのlog
         self.log_minibatch_index = []           #ミニバッチに採用された遷移reply_buffer内のindex
         self.log_loss = []                      #損失関数のlog
+        self.log_loss_buffer = []               #1エピソード分の損失関数のlog（ep.終了時にlog_lossに連結）
         self.log_v = []                         #NNの状態価値関数Vのlog
         self.log_adv = []                       #NNのアドバンテージ関数Aのlog
         self.log_p = []
@@ -662,15 +663,16 @@ class DQNAgent:
         self.update_priorities(p_list,batch_idxes)
 
         time_start3 = time.time()
+        
         #NNのパラメータ更新
         if self.global_step % self.learning_period == 0 or self.num_in_buffer == self.batch_size:
             loss = self.q_eval.train_on_batch(states, q_target)
-            self.log_loss.append(loss)
+            self.log_loss_buffer.append(loss)
             self.past_states = np.copy(states)
             self.past_q_target = np.copy(q_target)
         else:
             loss = self.q_eval.train_on_batch(self.past_states, self.past_q_target)
-            self.log_loss.append(loss)
+            self.log_loss_buffer.append(loss)
         
         #self.log_loss.append(self.q_eval.train_on_batch(states, q_target))
         #loss = self.q_eval.train_on_batch(states, q_target)
@@ -873,6 +875,22 @@ class DQNAgent:
             print(type(self.log_loss))
             print(self.log_loss)
             writer.writerows(list(self.log_loss))
+
+    def load_log_loss(self, filepath):
+        with open(filepath + "log_loss.csv") as name:
+            reader =list(csv.reader(name))
+            for rdr in reader[0]:
+                #print(rdr)
+                self.log_loss.append(float(rdr))
+
+    def link_log_loss(self):
+        self.log_loss += self.log_loss_buffer
+        self.log_loss_buffer = []
+
+    def save_log_loss(self, filepath):
+        with open(filepath + "/log_loss.csv", mode = "w", newline = "") as f:
+            writer = csv.writer(f, lineterminator = "\n")
+            writer.writerow(agent.log_loss)
 
     def check_loss(self):
         return self.log_loss

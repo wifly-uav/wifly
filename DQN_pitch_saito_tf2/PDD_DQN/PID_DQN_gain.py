@@ -60,7 +60,8 @@ if __name__ == "__main__":
         print("Loading NN model")
         agent.load_saved_NN(saved_dir)
         agent.NN_avoid_overhead()
-        
+        print("Loading log_loss")
+        agent.load_log_loss(saved_dir)
         print("Loading parameters")
         agent.load_param(filepath = saved_dir)
         print("Loading replay buffer")
@@ -266,6 +267,7 @@ if __name__ == "__main__":
         #エピソード終了時の変数の値を保持しておく。
         #テキスト等への書き出しは、学習終了後に行う。
         agent.buffer_param(save_dir)
+        agent.link_log_loss()
     
     #時間計測用
     Time = time.time() - Time_start
@@ -321,6 +323,7 @@ if __name__ == "__main__":
     #ac.visualize()
 
     agent.save_param(filepath = save_dir)
+    agent.save_log_loss(filepath = save_dir)
 
     print("finish")
     print("Time:%2f" % Time)
