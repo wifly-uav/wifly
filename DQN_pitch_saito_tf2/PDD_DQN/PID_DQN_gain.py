@@ -12,13 +12,13 @@ import os
 import time
 
 N_EPOCHS = 1            #学習epoch数
-N_FRAMES = 100          #1epochあたりのステップ数
+N_FRAMES = 200          #1epochあたりのステップ数
 I_GAIN = 0.0001 #0.0001
 D_GAIN = 0
-PWM_DEF = 189           #kitai側では+1されて190になる。
+PWM_DEF = 194           #kitai側では+1されて190になる。
 ER = 0
 MODEL_NAME_HEADER = "WiflyDual_DQN"
-YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain]
+YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
 
 if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
@@ -69,7 +69,6 @@ if __name__ == "__main__":
         #print(agent.memory_per.data[:60])
         #print(list(agent.memory_per.data).count(0))
         
-
         print('training? y/n')              #学習を行うか?（training_flag）
         ans = input()
         if (ans == 'y'):
@@ -184,8 +183,9 @@ if __name__ == "__main__":
             try:
                 state_next, ti, ti_ = env.observe_update_state_pid_2(pid = p_gain)
             except:
+                print("Communication Failure")
                 com_fail = True
-                break 
+                break
             #t_20 = time.time() - t_start
             #print("t_20:", end = "")
             #print(t_20)
@@ -196,8 +196,8 @@ if __name__ == "__main__":
             #print("t_21:", end = "")
             #print(t_21)
 
-            #EPOCHの最後ならば、terminalをTrueにする。
-            if j == N_EPOCHS - 1:
+            #EPOCHの最後(各EpochのN_FRAMES目)ならば、terminalをTrueにする。
+            if j == N_FRAMES - 1:
                 terminal = True
 
             #経験保存
@@ -326,4 +326,5 @@ if __name__ == "__main__":
     agent.save_log_loss(filepath = save_dir)
 
     print("finish")
+    print(save_dir)
     print("Time:%2f" % Time)

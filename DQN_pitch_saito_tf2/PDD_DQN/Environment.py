@@ -4,7 +4,7 @@ import numpy as np
 import random as rd
 import time
 from collections import deque
-from PID_DQN_gain import YAW_INDEX
+YAW_INDEX = 2
 FRAMES = 4      #維持フレーム数
 
 """
@@ -21,7 +21,7 @@ default_params = [255, PWM_WING, 0, PWM_WING, 0]    #ここを変更しないと
 #変更後
 RIGHT_WING = 1
 LEFT_WING = 2
-PWM_WING = 189
+PWM_WING = 194
 default_params = [255, PWM_WING, PWM_WING, 0, 0, 0]
 
 """

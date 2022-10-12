@@ -10,7 +10,6 @@ from tensorflow.keras.models import load_model
 from collections import deque
 from datetime import datetime
 from matplotlib import pyplot as plt
-from PID_DQN_gain import YAW_INDEX
 
 #import tensorflow.compat.v1 as tf
 #tf.disable_v2_behavior()
@@ -59,6 +58,8 @@ BETA = 0
 BETA_INCREMENT = 0
 LEARNING_PERIOD = 1 #
 MARGIN = 0.0001     #優先度が0になるのを防ぐための定数
+
+YAW_INDEX = 2
 
 #----------------------------------------------------------------------------------------------
 
@@ -596,7 +597,7 @@ class DQNAgent:
             #idxes_batch = np.random.choice(self.num_in_buffer, batch_size, replace = False)
             idxes_batch = random.sample(range(self.num_in_buffer), batch_size)
             transitions = self.memory_per.data[idxes_batch]
-            print(transitions.shape)
+            #print(transitions.shape)
             for tran in transitions:
                 states.append(tran[0])
                 actions.append(tran[1])
@@ -890,7 +891,7 @@ class DQNAgent:
     def save_log_loss(self, filepath):
         with open(filepath + "/log_loss.csv", mode = "w", newline = "") as f:
             writer = csv.writer(f, lineterminator = "\n")
-            writer.writerow(agent.log_loss)
+            writer.writerow(self.log_loss)
 
     def check_loss(self):
         return self.log_loss

@@ -7,7 +7,8 @@ import statistics
 import datetime as dt
 import os
 from graph import Graph
-from PID_DQN_gain import YAW_INDEX
+
+YAW_INDEX = 2
 
 class logger():
     def __init__(self, folder='log'):
