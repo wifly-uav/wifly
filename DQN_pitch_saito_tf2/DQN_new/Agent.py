@@ -7,36 +7,47 @@ from tensorflow.keras.optimizers import Adam
 #from tensorflow.keras.models import load_model
 from collections import deque
 from datetime import datetime
+from matplotlib import pyplot as plt
 
 #import tensorflow.compat.v1 as tf
 #tf.disable_v2_behavior()
 tf.get_logger().setLevel("ERROR")
 import numpy as np
 import csv
+import time
 
 import warnings
 warnings.filterwarnings('ignore')
 
+import time
 
 import os
 #--------------------------const, directory name, model name, etc...-------------------------
 MODEL_NAME = "WiflyDual_DQN"# + str(datetime.today())[0:10]
 MODEL_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 CHECKPOINT_NAME = "WiflyDual_DQN"
-MINIBATCH_SIZE = 16
-REPLAY_MEMORY_SIZE = 10000
+
+#適用手法選択
+DUELING = True
+DOUBLE = True
+
+#行動空間設定
+N_ACTIONS = 5
+ENABLE_ACTIONS = [i for i in range(N_ACTIONS)]
+
+#hyperparameter各種
 LEARNING_RATE = 0.02
 DISCOUNT_FACTOR = 0.95
+MINIBATCH_SIZE = 32
+REPLAY_MEMORY_SIZE = 10000
 EPSILON = 0.1
-EPSILON_DEC=1e-3
-EPSILON_END=0.01
-ENABLE_ACTIONS = [1,2,3,4,5]
-N_ACTIONS = len(ENABLE_ACTIONS)
-FRAMES = 4
-INPUT_DIMS = FRAMES*4
-#INPUTS = 5
-HIDDEN_1 = 10
-HIDDEN_2 = 5
+EPSILON_DEC = 1e-3
+EPSILON_END = 0.01
+KEEP_FRAMES = 4
+STATE_VARIABLES = 7     #状態変数の数
+COPY_PERIOD = 20
+HIDDEN_1 = 30           
+HIDDEN_2 = 30
 
 #----------------------------------------------------------------------------------------------
 
@@ -47,9 +58,9 @@ class ReplayBuffer():
 
         #各リプレイメモリーの初期化
         #state_memoryとnew_state_memoryは3次元arrayであることに注意
-        self.state_memory = np.zeros((self.mem_size,FRAMES,input_dims),       
+        self.state_memory = np.zeros((self.mem_size,KEEP_FRAMES,input_dims),       
                                     dtype=np.float32)
-        self.new_state_memory = np.zeros((self.mem_size,FRAMES,input_dims),   
+        self.new_state_memory = np.zeros((self.mem_size,KEEP_FRAMES,input_dims),   
                                 dtype=np.float32)
         self.action_memory = np.zeros(self.mem_size, dtype=np.int32)
         self.reward_memory = np.zeros(self.mem_size, dtype=np.float32)
@@ -69,7 +80,7 @@ class ReplayBuffer():
         actions = self.action_memory[batch]
         terminal = self.terminal_memory[batch]
 
-        return states, actions, rewards, states_, terminal
+        return states, actions, rewards, states_, terminal, batch
 
     def store_transition(self, state, action, reward, state_, done):
         
@@ -85,12 +96,11 @@ class ReplayBuffer():
         self.new_state_memory[index] = state_
         self.reward_memory[index] = reward
         self.action_memory[index] = action
-        self.terminal_memory[index] = 1 - int(done)
+        self.terminal_memory[index] = int(done)
 
         self.mem_cntr += 1      #保存した経験の数をカウント
 
-
-def build_dqn(lr, n_actions, input_dims, fc1_dims, fc2_dims):
+def build_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
     """
     NNの作成
     -NNの入力:4つの状態（Qを求めたい状態sとその3フレーム前までの3つの状態を合わせた合計4つの状態）
@@ -98,111 +108,158 @@ def build_dqn(lr, n_actions, input_dims, fc1_dims, fc2_dims):
     -state dequeの先頭に状態sが入っている
     """
 
-
-
+    #Sequential API
     model = keras.Sequential([
 
         #Denseは全結合ユニット
-        #ユニット数、（入力層のユニット数）、活性化関数が引数
-        #入力のユニット数の指定には、input_dim=とinput_shape=があるらしい。
-        keras.layers.Input(shape = (FRAMES,input_dims,)),        #入力の数はinput_dims*4フレーム（shapeでの指定時は順序が逆なので注意）
-        keras.layers.Flatten(),                             #平滑化‼
-        keras.layers.Dense(fc1_dims, activation='relu'),    #中間層1
-        keras.layers.Dense(fc2_dims, activation='relu'),    #中間層2
-        keras.layers.Dense(n_actions, activation=None)])    #出力層
+        #Denseの引数:ユニット数、（入力層のユニット数）、活性化関数
+        #入力のユニット数の指定には、"input_dim="と"input_shape="があるらしい。
+        keras.layers.Input(shape = (keep_frames,input_dims,)),  #入力の数はinput_dims*4フレーム（shapeでの指定時は順序が逆なので注意）
+        keras.layers.Flatten(),                                 #平滑化‼
+        keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層1
+        keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層2
+        keras.layers.Dense(n_actions, activation = None, kernel_initializer = "he_normal")])       #出力層
     
     #最適化アルゴリズム、誤差関数を指定する
-    model.compile(optimizer=Adam(learning_rate=lr), loss='mean_squared_error')
+    model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
 
-    #構築されたモデルの情報を表示
-    model.summary()
+    model.summary()     #構築されたモデルの情報を表示
+    return model,0,0    #Dueling_Networkと返り値の数を合わせている。
 
-    return model
+def build_dueling_dqn(lr, n_actions, input_dims, keep_frames, fc1_dims, fc2_dims):
+    """
+    dueling networkの作成
+    """
+    
+    #Functional API
+    #まず順伝搬を定義していく。
+    x = keras.layers.Input(shape = (keep_frames,input_dims,))    #入力の数はinput_dims*4フレーム（shapeでの指定時は順序が逆なので注意）
+    f = keras.layers.Flatten()(x)                                  #平滑化‼
+    
+    """
+    #案1 2層共有
+    h = keras.layers.Dense(fc1_dims, activation='relu', kernel_initializer = 'he_normal')(f)    #中間層1(入力層の情報を加えてあるので要確認)
+    h = keras.layers.Dense(fc2_dims, activation='relu', kernel_initializer = 'he_normal')(h)    #中間層2
+
+    V = keras.layers.Dense(1, activation=None, kernel_initializer = 'he_normal')(h)             #V(s)出力
+    A = keras.layers.Dense(n_actions, activation=None, kernel_initializer = 'he_normal')(h)     #A(s,a)出力
+
+    #q = keras.layers.Add()([V, A - tf.math.reduce_mean(A, axis = 1, keepdims = True)])
+    #q = keras.layers.Add()([V, A - tf.stop_gradient(tf.math.reduce_mean(A, axis = 1, keepdims = True))])
+    #Q = keras.layers.Dense(n_actions)(q)
+
+    Q = V +  A - tf.math.reduce_mean(A, axis = 1, keepdims = True)
+    """
+    
+    #案2 1層のみ共有
+    h = keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = 'he_normal')(f)    #中間層1(入力層の情報を加えてあるので要確認)
+    v_dense = keras.layers.Dense(fc2_dims//2, activation ='relu', kernel_initializer = 'he_normal')(h)
+    a_dense = keras.layers.Dense(fc2_dims//2, activation = 'relu', kernel_initializer = 'he_normal')(h)
+    
+    V = keras.layers.Dense(1, activation = None, kernel_initializer = 'he_normal')(v_dense)                 #V(s)出力
+    A = keras.layers.Dense(n_actions, activation = None, kernel_initializer = 'he_normal')(a_dense)         #A(s,a)出力
+    q = keras.layers.Add()([V, A - tf.stop_gradient(tf.math.reduce_mean(A, axis = 1, keepdims = True))])    #V,Aを合成
+    #q = keras.layers.Add()([V, A - tf.math.reduce_mean(A, axis = 1, keepdims = True)])                     #tf.stop_gradientなしver
+    Q = keras.layers.Dense(n_actions, activation = None)(q)                                                 #Q(s,a)出力
+
+    #Q,V,Aを出力とするモデルを作成(V,Aはlog用)
+    #入力と出力を指定すると、上で定義した順伝搬ネットワークができる。
+    model_Q = keras.Model(inputs = [x], outputs = [Q])
+    model_V = keras.Model(inputs = [x], outputs = [V])
+    model_A = keras.Model(inputs = [x], outputs = [A])
+
+    """
+    #最適化アルゴリズム、誤差関数を指定する
+    model_Q.compile(optimizer = Adam(learning_rate=lr), loss='huber_loss')
+    model_V.compile(optimizer = Adam(learning_rate=lr), loss='huber_loss')
+    model_A.compile(optimizer = Adam(learning_rate=lr), loss='huber_loss')
+    """
+
+    #最適化アルゴリズム、誤差関数を指定する
+    model_Q.compile(optimizer = Adam(learning_rate=lr), loss='huber_loss')
+    model_Q.summary()
+
+    return model_Q, model_V, model_A
 
 
 class DQNAgent:
     def __init__(self, folder='log'):
-        # Load parameters
+        #ファイル関係
         self.name = os.path.splitext(os.path.basename(__file__))[0] #このスクリプトの拡張子を含まないファイル名を取得
         self.path = os.path.dirname(__file__)                       #このスクリプトのディレクトリを取得
-        self.minibatch_size = MINIBATCH_SIZE
-
-        #self.replay_memory_size = REPLAY_MEMORY_SIZE
-        self.memory = ReplayBuffer(REPLAY_MEMORY_SIZE,FRAMES)   #ReplayBufferクラスのインスタンス作成
-        self.learning_rate = LEARNING_RATE
-        self.discount_factor = DISCOUNT_FACTOR
-        self.epsilon = EPSILON
-        self.eps_dec = EPSILON_DEC                 
-        self.eps_min = EPSILON_END
         self.model_dir = MODEL_DIRECTORY
         self.model_name = MODEL_NAME
         self.checkpoint_name = CHECKPOINT_NAME
-        self.enable_actions = ENABLE_ACTIONS
 
-        #以下log用
-        self.minibatch_index_log = np.empty(0)
-        self.log_q = []
-        self.log_act = []
-        self.log_loss = []
-        self.epsilon_act = 0
-        self.action_old = 0
+        #適用手法のフラグ
+        self.dueling = DUELING
+        self.double = DOUBLE
+
+        #行動空間
+        self.action_space = ENABLE_ACTIONS
+        self.n_action = N_ACTIONS
+
+        self.memory = ReplayBuffer(REPLAY_MEMORY_SIZE,STATE_VARIABLES)   #ReplayBufferクラスのインスタンス作成
+        self.learning_rate = LEARNING_RATE
+        self.gamma = DISCOUNT_FACTOR
+        self.epsilon = EPSILON
+        self.eps_dec = EPSILON_DEC                 
+        self.eps_min = EPSILON_END
+        self.batch_size = MINIBATCH_SIZE
+        self.keep_frames = KEEP_FRAMES
+        self.copy_period = COPY_PERIOD
+        self.hidden_1 = HIDDEN_1
+        self.hidden_2 = HIDDEN_2
+        
+        self.global_step = 0
+
+        #log用
+        self.log_states = []                    #状態のlog
+        self.log_yaw_angle = []
+        self.minibatch_index_log = np.empty(0)  
+        self.log_q = []                         #行動価値関数Qのlog
+        self.log_act = []                       #行動aのlog
+        self.log_minibatch_index = []           #ミニバッチに採用された遷移reply_buffer内のindex
+        self.log_loss = []                      #損失関数のlog
+        self.log_v = []                         #NNの状態価値関数Vのlog
+        self.log_adv = []                       #NNのアドバンテージ関数Aのlog
+        #self.epsilon_act = 0
+        #self.action_old = 0
 
         self.folder = folder
 
-        # create deque object for replay memory
-        # self.replay_memory = deque(maxlen=self.replay_memory_size)
-        
-        #NNの構築（初期化)
-        self.q_eval = build_dqn(LEARNING_RATE, N_ACTIONS, INPUT_DIMS, HIDDEN_1, HIDDEN_2)
-
+        #NNの構築
+        #Dueling or Normal
+        if self.dueling:
+            self.q_eval,self.v_eval,self.adv_eval = build_dueling_dqn(LEARNING_RATE, N_ACTIONS, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+            self.q_target, self.v_target, self.adv_target = build_dueling_dqn(LEARNING_RATE, N_ACTIONS, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+        else:
+            self.q_eval, self.v_eval,self.adv_eval = build_dqn(LEARNING_RATE, N_ACTIONS, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+            self.q_target, self.target, self.adv_target = build_dqn(LEARNING_RATE, N_ACTIONS, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
         # create TensorFlow graph (model)(tf1)
-        self.init_model()
+        #self.init_model()
 
         # reset current loss
         self.current_loss = 0.0
 
-    #未使用
-    def batch_norm_wrapper(inputs, is_training = True, decay = 0.999):
-        """
-        バッチの正規化
-        """
-        variance_epsilon = 1e-3
-        scale = tf.Variable(tf.ones([inputs.get_shape()[-1]]))
-        scale = tf.Variable(tf.ones([inputs.get_shape()[-1]]))
-        beta = tf.Variable(tf.zeros([inputs.get_shape()[-1]]))
-        pop_mean = tf.Variable(tf.zeros([inputs.get_shape()[-1]]), trainable=False)
-        pop_var = tf.Variable(tf.ones([inputs.get_shape()[-1]]), trainable=False)
+        #ダミーデータ処理
+        #predict_on_batchやtrain_on_batchの初回呼び出しが遅いので、先に呼び出しておく。
+        data_dummy = np.array([[[0]*STATE_VARIABLES]*self.keep_frames]*self.batch_size)
+        buf1 = self.q_eval.predict_on_batch(data_dummy)
+        buf2 = self.q_target.predict_on_batch(data_dummy)
+        buf3 = np.copy(self.q_eval)
+        self.q_eval.train_on_batch(data_dummy, buf1)
+        self.q_eval.set_weights(self.q_eval.get_weights())
+        self.q_target.set_weights(self.q_target.get_weights())
 
-        if is_training:
-            batch_mean, batch_var = tf.nn.moments(inputs,[0])
-            train_mean = tf.assign(pop_mean,
-                                pop_mean * decay + batch_mean * (1 - decay))
-            train_var = tf.assign(pop_var,
-                                pop_var * decay + batch_var * (1 - decay))
-            with tf.control_dependencies([train_mean, train_var]):
-                return tf.nn.batch_normalization(inputs,
-                    batch_mean, batch_var, beta, scale, variance_epsilon)
-        else:
-            return tf.nn.batch_normalization(inputs,
-                pop_mean, pop_var, beta, scale, variance_epsilon)
-
-    def huber_loss(self, y_true, y_pred, clip_delta=1.0):
-        error = y_true - y_pred
-        cond  = tf.keras.backend.abs(error) < clip_delta
-
-        squared_loss = 0.5 * tf.keras.backend.square(error)
-        linear_loss  = clip_delta * (tf.keras.backend.abs(error) - 0.5 * clip_delta)
-
-        return tf.where(cond, squared_loss, linear_loss)
-
-    #huber関数
-    def huber_loss_mean(self, y_true, y_pred, clip_delta=1.0):
-        return tf.keras.backend.mean(self.huber_loss(y_true, y_pred, clip_delta))
-
+        if self.dueling:
+            buf4 = self.v_eval.predict_on_batch(data_dummy)
+            buf5 = self.adv_eval.predict_on_batch(data_dummy)
+    """
     def build_dqn(lr, n_actions, input_dims, fc1_dims, fc2_dims):
-        """
-        NNの作成
-        """
+        
+        #NNの作成
+        
         model = keras.Sequential([
 
             #Denseは全結合ユニット
@@ -216,127 +273,54 @@ class DQNAgent:
         model.compile(optimizer=Adam(learning_rate=lr), loss='mean_squared_error')
 
         return model
-    
-    """
-    def init_model(self):
-        
-        ニューラルネットワークを構築する
-        
-        self.x = tf.placeholder(tf.float32, [None, FRAMES, INPUTS], name="x")   #入力層と同じ次元を持つ2次元配列
-
-        # flatten (FRAMES*INPUTS)
-        with tf.name_scope('reshape'):
-            x_flat = tf.reshape(self.x, [-1, FRAMES*INPUTS])                    #1次元配列に直す（これが入力層）
-
-        # input layer. fully connected(20)
-        with tf.name_scope('fc1'):
-            #重みの行列の次元は入力層ユニット数*隠れ層1のユニット数
-            #切断正規分布から取得される乱数で重みを初期化
-            self.W_fc1 = tf.Variable(tf.truncated_normal([FRAMES*INPUTS, HIDDEN_1], stddev=0.01), name="W_fc1")
-
-            #各ユニットのバイアスは0で初期化
-            self.b_fc1 = tf.Variable(tf.zeros([HIDDEN_1]), name="b_fc1")
-
-            #出力（ベクトル）の計算
-            #活性化関数はReLU
-            self.h_fc1 = tf.nn.relu(tf.matmul(x_flat, self.W_fc1) + self.b_fc1)
-
-        # hidden layer. fully connected (20)
-        with tf.name_scope('fc2'):
-            self.W_fc2 = tf.Variable(tf.truncated_normal([HIDDEN_1, HIDDEN_2], stddev=0.01), name="W_fc2")
-            self.b_fc2 = tf.Variable(tf.zeros([HIDDEN_2]),  name="b_fc2")
-            self.h_fc2 = tf.nn.relu(tf.matmul(self.h_fc1, self.W_fc2) + self.b_fc2)
-
-        # output layer. fully connected (3)
-        with tf.name_scope('output'):
-            # output layer (N_ACTIONS)
-            self.W_out = tf.Variable(tf.truncated_normal([HIDDEN_2, N_ACTIONS], stddev=0.01), name="W_out")
-            
-            #self.b_out = tf.Variable(tf.zeros([N_ACTIONS]), name="b_out")
-            #出力層のバイアスは[10,5,1,0.1,0]で初期化されている。
-            self.b_out = tf.Variable([10,5,1,0.1,0], name="b_out")
-
-            #出力層の活性化関数は恒等写像
-            self.y = tf.matmul(self.h_fc2, self.W_out) + self.b_out
-
-        # loss function
-        with tf.name_scope('loss'):
-            #self.y_は教師データ
-            #DQNにおける教師データはr+γ*maxQ(s,a)
-            #各状態において、行動aの数（N_ACTIONS）分のデータがある
-            self.y_ = tf.placeholder(tf.float32, [None, N_ACTIONS])
-
-            #損失関数は平均二乗誤差
-            self.loss = tf.reduce_mean(tf.square(self.y_ - self.y), name="loss")
-            #self.loss = tf.reduce_mean(self.huber_loss_mean(self.y_, self.y), name="loss")
-
-        # train operation RMSPropOptimizer
-        #重みとバイアスの調整に用いるアルゴリズムがoptimizer
-        #基本的には（確率的）勾配降下法の応用
-        with tf.name_scope('Optimizer'):
-            optimizer = tf.train.RMSPropOptimizer(self.learning_rate)
-            self.training = optimizer.minimize(self.loss)
-
-        # saver for TensorBoard
-        self.saver = tf.train.Saver()
-        # session
-        self.sess = tf.Session()
-        self.sess.run(tf.global_variables_initializer())
-        # write out for TensorBoard
-        #self.summary_writer = tf.summary.FileWriter("WiFly_DQN_TensorBoard", graph=self.sess.graph)
     """
 
-    # return Q(state, action) for each
-    def Q_values(self, state):
-        """
-        ニューラルネットワークから各行動のQ値を算出する
-        Args:
-            state ([deque]): 状態(nフレーム)
-        Returns:
-            [list?]: 各行動のQ値
-        """
-        return self.sess.run(self.y, feed_dict={self.x: [state]})[0]
-
-    def select_action(self, state):
-        """
-        行動決定(方策)
-        Args:
-            state ([deque]): 状態(nフレーム)
-        Returns:
-            [int]: 決定した行動の番号
-        """
-        a = self.Q_values(state)                            #NNから行動価値関数のリストを受け取る。
-        self.log_q.append(a)                                #log用
-        if np.random.rand() <= self.epsilon:                #εの確率で…
-            # random
-            act = np.random.choice(self.enable_actions)     #randomに行動選択
-        else:                                               #それ以外で…
-            # max_action Q(state, action)
-            act = self.enable_actions[np.argmax(a)]         #greedyに行動選択
-            
-        self.log_act.append([act])                          #log用
-        return act
-    
     def choose_action(self, keep_states):
         """
         ε-greedy方策による行動選択
         """
-        if np.random.random() < self.epsilon:
-            action = np.random.choice(self.action_space)
-        else:
-            #現在保持している状態のリストをnp.array化
-            #これによってNNに入力できる。
-            self.states = np.array([keep_states])
 
-            #NNからstatesの先頭の状態での各行動に対する行動価値関数の推定値を受け取る。
-            #NNのモデルに対しpredictメソッドを実行すると、出力される。
-            actions = self.q_eval.predict(self.states)
-            #print(actions)
-            action = np.argmax(actions)             #行動価値が最大である行動を選択     
+        #行動log用変数
+        log_action_buffer = []      #(行動番号, 行動の選び方)のtupleを作成
+        random_action_flag = 0      #random行動が選択された場合は1,argmaxQ行動が選択された場合は0
+
+        states = np.array([keep_states])         #観測された状態をリスト化
+
+        #NNからstateにおける各行動に対する行動価値関数の推定値を受け取る。
+        #NNのモデルに対しpredict_on_batchメソッドを実行すると、出力される。
+        Q_values = self.q_eval.predict_on_batch(states)
+
+        #行動選択
+        if np.random.random() < self.epsilon:
+            random_action_flag = 1
+            action = np.random.choice(self.action_space)
+            """
+            self.log_qvalue.append([])
+            if self.dueling:
+                self.log_v.append([])
+                self.log_adv.append([])
+            """
+        else:            
+            action = np.argmax(Q_values)             #行動価値が最大である行動を選択     
+
+        #NNから出力されるQ値のlogを格納
+        #predict_on_batchの返り値は[[a,b,c,d]]のように2重リストになっているので、アンパックしておく。
+        self.log_q.append(*Q_values)
+        if self.dueling:
+            V_value = self.v_eval.predict_on_batch(states)
+            Adv_value = self.adv_eval.predict_on_batch(states)
+            self.log_v.append(*V_value)
+            self.log_adv.append(*Adv_value)
+
+        #状態log格納
+        self.log_states.append(keep_states)
+        
+        #行動log格納
+        log_action_buffer.append(action)
+        log_action_buffer.append(random_action_flag)
+        self.log_act.append(log_action_buffer)
 
         return action
-
-
 
     def select_action_epsilon(self, state, act_count=0):
         """
@@ -380,7 +364,7 @@ class DQNAgent:
         elif angle>45:
             return 7
         elif np.random.rand() <= self.epsilon:
-            # random
+            # randomstore_transition
             act = np.random.choice(self.enable_actions)
         else:
             # max_action Q(state, action)
@@ -389,19 +373,6 @@ class DQNAgent:
         self.log_act.append([act])
         return act
 
-    # store experience to replay memory
-    def store_experience(self, state, action, reward, state_1, terminal):
-        """
-        経験を保存する
-        Args:
-            state ([deque]): 現在の状態
-            action ([int]): 直前の行動の番号
-            reward ([int]): 現在の状態に対する報酬
-            state_1 ([deque]): 1フレーム前の状態
-            terminal ([int]): ターミナル
-        """
-        self.replay_memory.append((state.copy(), action, reward, state_1.copy(), terminal))
-
     # train the network by replaying experience
 
     def store_transition(self, state, action, reward, new_state, done):
@@ -409,102 +380,71 @@ class DQNAgent:
         経験の保存
         """
         self.memory.store_transition(state, action, reward, new_state, done)
-
-    def experience_replay(self, a=4, b=1):
-        """
-        NNの重みとバイアスを学習（ミニバッチ学習）
-        """
-            
-        state_minibatch = []    #状態を格納するミニバッチ
-        y_minibatch = []        #教師データ(r'+γmaxQ(s',a'))を格納するミニバッチ
-
-        # sample random minibatch
-        #replay_memoryに保存されたデータ数がminibatch_sizeよりも少なければ、今保存されているデータのみを使って行う。
-        minibatch_size = min(len(self.replay_memory), self.minibatch_size)
-
-        #minibatch_indexes = np.random.randint(0, len(self.replay_memory), minibatch_size)
-
-        #最新の経験をミニバッチに確定で入れるかどうか
-        
-        #minibatch_indexes = np.random.randint(0, len(self.replay_memory), minibatch_size-1)
-        #minibatch_indexes = np.insert(minibatch_indexes,0,len(self.replay_memory)-1)
-    
-        beta = np.random.beta(a,b,self.minibatch_size)  #β分布に基づいたminibatch_size個の乱数リストを取得
-        
-        #取得した乱数を全てreplay_memory倍する
-        #これにより0~1の乱数から、0~len(self.replay_memory)までのランダムな番号を得られる
-        beta = beta * len(self.replay_memory)
-
-        minibatch_indexes = [int(n) for n in beta]      #乱数によって得られた添え字をリストに格納
-
-        #log用
-        self.minibatch_index_log = np.concatenate([self.minibatch_index_log, minibatch_indexes])
-        k = np.append(self.minibatch_index_log,-1)
-        self.minibatch_index_log = k
-
-        #create minibatch dataset
-        #replay_memoryのうち、乱数で取得した番号のものを取得していく。
-        
-        for j in minibatch_indexes:
-            state_j, action_j, reward_j, state_j_1, terminal = self.replay_memory[j]    #経験を各変数に分解
-            action_j_index = self.enable_actions.index(action_j)                        #action_jがenable_actionsの何番目かを調べる
-
-            y_j = self.Q_values(state_j)                                                #state_jにおける各行動に対する行動価値関数のリスト
-        
-            #y_j[action_j_index]のみ教師データ（TDターゲット）に基づく値に書き換える。
-            #他のy_j[i](state_jにおける他の行動に対するQ)はそのまま
-            if terminal:
-                y_j[action_j_index] = reward_j
-            else:
-                # reward_j + DiscountFactor * max_action' Q(state', action')
-                y_j[action_j_index] = reward_j + self.discount_factor * np.max(self.Q_values(state_j_1))  # NOQA
-
-            state_minibatch.append(state_j)         #学習に使う状態を格納
-            y_minibatch.append(y_j)                 #それに対応する教師データ（TDターゲット）を格納
-
-        #training
-        #RMSpropOptimizerを用いて、損失関数が最小になるようにNNの重みとバイアスを調整
-        self.sess.run(self.training, feed_dict={self.x: state_minibatch, self.y_: y_minibatch})
-
-        # for logging
-        self.current_loss = self.sess.run(self.loss, feed_dict={self.x: state_minibatch, self.y_: y_minibatch})
-        self.log_loss.append([-1, self.current_loss])
         
     def learn(self):
         """
         NNの重みとバイアスを学習
         """
         #保存された経験が足りない場合は学習しない
-        if self.memory.mem_cntr < self.minibatch_size:
+        if self.memory.mem_cntr < self.batch_size:
             return
         #各種ミニバッチ作成
-        states, actions, rewards, states_, dones = self.memory.sample_buffer(self.minibatch_size)
+        states, actions, rewards, states_, dones, batch_idxes = self.memory.sample_buffer(self.batch_size)
 
-        #Fixed-Targetは未実装
-        
-        q_eval = self.q_eval.predict(states)
+        #minibatch_indexのlog格納
+        self.log_minibatch_index.append(batch_idxes)
 
-        q_next = self.q_eval.predict(states_)       
-
-        q_target = np.copy(q_eval)          
+        #Fixed-Targetを実装
+        #time_start = time.time()
+        q_eval = self.q_target.predict(states)
+        q_next = self.q_target.predict(states_)       
+        #time_start2 = time.time()
+        q_target = np.copy(q_eval)      #q_targetの値を書き換えて、教師データとしていく、
 
         #0~batch_size-1までの連番リストを取得
-        batch_index = np.arange(self.batch_size, dtype=np.int32)
+        batch_index = np.arange(self.batch_size, dtype = np.int32)
 
-        #TDターゲットの計算
-        q_target[batch_index, actions] = rewards + self.gamma * np.max(q_next, axis=1)*dones
+        #
+        #Double or Fixed Target Network
+        if self.double:
+            a = np.argmax(q_eval, axis = 1)
+            q_target[batch_index, actions] = rewards + self.gamma * q_next[batch_index,a] * dones
+        else:
+            q_target[batch_index, actions] = rewards + self.gamma * np.max(q_next, axis=1)* dones
 
+        time_start3 = time.time()
         #NNのパラメータ更新
-        self.q_eval.train_on_batch(states, q_target)
+        #self.log_loss.append(self.q_eval.train_on_batch(states, q_target))
+        loss = self.q_eval.train_on_batch(states, q_target)
+        self.log_loss.append(loss)
+        """
+        float_loss = loss.item()
+        print(type(float_loss))
+        self.log_loss.append(float_loss)
+        """
+        #print(self.log_loss)
+        a = time.time()
 
+        if (self.global_step % self.copy_period == 0):
+            print("Copy Weight")
+            '''
+            self.q_eval.layers[0].set_weights(self.q_target.layers[0].get_weights())
+            self.q_eval.layers[1].set_weights(self.q_target.layers[1].get_weights())
+            self.q_eval.layers[2].set_weights(self.q_target.layers[3].get_weights())
+            self.q_eval.layers[3].set_weights(self.q_target.layers[4].get_weights())
+            '''
+            self.q_target.set_weights(self.q_eval.get_weights())
+
+        #print(loss)
+        #print("time:" + str(a-time_start) + " , " + str(time_start2-time_start) + " , "  + str(time_start3-time_start2) + " , "  + str(a-time_start3))
         #self.epsilon = self.epsilon - self.eps_dec if self.epsilon > self.eps_min else self.eps_min
-        
-        #logの取得が未実装
 
-
+    def get_angle(self,states):
+        self.log_yaw_angle.append(float(states[0][5]))
 
     def create_checkpoint(self):
-        self.saver.save(self.sess, os.path.join(self.model_dir, self.checkpoint_name + datetime.now().strftime('%H%M%S')))
+        #self.saver.save(self.sess, os.path.join(self.model_dir, self.checkpoint_name + datetime.now().strftime('%H%M%S')))
+        self.q_eval.save(self.folder + '/' + self.model_name + self.checkpoint_name + datetime.now().strftime('%H%M%S'))
 
     def load_model(self, model_path):
         # load from model_path
@@ -515,62 +455,96 @@ class DQNAgent:
         ckpt = tf.train.get_checkpoint_state(self.folder + '/../' + model_path + '/')
         if ckpt:
             #データが読み込まれる
-            self.saver.restore(self.sess, self.folder + '/../' + model_path + '/' + MODEL_NAME)
+            #self.saver.restore(self.sess, self.folder + '/../' + model_path + '/' + MODEL_NAME)
+            self.q_eval = keras.models.load_model(self.folder + '/../' + model_path + '/' + MODEL_NAME)
             return True
         else:
             return False
 
     def save_model(self):
         #self.saver.save(self.sess, os.path.join(self.model_dir, self.model_name))
-        self.saver.save(self.sess, self.folder + '/' + self.model_name)
+        #self.saver.save(self.sess, self.folder + '/' + self.model_name)
+        self.q_eval.save(self.folder + '/' + self.model_name)
 
     def debug_nn(self):
+        l1 = self.q_eval.layers[0]
+        l2 = self.q_eval.layers[1]
+        l3 = self.q_eval.layers[2]
+        l4 = self.q_eval.layers[3]
         with open(self.folder + '/debug.csv', 'a') as f:
-            np.savetxt(f, self.sess.run(self.W_fc1))
-            np.savetxt(f, self.sess.run(self.b_fc1))
-            np.savetxt(f, self.sess.run(self.W_fc2))
-            np.savetxt(f, self.sess.run(self.b_fc2))
-            np.savetxt(f, self.sess.run(self.W_out))
-            #np.savetxt(f, self.sess.run(self.b_out))
-        np.savetxt(self.folder + '/debug_W_fc1.csv', self.sess.run(self.W_fc1), delimiter=',')
-        np.savetxt(self.folder + '/debug_b_fc1.csv', self.sess.run(self.b_fc1), delimiter=',')
-        np.savetxt(self.folder + '/debug_W_fc2.csv', self.sess.run(self.W_fc2), delimiter=',')
-        np.savetxt(self.folder + '/debug_b_fc2.csv', self.sess.run(self.b_fc2), delimiter=',')
-        np.savetxt(self.folder + '/debug_W_out.csv', self.sess.run(self.W_out), delimiter=',')
-        np.savetxt(self.folder + '/debug_b_out.csv', self.sess.run(self.b_out), delimiter=',')
-        '''
-        with open('debug_nn' + ".csv", 'w') as f:
-            writer = csv.writer(f, lineterminator='\n')  # 改行コード（\n）を指定しておく
-            writer.writerows(self.sess.run(self.W_fc1))
-            writer.writerows(self.sess.run(self.b_fc1))
-            writer.writerows(self.sess.run(self.W_fc2))
-            writer.writerows(self.sess.run(self.b_fc2))
-            writer.writerows(self.sess.run(self.W_out))
-            writer.writerows(self.sess.run(self.b_out))
-            f.close()
-        '''
+            np.savetxt(f, l2.get_weights()[0])
+            np.savetxt(f, l2.get_weights()[1])
+            np.savetxt(f, l3.get_weights()[0])
+            np.savetxt(f, l3.get_weights()[1])
+            np.savetxt(f, l4.get_weights()[0])
+            np.savetxt(f, l4.get_weights()[1])
+        
+        np.savetxt(self.folder + '/debug_W_fc1.csv', l2.get_weights()[0], delimiter=',')
+        np.savetxt(self.folder + '/debug_b_fc1.csv', l2.get_weights()[1], delimiter=',')
+        np.savetxt(self.folder + '/debug_W_fc2.csv', l3.get_weights()[0], delimiter=',')
+        np.savetxt(self.folder + '/debug_b_fc2.csv', l3.get_weights()[1], delimiter=',')
+        np.savetxt(self.folder + '/debug_W_out.csv', l4.get_weights()[0], delimiter=',')
+        np.savetxt(self.folder + '/debug_b_out.csv', l4.get_weights()[1], delimiter=',')
 
     def debug_memory(self):
         with open(self.folder + '/debug_memory.csv', 'w') as f:
             writer = csv.writer(f, lineterminator='\n')
-            writer.writerows(self.replay_memory)
+            writer.writerows(self.memory.state_memory)
 
     def debug_minibatch(self):
         #print(self.minibatch_ind)
         np.savetxt(self.folder + '/debug_minibatch.csv', self.minibatch_index_log, delimiter=',', fmt='%s')
 
+    def debug_minibatch_2(self):
+        with open(self.folder + "/minibatch_index_log.csv", mode = "w", newline = "") as f1:
+            writer = csv.writer(f1)
+            writer.writerows(self.log_minibatch_index)
+
     def debug_q(self):
         with open(self.folder + '/debug_q.csv', 'w') as f:
-            writer = csv.writer(f, lineterminator='\n')
+            writer = csv.writer(f, lineterminator ='\n')
             writer.writerows(self.log_q)
         with open(self.folder + '/debug_act.csv', 'w') as f:
-            writer = csv.writer(f, lineterminator='\n')
+            writer = csv.writer(f, lineterminator ='\n')
             writer.writerows(self.log_act)
+        if self.dueling:
+            with open(self.folder + '/debug_v.csv', 'w') as f:
+                writer = csv.writer(f, lineterminator = '\n')
+                writer.writerows(self.log_v)
+            with open(self.folder + '/debug_adv.csv', 'w') as f:
+                writer = csv.writer(f, lineterminator = '\n')
+                writer.writerows(self.log_adv)
+    
+    def debug_yaw(self):
+        with open(self.folder + '/debug_yaw.csv', 'w') as f:
+            writer = csv.writer(f, lineterminator ='\n')
+            writer.writerow(list(self.log_yaw_angle))
+
+    def hyper_params(self):
+        with open(self.folder + "hyper_param.txt", mode = "w") as name:
+            print("dueling:" + str(DUELING), file = name)
+            print("double:" + str(DOUBLE), file = name)
+            print("lr:%f" % LEARNING_RATE, file = name)
+            print("df:%f" % DISCOUNT_FACTOR, file = name)
+            print("ep:%f" % EPSILON, file = name)
+            print("ep_end:%f" % EPSILON_END, file = name)
+            print("ep_dec:%f" % EPSILON_DEC, file = name)
+            print("RM_size:%d" % REPLAY_MEMORY_SIZE, file = name)
+            print("MB_size:%d" % MINIBATCH_SIZE, file = name)
+            print("CP:%d" % COPY_PERIOD, file = name)
+            print("hidden_1:%d" % HIDDEN_1, file = name)
+            print("hidden_2:%d" % HIDDEN_2, file = name)
+            #print("alpha:%f" % ALPHA, file = name)
+            #print("beta:%f" % BETA, file = name)
+            #print("beta_increment:%f" % BETA_INCREMENT, file = name)
+            #print("lp:%d" % LEARNING_PERIOD, file = name)
 
     def debug_loss(self):
         with open(self.folder + '/debug_loss.csv', 'w') as f:
             writer = csv.writer(f, lineterminator='\n')
-            writer.writerows(self.log_loss)
+            print(type(self.log_loss))
+            print(self.log_loss)
+            writer.writerows(list(self.log_loss))
 
     def check_loss(self):
         return self.log_loss

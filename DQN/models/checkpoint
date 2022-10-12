@@ -1,6 +1,0 @@
-model_checkpoint_path: "c:\\Users\\hp\\wifly\\DQN\\models\\WiflyDual_DQN2021-11-30"
-all_model_checkpoint_paths: "c:\\Users\\hp\\wifly\\DQN\\models\\WiflyDual_DQN160126"
-all_model_checkpoint_paths: "c:\\Users\\hp\\wifly\\DQN\\models\\WiflyDual_DQN160156"
-all_model_checkpoint_paths: "c:\\Users\\hp\\wifly\\DQN\\models\\WiflyDual_DQN160228"
-all_model_checkpoint_paths: "c:\\Users\\hp\\wifly\\DQN\\models\\WiflyDual_DQN160259"
-all_model_checkpoint_paths: "c:\\Users\\hp\\wifly\\DQN\\models\\WiflyDual_DQN2021-11-30"

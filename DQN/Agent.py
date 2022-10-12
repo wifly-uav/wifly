@@ -8,6 +8,7 @@ tf.disable_v2_behavior()
 tf.get_logger().setLevel("ERROR")
 import numpy as np
 import csv
+import math
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -15,15 +16,15 @@ warnings.filterwarnings('ignore')
 
 import os
 #--------------------------const, directory name, model name, etc...-------------------------
-MODEL_NAME = "WiflyDual_DQN" + str(datetime.today())[0:10]
+MODEL_NAME = "WiflyDual_DQN"# + str(datetime.today())[0:10]
 MODEL_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 CHECKPOINT_NAME = "WiflyDual_DQN"
-MINIBATCH_SIZE = 8
+MINIBATCH_SIZE = 16
 REPLAY_MEMORY_SIZE = 10000
-LEARNING_RATE = 0.015
+LEARNING_RATE = 0.02
 DISCOUNT_FACTOR = 0.95
 EPSILON = 0.1
-ENABLE_ACTIONS = [1,2,3,4,5,6,7]
+ENABLE_ACTIONS = [1,2,3,4,5]
 N_ACTIONS = len(ENABLE_ACTIONS)
 FRAMES = 4
 INPUTS = 4
@@ -34,7 +35,7 @@ HIDDEN_2 = 5
 
 
 class DQNAgent:
-    def __init__(self):
+    def __init__(self, folder='log'):
         # Load parameters
         self.name = os.path.splitext(os.path.basename(__file__))[0]
         self.path = os.path.dirname(__file__)
@@ -52,6 +53,10 @@ class DQNAgent:
         self.log_q = []
         self.log_act = []
         self.log_loss = []
+        self.epsilon_act = 0
+        self.action_old = 0
+
+        self.folder = folder
 
         # create deque object for replay memory
         self.replay_memory = deque(maxlen=self.replay_memory_size)
@@ -67,6 +72,7 @@ class DQNAgent:
         バッチの正規化
         """
         variance_epsilon = 1e-3
+        scale = tf.Variable(tf.ones([inputs.get_shape()[-1]]))
         scale = tf.Variable(tf.ones([inputs.get_shape()[-1]]))
         beta = tf.Variable(tf.zeros([inputs.get_shape()[-1]]))
         pop_mean = tf.Variable(tf.zeros([inputs.get_shape()[-1]]), trainable=False)
@@ -84,6 +90,18 @@ class DQNAgent:
         else:
             return tf.nn.batch_normalization(inputs,
                 pop_mean, pop_var, beta, scale, variance_epsilon)
+
+    def huber_loss(self, y_true, y_pred, clip_delta=1.0):
+        error = y_true - y_pred
+        cond  = tf.keras.backend.abs(error) < clip_delta
+
+        squared_loss = 0.5 * tf.keras.backend.square(error)
+        linear_loss  = clip_delta * (tf.keras.backend.abs(error) - 0.5 * clip_delta)
+
+        return tf.where(cond, squared_loss, linear_loss)
+
+    def huber_loss_mean(self, y_true, y_pred, clip_delta=1.0):
+        return tf.keras.backend.mean(self.huber_loss(y_true, y_pred, clip_delta))
 
     def init_model(self):
         """
@@ -111,13 +129,15 @@ class DQNAgent:
         with tf.name_scope('output'):
             # output layer (N_ACTIONS)
             self.W_out = tf.Variable(tf.truncated_normal([HIDDEN_2, N_ACTIONS], stddev=0.01), name="W_out")
-            self.b_out = tf.Variable(tf.zeros([N_ACTIONS]), name="b_out")
+            #self.b_out = tf.Variable(tf.zeros([N_ACTIONS]), name="b_out")
+            self.b_out = tf.Variable([10,5,1,0.1,0], name="b_out")
             self.y = tf.matmul(self.h_fc2, self.W_out) + self.b_out
 
         # loss function
         with tf.name_scope('loss'):
             self.y_ = tf.placeholder(tf.float32, [None, N_ACTIONS])
             self.loss = tf.reduce_mean(tf.square(self.y_ - self.y), name="loss")
+            #self.loss = tf.reduce_mean(self.huber_loss_mean(self.y_, self.y), name="loss")
 
         # train operation RMSPropOptimizer
         with tf.name_scope('Optimizer'):
@@ -152,7 +172,6 @@ class DQNAgent:
             [int]: 決定した行動の番号
         """
         a = self.Q_values(state)
-        self.log_q.append(list(state))
         self.log_q.append(a)
         if np.random.rand() <= self.epsilon:
             # random
@@ -161,7 +180,44 @@ class DQNAgent:
             # max_action Q(state, action)
             act = self.enable_actions[np.argmax(a)]
             
-        self.log_act.append([0, act])
+        self.log_act.append([act])
+        return act
+
+    def select_action_softmax(self, tau, state):
+        """
+            softmax 行動選択
+        """
+        values = self.Q_values(state)
+        sum_exp_values = sum([np.exp(v/tau) for v in values])   # softmax選択の分母の計算
+        p = [np.exp(v/tau)/sum_exp_values for v in values]      # 確率分布の生成
+
+        action = np.random.choice(np.arange(len(values)), p=p)  # 確率分布pに従ってランダムで選択
+        return action
+
+    def select_action_epsilon(self, state, act_count=0):
+        """
+        行動決定(方策)
+        Args:
+            state ([deque]): 状態(nフレーム)
+        Returns:
+            [int]: 決定した行動の番号
+        """
+        a = self.Q_values(state)
+        self.log_q.append(a)
+        if self.epsilon_act == 0:
+            if np.random.rand() <= self.epsilon:
+                # random
+                act = np.random.choice(self.enable_actions)
+                self.action_old = act
+                self.epsilon_act = act_count
+            else:
+                # max_action Q(state, action)
+                act = self.enable_actions[np.argmax(a)]
+        else:
+            act = self.action_old
+            self.epsilon_act -= 1
+            
+        self.log_act.append([act])
         return act
     
     def select_action_limit(self, state):
@@ -173,7 +229,6 @@ class DQNAgent:
             [int]: 決定した行動の番号
         """
         a = self.Q_values(state)
-        self.log_q.append(list(state))
         self.log_q.append(a)
         angle = float(state[0][0])
         if angle<-45:
@@ -187,7 +242,7 @@ class DQNAgent:
             # max_action Q(state, action)
             act = self.enable_actions[np.argmax(a)]
             
-        self.log_act.append([0, act])
+        self.log_act.append([act])
         return act
 
     # store experience to replay memory
@@ -201,10 +256,10 @@ class DQNAgent:
             state_1 ([deque]): 1フレーム前の状態
             terminal ([int]): ターミナル
         """
-        self.replay_memory.append((state, action, reward, state_1, terminal))
+        self.replay_memory.append((state.copy(), action, reward, state_1.copy(), terminal))
 
     # train the network by replaying experience
-    def experience_replay(self):
+    def experience_replay(self, a=4, b=1):
         """
         ミニバッチ学習を行う
         """
@@ -217,9 +272,12 @@ class DQNAgent:
 
         #最新の経験をミニバッチに確定で入れるかどうか
         
-        minibatch_indexes = np.random.randint(0, len(self.replay_memory), minibatch_size-1)
-        minibatch_indexes = np.insert(minibatch_indexes,0,len(self.replay_memory)-1)
-        
+        #minibatch_indexes = np.random.randint(0, len(self.replay_memory), minibatch_size-1)
+        #minibatch_indexes = np.insert(minibatch_indexes,0,len(self.replay_memory)-1)
+    
+        beta = np.random.beta(a,b,self.minibatch_size)
+        beta = beta * len(self.replay_memory)
+        minibatch_indexes = [int(n) for n in beta]
 
         self.minibatch_index_log = np.concatenate([self.minibatch_index_log, minibatch_indexes])
         k = np.append(self.minibatch_index_log,-1)
@@ -253,25 +311,32 @@ class DQNAgent:
 
     def load_model(self, model_path):
         # load from model_path
-        self.saver.restore(self.sess,os.path.join(self.model_dir,  model_path))
+        #self.saver.restore(self.sess,os.path.join(self.model_dir, model_path))
+        ckpt = tf.train.get_checkpoint_state(self.folder + '/../' + model_path + '/')
+        if ckpt:
+            self.saver.restore(self.sess, self.folder + '/../' + model_path + '/' + MODEL_NAME)
+            return True
+        else:
+            return False
 
     def save_model(self):
-        self.saver.save(self.sess, os.path.join(self.model_dir, self.model_name))
+        #self.saver.save(self.sess, os.path.join(self.model_dir, self.model_name))
+        self.saver.save(self.sess, self.folder + '/' + self.model_name)
 
     def debug_nn(self):
-        with open(os.path.join(self.path, 'debug/debug.csv'), 'a') as f:
+        with open(self.folder + '/debug.csv', 'a') as f:
             np.savetxt(f, self.sess.run(self.W_fc1))
             np.savetxt(f, self.sess.run(self.b_fc1))
             np.savetxt(f, self.sess.run(self.W_fc2))
             np.savetxt(f, self.sess.run(self.b_fc2))
             np.savetxt(f, self.sess.run(self.W_out))
             #np.savetxt(f, self.sess.run(self.b_out))
-        np.savetxt(os.path.join(self.path,'debug/debug_W_fc1.csv'), self.sess.run(self.W_fc1), delimiter=',')
-        np.savetxt(os.path.join(self.path,'debug/debug_b_fc1.csv'), self.sess.run(self.b_fc1), delimiter=',')
-        np.savetxt(os.path.join(self.path,'debug/debug_W_fc2.csv'), self.sess.run(self.W_fc2), delimiter=',')
-        np.savetxt(os.path.join(self.path,'debug/debug_b_fc2.csv'), self.sess.run(self.b_fc2), delimiter=',')
-        np.savetxt(os.path.join(self.path,'debug/debug_W_out.csv'), self.sess.run(self.W_out), delimiter=',')
-        np.savetxt(os.path.join(self.path,'debug/debug_b_out.csv'), self.sess.run(self.b_out), delimiter=',')
+        np.savetxt(self.folder + '/debug_W_fc1.csv', self.sess.run(self.W_fc1), delimiter=',')
+        np.savetxt(self.folder + '/debug_b_fc1.csv', self.sess.run(self.b_fc1), delimiter=',')
+        np.savetxt(self.folder + '/debug_W_fc2.csv', self.sess.run(self.W_fc2), delimiter=',')
+        np.savetxt(self.folder + '/debug_b_fc2.csv', self.sess.run(self.b_fc2), delimiter=',')
+        np.savetxt(self.folder + '/debug_W_out.csv', self.sess.run(self.W_out), delimiter=',')
+        np.savetxt(self.folder + '/debug_b_out.csv', self.sess.run(self.b_out), delimiter=',')
         '''
         with open('debug_nn' + ".csv", 'w') as f:
             writer = csv.writer(f, lineterminator='\n')  # 改行コード（\n）を指定しておく
@@ -285,23 +350,26 @@ class DQNAgent:
         '''
 
     def debug_memory(self):
-        with open(os.path.join(self.path,'debug/debug_memory' + ".csv"), 'w') as f:
+        with open(self.folder + '/debug_memory.csv', 'w') as f:
             writer = csv.writer(f, lineterminator='\n')
             writer.writerows(self.replay_memory)
 
     def debug_minibatch(self):
         #print(self.minibatch_ind)
-        np.savetxt(os.path.join(self.path,'debug/debug_minibatch.csv'), self.minibatch_index_log, delimiter=',', fmt='%s')
+        np.savetxt(self.folder + '/debug_minibatch.csv', self.minibatch_index_log, delimiter=',', fmt='%s')
 
     def debug_q(self):
-        with open(os.path.join(self.path,'debug/debug_q' + ".csv"), 'w') as f:
+        with open(self.folder + '/debug_q.csv', 'w') as f:
             writer = csv.writer(f, lineterminator='\n')
             writer.writerows(self.log_q)
-        with open(os.path.join(self.path,'debug/debug_act' + ".csv"), 'w') as f:
+        with open(self.folder + '/debug_act.csv', 'w') as f:
             writer = csv.writer(f, lineterminator='\n')
             writer.writerows(self.log_act)
 
     def debug_loss(self):
-        with open(os.path.join(self.path,'log/debug_loss' + ".csv"), 'w') as f:
+        with open(self.folder + '/debug_loss.csv', 'w') as f:
             writer = csv.writer(f, lineterminator='\n')
             writer.writerows(self.log_loss)
+
+    def check_loss(self):
+        return self.log_loss
