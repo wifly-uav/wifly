@@ -157,7 +157,16 @@ void setup() {
         Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
       #endif
       digitalWrite(led, HIGH);
-      while(1);
+      while(1){
+        digitalWrite(led, HIGH);
+        delay(100);
+        digitalWrite(led, LOW);
+        delay(100);
+        digitalWrite(led, HIGH);
+        delay(100);
+        digitalWrite(led, LOW);
+        delay(700);
+      }
     }
   #endif
   digitalWrite(led, LOW);
