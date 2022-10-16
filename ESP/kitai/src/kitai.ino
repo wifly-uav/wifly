@@ -234,6 +234,7 @@ void loop() {
       */
     #endif
 
+    //機体の状態をコントローラに送信
     esp_now_send(broadcastAddress, (uint8_t *) &data, sizeof(data));
     lastTime = millis();
   }

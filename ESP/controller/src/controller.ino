@@ -6,7 +6,7 @@
 
 unsigned long lastTime = 0;  
 unsigned long timerDelay = 60;  // send readings timer
-size_t data_pc_;
+size_t data_pc_;                //size_t:オブジェクトのバイト数を表現できる程度に十分に大きい符号なし整数型
 uint8_t data_pc[5] = {0};
 int re_data[5] = {0};
 double re_data_angle[4] = {0};
@@ -78,8 +78,7 @@ void qu2eu(int eular[3], double quotanion[4]){
 //引数:送信元macアドレス情報,受信データ,受信データ長
 void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     char macStr[18];
-
-    //データの送信元のmacアドレスを表示する
+    //データの送信元のmacアドレスを整形し（%02X:等を付け）て、macStr配列に書き込む。
     //%02Xは2桁以上の16進数で表示することを指定（桁が足りない場合、上位の桁が0埋めされる。）
     snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
         mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
@@ -88,7 +87,10 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     //Serial.printf("Last Packet Recv from: %s\n", macStr);
     //Serial.printf("Last Packet Recv Data(%d): ", data_len);
     //Serial.println();
-    
+
+    //受信データの整形
+    //data_lenは9
+    //[pwm1, pwm2, servo1, servo2, 受信間隔, quaternion1,quaternion2,quaternion3,quaternion4]
     for (int i = 0; i < data_len; i++) {
         if(i > 4){
           //受信データの5番目以降（quotanion）は、処理してre_data_angleに格納していく。
@@ -98,12 +100,12 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
           re_data[i] = 255 - data[i];
         }
         else{
-          //残りはそのままre_dataに格納
+          //残り(受信間隔とquaternion4つ)はそのままre_dataに格納
           re_data[i] = data[i];
         }
     }
-
-    //カンマ区切りでre_dataの中身を表示
+    
+    //カンマ区切りでre_dataの中身をシリアルポートに送信
     for (int i = 0; i < 5; i++) {
       Serial.print(re_data[i]);
       if(i != 4){
@@ -111,12 +113,11 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
       }
     }
 
-    //受信したquotanionをEuler角に変換
+    //受信したquotarnionをEuler角に変換
     qu2eu(eular,re_data_angle);
-
     Serial.print(",");
 
-    //Euler角を表示（角度の順番を要確認!）
+    //Euler角（Pitch, Yaw, Roll）をシリアルポートに送信
     for (int i = 0; i < 3; i++) {
       Serial.print(eular[i]);
       if(i != 2){
@@ -124,6 +125,7 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
       }
     }
     Serial.println();
+    Serial.flush();     //データを送信しきるまで（送信バッファが空になるまで）待つ。
 }
 
 //送信時コールバック関数
@@ -144,7 +146,10 @@ void OnDataSent(const uint8_t* mac_addr, esp_now_send_status_t status) {
 void recieve_pc(){
   if(Serial.available()){                               //シリアルポートにデータが来ている場合
     if((int)Serial.read() == 255){                      //データの先頭が255である場合
-      data_pc_ = Serial.readBytesUntil('\n',data_pc,5); //5つのデータを読み取り、data_pc_に格納
+
+      //5つのデータを読み取り、data_pcに格納する。
+      //data_pc_にはデータ長が格納される
+      data_pc_ = Serial.readBytesUntil('\n',data_pc,5); 
     }
   }
 }
@@ -204,6 +209,7 @@ void setup() {
     }
     
     //esp_now_register_send_cb(OnDataSent);
+    //受信時コールバック関数の指定
     esp_now_register_recv_cb(onReceive);
     
 }
@@ -228,6 +234,8 @@ void loop() {
     if(btn_L == 1){
       recieve_pc();                         //PCからデータ受信
       //Serial.print("PC_mode");
+
+      //PCから受け取った情報を機体側のマイコンに送信する準備
       for(int i=0;i<2;++i){
         data[i] = 254 - data_pc[i];         //受信データの先頭2つ（羽ばたき出力）は反転
       }
