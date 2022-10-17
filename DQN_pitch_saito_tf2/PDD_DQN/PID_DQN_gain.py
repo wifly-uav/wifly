@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+from Communication import Communicator
 from Environment import Environment
 from Agent import MINIBATCH_SIZE, DQNAgent
 from Logger import logger
@@ -12,7 +13,7 @@ import os
 import time
 
 N_EPOCHS = 1            #学習epoch数
-N_FRAMES = 200          #1epochあたりのステップ数
+N_FRAMES = 100          #1epochあたりのステップ数
 I_GAIN = 0.0001 #0.0001
 D_GAIN = 0
 PWM_DEF = 194           #kitai側では+1されて190になる。
@@ -283,6 +284,7 @@ if __name__ == "__main__":
     env.execute_action_([0,0])
     env.execute_action_([0,0])
     env.execute_action_([0,0])
+    env.communicator.serial_close()     #念のため追加
 
     agent.hyper_params()
     #agent.save_NN_model()      #NNモデルの保存

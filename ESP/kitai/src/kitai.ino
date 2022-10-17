@@ -9,7 +9,7 @@
 
 #include <SPI.h>
 
-#define DEBUG         //シリアルモニタで各スイッチの出力を確認できる。
+//#define DEBUG         //シリアルモニタで各スイッチの出力を確認できる。
 #define sensor        //操縦時はコメントアウト
 
 //int kitai_number = 4;   

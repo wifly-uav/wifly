@@ -77,6 +77,8 @@ void qu2eu(int eular[3], double quotanion[4]){
 //受信時コールバック関数（データを受信すると実行される）
 //引数:送信元macアドレス情報,受信データ,受信データ長
 void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
+    //noInterrupts();
+    taskDISABLE_INTERRUPTS();
     char macStr[18];
     //データの送信元のmacアドレスを整形し（%02X:等を付け）て、macStr配列に書き込む。
     //%02Xは2桁以上の16進数で表示することを指定（桁が足りない場合、上位の桁が0埋めされる。）
@@ -126,6 +128,9 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     }
     Serial.println();
     Serial.flush();     //データを送信しきるまで（送信バッファが空になるまで）待つ。
+    //interrupts();
+    taskENABLE_INTERRUPTS();
+    delay(10);           //さらに待機
 }
 
 //送信時コールバック関数
@@ -179,7 +184,8 @@ void setup() {
     }
 
     //シリアル通信開始
-    Serial.begin(460800);    
+    //Serial.begin(460800);
+    Serial.begin(115200);   
     
     //ピンモードの設定
     pinMode(stick_lr, INPUT);
