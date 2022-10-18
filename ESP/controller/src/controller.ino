@@ -2,7 +2,7 @@
 #include <WiFi.h>
 
 #include <SPI.h>
-#define DEBUG
+//#define DEBUG
 
 unsigned long lastTime = 0;  
 unsigned long timerDelay = 60;  // send readings timer
@@ -78,7 +78,7 @@ void qu2eu(int eular[3], double quotanion[4]){
 //引数:送信元macアドレス情報,受信データ,受信データ長
 void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     //noInterrupts();
-    taskDISABLE_INTERRUPTS();
+    //taskDISABLE_INTERRUPTS();
     char macStr[18];
     //データの送信元のmacアドレスを整形し（%02X:等を付け）て、macStr配列に書き込む。
     //%02Xは2桁以上の16進数で表示することを指定（桁が足りない場合、上位の桁が0埋めされる。）
@@ -126,25 +126,28 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
         Serial.print(",");
       }
     }
-    Serial.println();
-    Serial.flush();     //データを送信しきるまで（送信バッファが空になるまで）待つ。
+    Serial.println();           
+    //Serial.flush();     //データを送信しきるまで（送信バッファが空になるまで）待つ。
+    delay(10);            //flushじゃだめかもしれない？
     //interrupts();
-    taskENABLE_INTERRUPTS();
-    delay(10);           //さらに待機
+    //taskENABLE_INTERRUPTS();
+    //delay(10);           //さらに待機
 }
 
 //送信時コールバック関数
 //送信が成功したかどうかを表示する。
 void OnDataSent(const uint8_t* mac_addr, esp_now_send_status_t status) {
-  Serial.println();
-  Serial.printf("ESP32\n");
-  Serial.print("Last Packet Send Status: ");
-  if (status == 0){
-    Serial.println("Delivery success");
-  }
-  else{
-    Serial.println("Delivery fail");
-  }
+  #ifdef DEBUG
+    Serial.println();
+    Serial.printf("ESP32\n");
+    Serial.print("Last Packet Send Status: ");
+    if (status == 0){
+      Serial.println("Delivery success");
+    }
+    else{
+      Serial.println("Delivery fail");
+    }
+  #endif
 }
 
 //PCからの情報を受信する関数
@@ -154,7 +157,8 @@ void recieve_pc(){
 
       //5つのデータを読み取り、data_pcに格納する。
       //data_pc_にはデータ長が格納される
-      data_pc_ = Serial.readBytesUntil('\n',data_pc,5); 
+      data_pc_ = Serial.readBytesUntil('\n',data_pc,5);
+      delay(10);  //dataを読み切るための待機時間を追加 
     }
   }
 }
@@ -184,8 +188,9 @@ void setup() {
     }
 
     //シリアル通信開始
-    //Serial.begin(460800);
-    Serial.begin(115200);   
+    //Serial.begin(460800);   もとのボーレート
+    //Serial.begin(115200);   一段階下げたもの
+    Serial.begin(57600);      //もう一段階下げたもの（Lazurite時代と同じ）
     
     //ピンモードの設定
     pinMode(stick_lr, INPUT);
@@ -233,7 +238,7 @@ void loop() {
   int btn_L = digitalRead(switch_1);
   int btn_R = digitalRead(switch_2);
 
-  if ((millis() - lastTime) > timerDelay) { //受信間隔がtimerDelay以内であれば、
+  if ((millis() - lastTime) > timerDelay) { //受信間隔がtimerDelay以上であれば、
     uint8_t data[5];
 
     //PCモード
@@ -309,14 +314,13 @@ void loop() {
       }
     }
     
+    //羽ばたき出力の矯正
+    //大体Maxの値になっていたらMaxの出力にしてやる
+    if(data[0]>240){data[0] = 255;}
+    if(data[1]>240){data[1] = 255;}
+
     //コントローラモードの場合のみ
     if(btn_L != 1){
-
-      //羽ばたき出力の矯正
-      //大体Maxの値になっていたらMaxの出力にしてやる
-      if(data[0]>240){data[0] = 255;}
-      if(data[1]>240){data[1] = 255;}
-
       //PC側にコントローラから指示された値を返してやる。
       //PC側にシリアル通信で送信することで、シリアルモニタに表示される。
       //PC_modeでこれをやったらダメ!receive_from_espがバグる。
@@ -361,6 +365,7 @@ void loop() {
 
     // Send message via ESP-NOW
     esp_now_send(castAddress, (uint8_t *) &data, sizeof(data));
+    delay(10);
     //esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
     lastTime = millis();
   }

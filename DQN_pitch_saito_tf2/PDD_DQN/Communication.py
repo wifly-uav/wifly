@@ -39,7 +39,8 @@ class Communicator():
         self.__ser = serial.Serial(                     #SERIAL通信の設定
                         port_controller,                #COMの番号
                         #baudrate = 460800,             #もとのボーレート
-                        baudrate = 115200,              #遅くしてみた。
+                        #baudrate = 115200,             #遅くしてみた。
+                        baudrate = 57600,               #さらに遅くしてみた。(Lazurite時代と同じ)
                         parity = serial.PARITY_NONE,
                         bytesize = serial.EIGHTBITS,
                         stopbits = serial.STOPBITS_ONE,
