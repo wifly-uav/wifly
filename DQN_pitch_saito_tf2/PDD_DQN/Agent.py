@@ -595,7 +595,18 @@ class DQNAgent:
         #print(idxes_batch)
         else:
             #idxes_batch = np.random.choice(self.num_in_buffer, batch_size, replace = False)
+            """
+            randomサンプリング
             idxes_batch = random.sample(range(self.num_in_buffer), batch_size)
+            """
+
+            #betaサンプリング
+            idxes_batch = []
+            while len(idxes_batch) != self.batch_size:
+                beta_int = int(self.num_in_buffer * np.random.beta(4,1))
+                idxes_batch.append(beta_int)
+                idxes_batch = list(set(idxes_batch))
+
             transitions = self.memory_per.data[idxes_batch]
             #print(transitions.shape)
             for tran in transitions:
