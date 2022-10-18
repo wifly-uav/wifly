@@ -41,7 +41,7 @@ ENABLE_ACTIONS = [i for i in range(N_ACTIONS)]
 #hyperparameter for DQN
 LEARNING_RATE = 0.02
 DISCOUNT_FACTOR = 0.95
-MINIBATCH_SIZE = 32
+MINIBATCH_SIZE = 16
 REPLAY_MEMORY_SIZE = 10000
 EPSILON = 0.1           #モデルの変化を考慮して、スケジューリングをしない。
 EPSILON_DEC = 1e-3
@@ -50,7 +50,7 @@ KEEP_FRAMES = 4
 STATE_VARIABLES = 4     #状態変数の数(PWM,PWM,Yaw,Pgain)
 COPY_PERIOD = 50
 HIDDEN_1 = 10           
-HIDDEN_2 = 10
+HIDDEN_2 = 5
 
 #for PER
 ALPHA = 0.4

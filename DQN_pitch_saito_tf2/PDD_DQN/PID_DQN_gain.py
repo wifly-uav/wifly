@@ -16,7 +16,7 @@ N_EPOCHS = 1            #学習epoch数
 N_FRAMES = 100          #1epochあたりのステップ数
 I_GAIN = 0.0001 #0.0001
 D_GAIN = 0
-PWM_DEF = 194           #kitai側では+1されて195になる。
+PWM_DEF = 209           #kitai側では+1されて195になる。
 ER = 0
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
@@ -217,7 +217,7 @@ if __name__ == "__main__":
                     "STEP:%d" % j,
                     "Grobal_STEP:%d" % agent.global_step, 
                     "Latest state:" + str(state_next[0]), 
-                    "Yaw angle:%f" % str(state_next[0][YAW_INDEX]),
+                    "Yaw angle:%f" % float(state_next[0][YAW_INDEX]),
                     "Reward:%d" % reward,
                     "Epsilon:%4f" % agent.epsilon, 
                     "u_I:%6f" % u_i)

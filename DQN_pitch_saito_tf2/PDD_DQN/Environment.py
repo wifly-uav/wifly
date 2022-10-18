@@ -21,7 +21,7 @@ default_params = [255, PWM_WING, 0, PWM_WING, 0]    #ここを変更しないと
 #変更後
 RIGHT_WING = 1
 LEFT_WING = 2
-PWM_WING = 194
+PWM_WING = 209
 default_params = [255, PWM_WING, PWM_WING, 0, 0, 0]
 
 """
