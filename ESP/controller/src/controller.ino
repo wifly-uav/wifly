@@ -309,44 +309,53 @@ void loop() {
       }
     }
     
-    if(data[0]>240){data[0] = 255;}
-    if(data[1]>240){data[1] = 255;}
+    //コントローラモードの場合のみ
+    if(btn_L != 1){
 
-    #ifdef DEBUG
-      /*
-      Serial.print("lx:");
-      Serial.print(left_LR);
-      Serial.print("ly:");
-      Serial.print(left_UD);
-      Serial.print("sli_L:");
-      Serial.print(sli_L);
-      Serial.print("sli_R:");
-      Serial.print(sli_R);
-      Serial.print("vol:");
-      Serial.print(vol);
-      Serial.print("btn1:");
-      Serial.print(btn_R);
-      Serial.print("btn2:");
-      Serial.print(btn_L);
-      */
-      Serial.print(data[0]);
-      Serial.print(data[1]);
-      Serial.print(data[2]);
-      Serial.print(data[3]);
-      Serial.println();
-      Serial.print(btn_R);
-      /*
-      Serial.print("rx:");
-      Serial.print(right_LR);
-      Serial.print("ry:");
-      Serial.print(right_UD);
-      Serial.print("btnr:");
-      Serial.print(btn_r);
-      Serial.print("btnl");
-      Serial.print(btn_l);
-      Serial.println();
-      */
-    #endif
+      //羽ばたき出力の矯正
+      //大体Maxの値になっていたらMaxの出力にしてやる
+      if(data[0]>240){data[0] = 255;}
+      if(data[1]>240){data[1] = 255;}
+
+      //PC側にコントローラから指示された値を返してやる。
+      //PC側にシリアル通信で送信することで、シリアルモニタに表示される。
+      //PC_modeでこれをやったらダメ!receive_from_espがバグる。
+      #ifdef DEBUG
+        /*
+        Serial.print("lx:");
+        Serial.print(left_LR);
+        Serial.print("ly:");
+        Serial.print(left_UD);
+        Serial.print("sli_L:");
+        Serial.print(sli_L);
+        Serial.print("sli_R:");
+        Serial.print(sli_R);
+        Serial.print("vol:");
+        Serial.print(vol);
+        Serial.print("btn1:");
+        Serial.print(btn_R);
+        Serial.print("btn2:");
+        Serial.print(btn_L);
+        */
+        Serial.print(data[0]);
+        Serial.print(data[1]);
+        Serial.print(data[2]);
+        Serial.print(data[3]);
+        Serial.println();
+        Serial.print(btn_R);
+        /*
+        Serial.print("rx:");
+        Serial.print(right_LR);
+        Serial.print("ry:");
+        Serial.print(right_UD);
+        Serial.print("btnr:");
+        Serial.print(btn_r);
+        Serial.print("btnl");
+        Serial.print(btn_l);
+        Serial.println();
+        */
+      #endif
+    }
 
     //delay(10);
 
