@@ -10,7 +10,7 @@
 #include <SPI.h>
 
 //#define DEBUG
-//#define sensor
+#define sensor
 
 #define PWM_FREQ 1000
 #define PWM_RANGE 255
@@ -188,6 +188,7 @@ void loop() {
     #endif
     data[4] = loopTi;
     #ifdef DEBUG
+      #ifdef sensor
       //Serial.print("y:");
       //Serial.print(euler.y());
       //Serial.print("z:");
@@ -199,6 +200,7 @@ void loop() {
       Serial.print(" , ");
       Serial.print(quaternion.z());
       Serial.println();
+      #endif
     #endif
 
     esp_now_send(broadcastAddress, (uint8_t *) &data, sizeof(data));
