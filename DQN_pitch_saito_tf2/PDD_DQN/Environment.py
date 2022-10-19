@@ -174,7 +174,7 @@ class Environment():
         try:
             err = abs(float(data[0][YAW_INDEX])-0.0)
             if err < 10:
-                return 10
+                return 1
             elif err < 20:
                 return 0
             elif err <45:
