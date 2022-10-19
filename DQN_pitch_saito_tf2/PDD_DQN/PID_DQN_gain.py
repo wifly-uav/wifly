@@ -24,7 +24,7 @@ YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,e
 if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
     #PID_param
-    saturations = [0,150]           #PID操作量の制限
+    saturations = [0,160]           #PID操作量の制限
     pwm_def = PWM_DEF                   #モーター出力デフォルト値(Environmemtのdefault_paramsもチェック)
     pid = calc_PID(saturations)     #calc_PIDクラスのインスタンス作成（__init__が呼び出され、初期化が行われる）
     param = [1.5,I_GAIN,D_GAIN,0]   #[P-gain,I-gain,D-gain,Target Yaw angle]
