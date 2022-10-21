@@ -13,7 +13,7 @@ import os
 import time
 
 N_EPOCHS = 1            #学習epoch数
-N_FRAMES = 100          #1epochあたりのステップ数
+N_FRAMES = 200          #1epochあたりのステップ数
 I_GAIN = 0.0001 #0.0001
 D_GAIN = 0
 PWM_DEF = 209           #kitai側では+1されて195になる。
@@ -78,6 +78,7 @@ if __name__ == "__main__":
         else:
             training_flag = False
             print('test')
+            agent.epsilon = 0
 
         """
         use_folder = input()                                   
@@ -126,6 +127,7 @@ if __name__ == "__main__":
         terminal = False                        #終状態フラグ（もとはTrue）
         data = True                             #?
         com_fail = False                        #通信に失敗した場合にTrueにする。
+        score = 0                               #累積報酬
 
         #状態を格納するdequeを作成
         #この中でstart_espも行われる。（現在の初期送信データ長は4）
@@ -192,6 +194,7 @@ if __name__ == "__main__":
             #print(t_20)
 
             reward = env.observe_reward(state_next)     #Yaw角の0.0度からのずれに基づいた報酬を観測
+            score += reward
 
             #t_21 = time.time() - t_start
             #print("t_21:", end = "")
@@ -235,6 +238,7 @@ if __name__ == "__main__":
             
             if training_flag:                       #学習を行う場合…
                 #agent.epsilon -= 0.1/3000          #ランダム行動確率を下げていく。
+                agent.update_epsilon()
                 pass                                #モデルの変化を考慮して、探索させる確率を下げない。
             else:                                   #学習を行わない場合…
                 agent.epsilon = 0                   #ランダム行動はさせない。
@@ -325,6 +329,7 @@ if __name__ == "__main__":
     #ac.visualize()
 
     agent.save_param(filepath = save_dir)
+    agent.save_score(score, filepath = save_dir)
     agent.save_log_loss(filepath = save_dir)
 
     print("finish")

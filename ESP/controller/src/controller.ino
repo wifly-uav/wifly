@@ -190,7 +190,10 @@ void setup() {
     //シリアル通信開始
     //Serial.begin(460800);   もとのボーレート
     //Serial.begin(115200);   一段階下げたもの
-    Serial.begin(57600);      //もう一段階下げたもの（Lazurite時代と同じ）
+    //9600, 14400, 19200, 28800,38400
+    //Serial.begin(57600);    もう一段階下げたもの（Lazurite時代と同じ）
+    Serial.begin(38400);
+    
     
     //ピンモードの設定
     pinMode(stick_lr, INPUT);

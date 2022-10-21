@@ -43,14 +43,15 @@ LEARNING_RATE = 0.02
 DISCOUNT_FACTOR = 0.95
 MINIBATCH_SIZE = 16
 REPLAY_MEMORY_SIZE = 10000
-EPSILON = 0.1           #モデルの変化を考慮して、スケジューリングをしない。
-EPSILON_DEC = 1e-3
-EPSILON_END = 0.01
+#EPSILON = 0.1          #モデルの変化を考慮して、スケジューリングをしない。
+EPSILON = 1             #εの初期値
+EPSILON_DEC = 0.00225   #400stepで1から0.1までεを減少させる。
+EPSILON_END = 0.1       #εの最終的な値
 KEEP_FRAMES = 4
 STATE_VARIABLES = 4     #状態変数の数(PWM,PWM,Yaw,Pgain)
 COPY_PERIOD = 50
 HIDDEN_1 = 10           
-HIDDEN_2 = 5
+HIDDEN_2 = 10           #先行研究では5だが、Duelingでは2等分したいので偶数の10にする。
 
 #for PER
 ALPHA = 0.4
@@ -469,6 +470,9 @@ class DQNAgent:
 
         return action
 
+    def update_epsilon(self):
+        self.epsilon = self.epsilon - self.eps_dec if self.epsilon > self.eps_min else self.eps_min
+
     def select_action_epsilon(self, state, act_count=0):
         """
         行動決定(方策)
@@ -801,6 +805,10 @@ class DQNAgent:
         if self.per:
             with open(filepath + "/beta.txt", mode  = "w") as name:
                 print(self.last_beta, file = name)
+
+    def save_score(self, filepath, score):
+        with open(filepath + "/score.txt", mode = "w") as name:
+            print(score, file = name)
 
     def buffer_param(self, filepath):
         #最新のエピソード終了時の変数を記録

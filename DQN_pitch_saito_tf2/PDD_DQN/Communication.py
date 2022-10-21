@@ -40,7 +40,8 @@ class Communicator():
                         port_controller,                #COMの番号
                         #baudrate = 460800,             #もとのボーレート
                         #baudrate = 115200,             #遅くしてみた。
-                        baudrate = 57600,               #さらに遅くしてみた。(Lazurite時代と同じ)
+                        #baudrate = 57600,              #さらに遅くしてみた。(Lazurite時代と同じ)
+                        baudrate = 38400,               #9600, 14400, 19200, 28800
                         parity = serial.PARITY_NONE,
                         bytesize = serial.EIGHTBITS,
                         stopbits = serial.STOPBITS_ONE,

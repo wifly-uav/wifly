@@ -171,16 +171,26 @@ class Environment():
         """
         #報酬の設定
         #Yaw角の0.0度からのずれに基づいて報酬を与える
+        #報酬はクリッピングしてある。
         try:
             err = abs(float(data[0][YAW_INDEX])-0.0)
             if err < 10:
                 return 1
             elif err < 20:
                 return 0
+            else:
+                return -1
+
+            """
+            #-10の報酬があると、初期状態によって累積報酬が大きく変わってしまうのでなくした。
+            #大きな角度になってしまった場合、0度付近に戻るまで時間がかかり、その分負の報酬が加算される。
+            #これにより、大きな角度ほど累積報酬に対して、マイナスの影響が及ぶ。→わざわざ-10の報酬を設定しなくてよい。
             elif err <45:
                 return -1
             else:
-                return -10
+                return -10  
+            """
+
         except:
             return 1
 
