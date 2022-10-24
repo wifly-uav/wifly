@@ -22,7 +22,7 @@ default_params = [255, PWM_WING, 0, PWM_WING, 0]    #ここを変更しないと
 RIGHT_WING = 1
 LEFT_WING = 2
 PWM_WING = 209
-default_params = [255, PWM_WING, PWM_WING, 0, 0, 0]
+default_params = [255, PWM_WING, PWM_WING, 45, 0, 0]
 
 """
 #変更提案(2022/08/09/22:47)→没!(2022/08/20/18:24)
@@ -174,9 +174,9 @@ class Environment():
         #報酬はクリッピングしてある。
         try:
             err = abs(float(data[0][YAW_INDEX])-0.0)
-            if err < 10:
+            if err < 5:
                 return 1
-            elif err < 20:
+            elif err < 10:
                 return 0
             else:
                 return -1
@@ -254,8 +254,10 @@ class Environment():
             return 4
         elif action == 3:
             return 4.5
-        else:
+        elif action == 4:
             return 6
+        else:
+            return 9
     
     #未使用
     def excute_action_pid(self, action, actions):
