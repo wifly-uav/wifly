@@ -14,8 +14,8 @@ import time
 
 N_EPOCHS = 1            #学習epoch数
 N_FRAMES = 200          #1epochあたりのステップ数
-I_GAIN = 0.0001 #0.0001
-D_GAIN = 0
+I_GAIN = 0.0001         #0.0001
+D_GAIN = 0              
 PWM_DEF = 209           #kitai側では+1されて195になる。
 ER = 0
 MODEL_NAME_HEADER = "WiflyDual_DQN"
@@ -24,8 +24,8 @@ YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,e
 if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
     #PID_param
-    saturations = [0,160]           #PID操作量の制限
-    pwm_def = PWM_DEF                   #モーター出力デフォルト値(Environmemtのdefault_paramsもチェック)
+    saturations = [0,100]           #PID操作量の制限
+    pwm_def = PWM_DEF               #モーター出力デフォルト値(Environmemtのdefault_paramsもチェック)
     pid = calc_PID(saturations)     #calc_PIDクラスのインスタンス作成（__init__が呼び出され、初期化が行われる）
     param = [1.5,I_GAIN,D_GAIN,0]   #[P-gain,I-gain,D-gain,Target Yaw angle]
     ti = 10                         #PIDの微積分計算で用いる最小の時間幅
@@ -113,7 +113,7 @@ if __name__ == "__main__":
     
     #print("press y to start")                   #未実装
     #print("Start after 3 seconds")
-    #stime.sleep(3)
+    time.sleep(3)
 
     Time_start = time.time()
 #try:
@@ -329,7 +329,7 @@ if __name__ == "__main__":
     #ac.visualize()
 
     agent.save_param(filepath = save_dir)
-    agent.save_score(score, filepath = save_dir)
+    agent.save_score(save_dir, score)
     agent.save_log_loss(filepath = save_dir)
 
     print("finish")
