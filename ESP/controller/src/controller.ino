@@ -193,6 +193,7 @@ void setup() {
     //9600, 14400, 19200, 28800,38400
     //Serial.begin(57600);    もう一段階下げたもの（Lazurite時代と同じ）
     Serial.begin(38400);
+    while(!Serial);
     
     
     //ピンモードの設定
