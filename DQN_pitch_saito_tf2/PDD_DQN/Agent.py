@@ -35,7 +35,7 @@ DUELING = False
 DOUBLE = False
 
 #行動空間設定
-N_ACTIONS = 5
+N_ACTIONS = 6
 ENABLE_ACTIONS = [i for i in range(N_ACTIONS)]
 
 #hyperparameter for DQN
@@ -44,8 +44,8 @@ DISCOUNT_FACTOR = 0.95
 MINIBATCH_SIZE = 16
 REPLAY_MEMORY_SIZE = 10000
 #EPSILON = 0.1          #モデルの変化を考慮して、スケジューリングをしない。
-EPSILON = 1             #εの初期値
-EPSILON_DEC = 0.00225   #400stepで1から0.1までεを減少させる。
+EPSILON = 1.0           #εの初期値
+EPSILON_DEC = 0.00225    #400stepで1から0.1までεを減少させる。
 EPSILON_END = 0.1       #εの最終的な値
 KEEP_FRAMES = 4
 STATE_VARIABLES = 4     #状態変数の数(PWM,PWM,Yaw,Pgain)
@@ -599,17 +599,19 @@ class DQNAgent:
         #print(idxes_batch)
         else:
             #idxes_batch = np.random.choice(self.num_in_buffer, batch_size, replace = False)
-            """
-            randomサンプリング
+            
+            #randomサンプリング
             idxes_batch = random.sample(range(self.num_in_buffer), batch_size)
+            
             """
-
             #betaサンプリング
             idxes_batch = []
             while len(idxes_batch) != self.batch_size:
                 beta_int = int(self.num_in_buffer * np.random.beta(4,1))
                 idxes_batch.append(beta_int)
                 idxes_batch = list(set(idxes_batch))
+            """
+
 
             transitions = self.memory_per.data[idxes_batch]
             #print(transitions.shape)
