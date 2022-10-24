@@ -2,28 +2,28 @@
 #include <WiFi.h>
 
 #include <SPI.h>
-#define DEBUG
+//#define DEBUG
 
 unsigned long lastTime = 0;  
 unsigned long timerDelay = 60;  // send readings timer
 size_t data_pc_;
 uint8_t data_pc[5] = {0};
 int re_data[5] = {0};
-double re_data_angle[4] = {0};
+double re_data_angle[4] = {0};   
 
 // REPLACE WITH RECEIVER MAC Address
 //機体側のマイコンの番号にあったアドレスのみコメントアウトを外す。
-uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60}; //1
+//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60}; //1
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x3D}; //2
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0xE4}; //3
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0xAC}; //4
-//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0x98}; //5
+uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0x98}; //5
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA2, 0xBF};   //6
 
 esp_now_peer_info_t peerInfo;
 
-const int controller_num = 1; //1:A 2:B
-const float servo_sensitivity = 1.0; //0.0(min)~1.0(max)
+const int controller_num = 2; //1:A 2:B
+const float servo_sensitivity = 0.2; //0.0(min)~1.0(max)
 
 //pin
 //各ボタンのピン番号
@@ -254,12 +254,16 @@ void loop() {
           data[2] = left_UD;  //サーボ1角（元は尾翼）
           data[3] = 180 - left_UD;  //サーボ2角（元はcog）
           data[4] = btn_R;
+          if(btn_R == 1){
+            data[2] = 0;
+            data[3] = 0;
+          }
           break;
         
         case 2:
           left_LR = map(analogRead(stick_lr),0,4096,0,255); //揚力差
           left_UD = map(analogRead(stick_ud),0,4096,0,255); //割り当てなし
-          sli_L = map(analogRead(slider_l),0,4096,0,180);   //尾翼サーボ
+          sli_L = map(analogRead(slider_l),0,4096,90.0*(1.0-servo_sensitivity),90.0+90.0*servo_sensitivity);   //尾翼サーボ
           sli_R = map(analogRead(slider_r),0,4096,0,255);   //羽ばたき出力
           //btn_L = digitalRead(switch_1);
           //vol = map(analogRead(volume),0,4096,0,255);

@@ -17,7 +17,7 @@
 
 //コントローラごとにここを切り替える!!!!----------------------------------
 
-char controller = 'A';  //大きいコントローラ：A 小さいコントローラ：B
+char controller = 'B';  //大きいコントローラ：A 小さいコントローラ：B
 
 //---------------------------------------------------------------------
 
@@ -222,6 +222,7 @@ void loop() {
       //Serial.print("y:");
       //Serial.print(euler.y());
       //Serial.print("z:");
+      /*
       Serial.print(quaternion.w());
       Serial.print(" , ");
       Serial.print(quaternion.x());
@@ -230,6 +231,7 @@ void loop() {
       Serial.print(" , ");
       Serial.print(quaternion.z());
       Serial.println();
+      */
     #endif
 
     esp_now_send(broadcastAddress, (uint8_t *) &data, sizeof(data));
