@@ -2,15 +2,19 @@
 #include <WiFi.h>
 
 #include <SPI.h>
-#include <PID_v1.h>
+//#include <PID_v1.h>
+
+#include "CalPID.h"
+
 //#define DEBUG
 
 typedef struct param_{
   double kp = 0;
   double ki = 0;
   double kd = 0;
-  double Setpoint;
-  double Input;
+  double Target;
+  double Error;
+  double State;
   double Output;
   double max;
   double min = 0;
@@ -24,12 +28,13 @@ unsigned long lastTime = 0;
 unsigned long timerDelay = 60;  // send readings timer
 size_t data_pc_;
 uint8_t data_pc[5] = {0};
-int re_data[5] = {0};
-double re_data_angle[4] = {0}; 
-//各ボタンのピン番号
-int stick_lr,stick_ud,slider_l,slider_r,switch_1,switch_2,volume;
-double ysqr,t0,t1,t2,t3,t4 = 0;
+int re_data[11] = {0};
+double re_data_angle[3] = {0};
 int eular[3] = {0};
+char send_pc[40];
+int left_pwm,right_pwm,servo_angle,cog_angle;
+uint8_t data[5];
+int stick_lr,stick_ud,slider_l,slider_r,switch_1,switch_2,volume;
 
 // REPLACE WITH RECEIVER MAC Address
 //機体側のマイコンの番号にあったアドレスのみコメントアウトを外す。
@@ -50,7 +55,7 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len);
 void OnDataSent(const uint8_t* mac_addr, esp_now_send_status_t status);
 void recieve_pc();
 
-PID pitch_PID(&servo.Input, &servo.Output, &servo.Setpoint, servo.kp, servo.ki, servo.kd, DIRECT);
+CalPID pitch_pid(0,0,0,40,0);
 
 void setup() {
   servo.kp = 1;
@@ -59,13 +64,11 @@ void setup() {
   servo.max = 45;
   servo.min = -45;
   servo.dt = 40;
+  servo.Target = 0;
 
-  pitch_PID.SetOutputLimits(servo.max,servo.min);
-  pitch_PID.SetSampleTime(servo.dt);
-  pitch_PID.SetMode(AUTOMATIC);
-  pitch_PID.kp = servo.kp;
-  pitch_PID.ki = servo.ki;
-  pitch_PID.kd = servo.kd;
+  pitch_pid.setParameter(servo.kp,servo.ki,servo.kd);
+  pitch_pid.setDELTA_T(servo.dt);
+  pitch_pid.setMaxValue(servo.max);
 
   //各コントローラごとのピン番号
   switch(controller_num){
@@ -141,9 +144,9 @@ void loop() {
     uint8_t data[5];
 
 
-    servo.Setpoint = 0;
-    servo.Input = eular[1];
-    pitch_PID.Compute();
+    servo.State = eular[0];
+    servo.Error = servo.Target-servo.State;
+    servo.Output = pitch_pid.calPID(servo.Error);
     //PCモード
     if(btn_L == 1){
           left_LR = map(analogRead(stick_lr),0,4096,0,255); //揚力差
@@ -161,8 +164,8 @@ void loop() {
           
           data[0] = left_pwm;          
           data[1] = right_pwm;
-          data[2] = max(min(45,(int)servo.Output),-45)+45;
-          data[3] = -1*max(min(45,(int)servo.Output),-45)+45;
+          data[2] = servo.Output;
+          data[3] = servo.Output;
     
     //コントローラモード
     }else{  
@@ -271,7 +274,7 @@ void loop() {
 
     //delay(10);
 
-    Serial.print(servo.Input);
+    Serial.print(servo.State);
     Serial.print(",");
     Serial.println(servo.Output);
     // Send message via ESP-NOW
@@ -320,9 +323,6 @@ void qu2eu(int eular[3], double quotanion[4]){
 //引数:送信元macアドレス情報,受信データ,受信データ長
 void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     char macStr[18];
-
-    //データの送信元のmacアドレスを表示する
-    //%02Xは2桁以上の16進数で表示することを指定（桁が足りない場合、上位の桁が0埋めされる。）
     snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
         mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
     //Serial.println();
@@ -330,37 +330,33 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     //Serial.printf("Last Packet Recv from: %s\n", macStr);
     //Serial.printf("Last Packet Recv Data(%d): ", data_len);
     //Serial.println();
-    for (int i = 0; i < data_len; i++) {
-        if(i > 4){
-          //受信データの5番目以降（quotanion）は、処理してre_data_angleに格納していく。
-          re_data_angle[i-5] = data[i]*0.01-1;
-        }else if(i < 2){
-          //受信データの先頭2つ（羽ばたき出力）は、0~255を反転してre_dataに格納
-          re_data[i] = 255 - data[i];
-        }
-        else{
-          //残りはそのままre_dataに格納
-          re_data[i] = data[i];
-        }
-    }
-    //カンマ区切りでre_dataの中身を表示
     for (int i = 0; i < 5; i++) {
+      re_data[i] = data[i];
       //Serial.print(re_data[i]);
-      if(i != 4){
-        //Serial.print(",");
+      //Serial.print(",");
+    }
+    if(data[5] != 0){
+      re_data[5] = data[5];
+    }else{
+      re_data[5] = -1*data[6];
+    }
+    if(data[7] != 0){
+      re_data[6] = data[7];
+    }else{
+      re_data[6] = -1*data[8];
+    }
+    re_data[7] = data[9]+data[10];
+    /*
+    for(int i = 5; i<8; i++){
+      Serial.print(re_data[i]);
+      if(i!=7){
+        Serial.print(",");
       }
     }
-    //受信したquotanionをEuler角に変換
-    qu2eu(eular,re_data_angle);
-    //Serial.print(",");
-    //Euler角を表示（角度の順番を要確認!）
-    for (int i = 0; i < 3; i++) {
-      //Serial.print(eular[i]);
-      if(i != 2){
-        //Serial.print(",");
-      }
-    }
-    //Serial.println();
+    */
+   sprintf(send_pc, "%d,%d,%d,%d,%d,%d,%d,%d",re_data[0],re_data[1],re_data[2],re_data[3],re_data[4],re_data[5],re_data[6],re_data[7]);
+   Serial.println(send_pc);
+   Serial.flush();
 }
 
 //送信時コールバック関数
