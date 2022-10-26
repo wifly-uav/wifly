@@ -334,4 +334,5 @@ if __name__ == "__main__":
 
     print("finish")
     print(save_dir)
+    print(score)
     print("Time:%2f" % Time)
