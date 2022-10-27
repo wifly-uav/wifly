@@ -12,7 +12,9 @@ int re_data[5] = {0};
 double re_data_angle[4] = {0};
 
 // REPLACE WITH RECEIVER MAC Address
+
 //機体側のマイコンの番号にあったアドレスのみコメントアウトを外す。
+//uint8_t castAddress[] = {0x8C, 0xCE, 0x4E, 0xEA, 0xB1, 0xC9}; //0
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60}; //1
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x3D}; //2
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0xE4}; //3
@@ -276,7 +278,7 @@ void loop() {
           data[0] = sli_L;
           data[1] = sli_R;
           data[2] = left_UD;
-          data[3] = btn_R*40;
+          data[3] = btn_R*120;
           data[4] = btn_R;
           break;
         
