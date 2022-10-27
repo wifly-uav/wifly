@@ -31,7 +31,7 @@ Servo ladder;
 
 int com_flag = 0;
 int command[8] = {0};
-uint8_t data[9];
+uint8_t data[11];
 uint8_t broadcastAddress[6];
 
 unsigned long lastTime = 0; 
@@ -63,26 +63,30 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t len) {
     broadcastAddress[5] = mac_addr[5];
     com_flag = 1;
   }else{
-    #ifdef DEBUG
-      Serial.println();
-      //Serial.printf("Last Packet Recv from: %s\n", macStr);
-      Serial.printf("Last Packet Recv Data(%d): ", len);
-    #endif
-    for (i = 0; i < len; ++i) {
-      command[i] = data[i];
-      #ifdef DEBUG
-        Serial.print(data[i]);
-        Serial.print(" ");
+    if(mac_addr[5] == broadcastAddress[5]){
+      #ifdef DEBUG_RCV
+        Serial.println();
+        //Serial.printf("Last Packet Recv from: %s\n", macStr);
+        Serial.printf("Last Packet Recv Data(%d): ", len);
       #endif
+      for (i = 0; i < len; ++i) {
+        command[i] = data[i];
+        #ifdef DEBUG_RCV
+          Serial.print(data[i]);
+          Serial.print(" ");
+        #endif
+      }
+      digitalWrite(led, LOW);
+      recvTime = millis();
     }
-    digitalWrite(led, LOW);
-    recvTime = millis();
   }
 }
 
 void setup() {
-  Serial.begin(115200);
-  Serial.println();
+  #ifdef DEBUG
+    Serial.begin(115200);
+    Serial.println();
+  #endif
 
   pinMode(pwm1, OUTPUT);
   pinMode(pwm2, OUTPUT);
@@ -108,6 +112,22 @@ void setup() {
     Serial.println(WiFi.macAddress());
   #endif
  
+   #ifdef sensor
+    if(!bno.begin()){
+      /* There was a problem detecting the BNO055 ... check your connections */
+      #ifdef DEBUG
+        Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+      #endif
+      digitalWrite(led, HIGH);
+      while(1){
+        led_onoff(1);
+        analogWrite(pwm1, PWM_RANGE);
+        analogWrite(pwm2, PWM_RANGE);
+      }
+    }
+  #endif
+  digitalWrite(led, LOW);
+
   // Set device as a Wi-Fi Station
   WiFi.mode(WIFI_STA);
 
@@ -126,22 +146,10 @@ void setup() {
 
   esp_now_register_recv_cb(OnDataRecv);
 
-  #ifdef sensor
-    if(!bno.begin()){
-      /* There was a problem detecting the BNO055 ... check your connections */
-      #ifdef DEBUG
-        Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
-      #endif
-      digitalWrite(led, HIGH);
-      while(1){
-        led_onoff(1);
-      }
-    }
-  #endif
-  digitalWrite(led, LOW);
-
   while(!com_flag){
     led_onoff(2);
+    analogWrite(pwm1, PWM_RANGE);
+    analogWrite(pwm2, PWM_RANGE);
   }
   
   // Register peer
@@ -163,8 +171,8 @@ void loop() {
     // - VECTOR_EULER         - degrees
     // - VECTOR_LINEARACCEL   - m/s^2
     // - VECTOR_GRAVITY       - m/s^2
-    //imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
-    imu::Quaternion quaternion = bno.getQuat();
+    imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
+    //imu::Quaternion quaternion = bno.getQuat();
   #endif
 
   Ti = millis();
@@ -176,15 +184,47 @@ void loop() {
     data[2] = command[2];
     data[3] = command[3];
     #ifdef sensor
+      if(euler.z()>=0){
+        data[5] = euler.z(); //pitch
+        data[6] = 0;
+      }else{
+        data[5] = 0;
+        data[6] = abs(euler.z());
+      }
+      if(abs(euler.z())<90){ //yaw
+        if(euler.y()>=0){
+          data[7] = abs(euler.y());
+          data[8] = 0;
+        }else{
+          data[7] = 0;
+          data[8] = abs(euler.y());
+        }
+      }else{
+        if(euler.y()>0){
+          data[7] = abs(180-abs(euler.y()));
+          data[8] = 0;
+        }else{
+          data[7] = 0;
+          data[8] = abs(abs(euler.y())-180);
+        }
+      }
+      if(euler.x()<180){
+        data[9] = euler.x(); //roll
+        data[10] = 0;
+      }else{
+        data[9] = 180;
+        data[10] = euler.x()-180;
+      }
+      /*
       data[5] = (quaternion.w()+1)*100;
       data[6] = (quaternion.x()+1)*100;
       data[7] = (quaternion.y()+1)*100;
       data[8] = (quaternion.z()+1)*100;
+      */
     #else
       data[5] = 0;
       data[6] = 0;
       data[7] = 0;
-      data[8] = 0;
     #endif
     data[4] = loopTi;
     #ifdef DEBUG
@@ -192,6 +232,7 @@ void loop() {
       //Serial.print("y:");
       //Serial.print(euler.y());
       //Serial.print("z:");
+      /*
       Serial.print(quaternion.w());
       Serial.print(" , ");
       Serial.print(quaternion.x());
@@ -199,6 +240,21 @@ void loop() {
       Serial.print(quaternion.y());
       Serial.print(" , ");
       Serial.print(quaternion.z());
+      Serial.print(" , ");
+      */
+      Serial.print(euler.x());
+      Serial.print(" , ");
+      Serial.print(euler.z());
+      Serial.print(" , ");
+      if(abs(euler.z())<90){
+        Serial.print(euler.y());
+      }else{
+        if(euler.y()>0){
+          Serial.print(180-abs(euler.y()));
+        }else{
+          Serial.print(abs(euler.y())-180);
+        }
+      }
       Serial.println();
       #endif
     #endif
@@ -215,8 +271,8 @@ void loop() {
   */
   analogWrite(pwm1, command[0]);
   analogWrite(pwm2, command[1]);
-  ladder.write(command[2]);
-  cog.write(command[3]);
+  ladder.write(min(max(0,command[2]),180));
+  cog.write(min(max(0,command[3]),180));
   
   //delay(50);
 }
