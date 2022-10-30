@@ -1,3 +1,8 @@
+"""
+・PIDを使用しない強化学習用コード
+・左右の羽の揚力を、PWM_WINGを基準に調整する。
+"""
+
 import numpy as np
 import tensorflow as tf
 from Communication import Communicator
@@ -24,13 +29,14 @@ YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,e
 if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
     #PID_param
-    saturations = [0,100]           #PID操作量の制限
+    #saturations = [0,100]           #PID操作量の制限
     pwm_def = PWM_DEF               #モーター出力デフォルト値(Environmemtのdefault_paramsもチェック)
-    pid = calc_PID(saturations)     #calc_PIDクラスのインスタンス作成（__init__が呼び出され、初期化が行われる）
-    param = [1.5,I_GAIN,D_GAIN,0]   #[P-gain,I-gain,D-gain,Target Yaw angle]
-    ti = 10                         #PIDの微積分計算で用いる最小の時間幅
+    #pid = calc_PID(saturations)     #calc_PIDクラスのインスタンス作成（__init__が呼び出され、初期化が行われる）
+    #param = [1.5,I_GAIN,D_GAIN,0]   #[P-gain,I-gain,D-gain,Target Yaw angle]
+    #ti = 10                         #PIDの微積分計算で用いる最小の時間幅
     actions = [pwm_def, pwm_def]    #行動ベクトル（両翼のモータ出力）
-    pid.update_params(param)        #paramの値をcalc_PIDクラスに反映
+    #pid.update_params(param)        #paramの値をcalc_PIDクラスに反映
+    
     path = os.path.dirname(__file__)                        #このスクリプトのディレクトリ名を取得
     print('save folder name:')                              #学習内容を保存するためのフォルダ名の入力を指示
     save_folder = input()                                   
@@ -104,18 +110,22 @@ if __name__ == "__main__":
         print('Progam starts without loading a model')
         training_flag = True
     
+
+    env = Environment(agent.keep_frames)        #Environmentクラスのインスタンス作成
+
     #各種log保存先指定
     log = logger(folder = save_dir)
-    env = Environment(agent.keep_frames)                         #Environmentクラスのインスタンス作成
     vi = visual_nn(folder = save_dir)        
     mi = visual_minibach(folder = save_dir)
     ac = visual_act(folder = save_dir)
     
-    #print("press y to start")                   #未実装
-    #print("Start after 3 seconds")
+    #通信安定化のための待機時間
+    print("Start after 3 seconds")
     time.sleep(3)
 
+    #時間計測開始
     Time_start = time.time()
+
 #try:
     for i in range(N_EPOCHS):                   #N_EPOCHSごとに各パラメータを初期化
         #init
@@ -123,7 +133,7 @@ if __name__ == "__main__":
         loss = 0.0                              #NN損失関数
         Q_max = 0.0                             #行動価値関数最大値
         reward = 0                              #報酬
-        p_gain = 1.5                            #初期Pgain
+        #p_gain = 1.5                            #初期Pgain
         terminal = False                        #終状態フラグ（もとはTrue）
         data = True                             #?
         com_fail = False                        #通信に失敗した場合にTrueにする。
@@ -133,47 +143,19 @@ if __name__ == "__main__":
         #この中でstart_espも行われる。（現在の初期送信データ長は4）
         #最初にNNの入力に必要なKEEP_FRAMES個の状態をLazuriteから取得し、#state([deque])に格納
         #ver2では、dequeにmaxlenを設定して、古い状態の削除を自動で行っている。
-        env.reset_pid_2(add = p_gain)   
+        env.reset_2()
+        #env.reset_pid_2(add = p_gain) 
         #env.reset_pid(add=p_gain)      
 
         state_next = env.observe_state()        #次状態（FRAMES=4個分の初期状態が格納されたstate）を観測
 
         for j in range(N_FRAMES):
             t_start = time.time()
-            #terminal = env.observe_terminal()              #未使用
             state_current = state_next                      #次状態を現在の状態とする
             agent.get_angle(state_current)                  #現在の状態から、Yaw角を取得して記録する(log用)
             action = agent.choose_action(state_current)     #ε-greedy方策によってactionを決定
-            p_gain = env.execute_action_gain(action)        #actionに対応するPgainを取得
-            param = [p_gain,I_GAIN,D_GAIN,0]                #paramを更新（Pgainを更新）
-            pid.update_params(param)                        #calc_PIDクラスにparamの変更を反映
-            #print(i,j,state_current[0][0],ti)
-            
-            #操作量をPID計算
-            #state_currentはFRAMES個の状態を保持
-            #state_current[0]が最新の状態で、state_current[0][YAW_INDEX]が最新の状態におけるYaw角
-            #delta_timeは微積分の近似で用いる時間幅
-            #modeはSaturationブロック有効化を決めるフラグ
-            #t_1 = time.time() - t_start
-            #print("t_1:", end = "")
-            #print(t_1)
-            diff = pid.calculate_output(current_value = int(state_current[0][YAW_INDEX]), delta_time = (int)(ti), mode = True)
-
-            #出力を変えるモータが逆な気がする…
-            if diff > 0:                            #操作量が正なら…
-                actions[0] = pwm_def - diff         #右側のモータ出力を下げる
-                actions[1] = pwm_def - ER           #ER=0なので気にしなくて良い
-            else:                                   #操作量が負なら…
-                actions[0] = pwm_def                
-                actions[1] = pwm_def + diff - ER    #左側のモータ出力を下げる
-
-            #print(actions)
-            env.execute_action_(actions)            #機体にモータ出力の変更内容を送信
-
-            """
-            if (j != 0 and training_flag == True):
-                agent.experience_replay()           #経験再生
-            """
+            env.execute_action(actions)                     #機体に行動番号に相当するモータ出力の変更内容を送信
+            #env.execute_action_(actions)                   #機体にモータ出力の変更内容を送信
 
             #t_2 = time.time() - t_start
             #print("t_2:", end = "")
@@ -183,9 +165,8 @@ if __name__ == "__main__":
             #state_next:新たな状態が1つ加わり、古い状態が削除されたもの
             #更新されたstateデック、受信間隔（機体計測）、受信側（PC計測）が返ってくる
             #state_next, ti, ti_ = env.observe_update_state_pid(pid=p_gain)
-            try:
-                state_next, ti, ti_ = env.observe_update_state_pid_2(pid = p_gain)
-            except:
+            state_next, ti, ti_ = env.observe_update_state_pid_2(pid = p_gain)
+            if state_next == False:
                 print("Communication Failure")
                 com_fail = True
                 break
@@ -214,7 +195,7 @@ if __name__ == "__main__":
             #print(t_3)
 
             #進捗表示
-            u_i = pid.I*I_GAIN  #Igainによる操作量（=I_gain*偏差の蓄積（積分））
+            #u_i = pid.I*I_GAIN  #Igainによる操作量（=I_gain*偏差の蓄積（積分））
             epoch = i + agent.episode_in_advance
             print( "Epoch:%d" % epoch, 
                     "STEP:%d" % j,
@@ -222,8 +203,8 @@ if __name__ == "__main__":
                     "Latest state:" + str(state_next[0]), 
                     "Yaw angle:%f" % float(state_next[0][YAW_INDEX]),
                     "Reward:%d" % reward,
-                    "Epsilon:%4f" % agent.epsilon, 
-                    "u_I:%6f" % u_i)
+                    "Epsilon:%4f" % agent.epsilon) 
+                    #"u_I:%6f" % u_i)
 
             #if (j != 0 and training_flag == True):
             if training_flag == True:

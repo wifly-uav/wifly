@@ -123,17 +123,16 @@ class Communicator():
                 #出力:[モータ1出力,モータ2出力,サーボ1,サーボ2,受信間隔,Pitch,Yaw,Roll]
 
                 if len(persed_data) == byt:                                     #受信データ長が指定通りならば...
-                    if persed_data[0] != " " and persed_data[0] != "":            #先頭の文字抜けが無ければ…
-                        #print(str(persed_data) + str(len(persed_data)))
-                        #receive_time = str(time.time() - self.time_started)    #受信した時間を記録
+                    if persed_data[0] != " " and persed_data[0] != "":          #先頭の文字抜けが無ければ…
                         delta_time = time.time() - self.time_last_receive       #最後の受信との時間間隔をPC側で記録
                         self.time_last_receive = time.time()                    #最後の受信時刻を更新  
                         receive_time_ = int(persed_data.pop(4))                 #機体側のマイコンで計測された受信間隔の読み取り（popなので削除もされる）
-                        persed_data.pop(-1)                                     #Roll角削除
-                        #persed_data:[モータ出力1,モータ出力2,尾翼サーボ,重心移動機構サーボ,Pitch,Yaw]
+                        
+                        #persed_data:[モータ出力1,モータ出力2,尾翼サーボ,重心移動機構サーボ,Pitch,Yaw,Roll]
                         
                         #状態の整形
-                        for i in range(3):
+                        persed_data.pop(-1)         #Roll角削除
+                        for i in range(3):          #サーボ角とPitchを削除
                             persed_data.pop(-2)
 
                         #persed_data:[モータ出力1,モータ出力2,Yaw]

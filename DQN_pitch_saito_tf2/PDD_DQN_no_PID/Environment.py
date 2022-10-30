@@ -69,7 +69,8 @@ class Environment():
         #print("state:")
         #print(self.state)
 
-    def reset2(self, add = 0):
+    #未使用
+    def reset_pid_2(self, add = 0):
         """
         4フレーム分の状態を格納するdequeを作成
         最初にNNの入力に必要なFRAMES個の状態をLazuriteから取得
@@ -98,6 +99,38 @@ class Environment():
             #4つの状態を保持するdeque(self.state)に格納する。
             self.update_2(data)
             #self.update(flag=False, data=data)
+
+    def reset_2(self):
+        """
+        4フレーム分の状態を格納するdequeを作成
+        最初にNNの入力に必要なFRAMES個の状態をLazuriteから取得
+        """
+
+        #ESPにデータを送り、通信の準備をさせる。
+        #(ESPは何かしらのデータを受け取らないと送信モードにならない。)
+        self.communicator.start_esp(default_params)
+
+        self.state = deque(maxlen = self.keep_frames)         #状態格納用deque
+        self.params_to_send = default_params                  #2行下に同じ文がある。
+
+        #NNの入力に必要なFRAMES個の状態をLazuriteから取得する。
+        for i in range(self.keep_frames):
+            #self.params_to_send = default_params    #送信用データを格納（未使用?）
+
+            #機体側ESPからデータを受信
+            #正常に受信できれば、受信データ、受信した時間、前回受信との間隔が返ってくる
+            #正常に受信できなかった場合、False,0,0が返ってくる
+            data, _, _ = self.communicator.receive_from_esp(byt = receive_byt)
+            if data == False:
+                print("Reset failure")
+                exit()
+            #data:[モータ出力1,モータ出力2,Yaw]                                               
+            #このdataが1つの状態である。
+
+            #4つの状態を保持するdeque(self.state)に格納する。
+            self.update_2(data)
+            #self.update(flag=False, data=data)
+    
 
     #未使用
     def update(self, flag, data):
@@ -129,6 +162,14 @@ class Environment():
         data, ti, ti_ = self.communicator.receive_from_laz(byt=receive_byt)
         self.update(flag=flag, data=data)
         return self.state, ti, ti_
+
+    def observe_update_state_2(self, flag = True):
+        """
+        状態を更新した上で状態を確認する
+        """
+        data, ti, ti_ = self.communicator.receive_from_esp(byt=receive_byt)
+        self.update_2(data)
+        return self.state, ti, ti_
     
     #未使用
     def observe_update_state_pid(self, flag=True, pid=0):
@@ -143,18 +184,17 @@ class Environment():
 
         return self.state, ti, ti_          #更新されたstateデック、受信した時間、前回受信との間隔を返す
 
+    #未使用
     def observe_update_state_pid_2(self, flag=True, pid=0):
-
         #ESPからデータを受信
         #正常に受信できれば、受信データ、受信した時間、前回受信との間隔が返ってくる
         #正常に受信できなかった場合、False,0,0が返ってくる
         data, ti, ti_ = self.communicator.receive_from_esp(byt = receive_byt)
-
-        data.append(pid)                    #受信データにPgainを付け加える（pid=0は引数が指定されなかった場合の値なので注意）
-        self.update_2(data)
-        return self.state, ti, ti_          #更新されたstateデック、受信した時間、前回受信との間隔を返す
+        if data == False:
+            return False, 0, 0
+        self.update_2(data)             #state dequeを更新
+        return self.state, ti, ti_      #更新されたstate deque、受信した時間、前回受信との間隔を返す
     
-
     def observe_state(self):
         """
         状態を確認する
@@ -194,6 +234,7 @@ class Environment():
         #except:
         #    return 1
 
+    #未使用
     def observe_terminal(self):
         """
         ターミナルスイッチの情報を読み取る
@@ -202,8 +243,7 @@ class Environment():
         """
         return self.communicator.termination_switch(default_params)
 
-    #未使用
-    def excute_action(self, action):
+    def execute_action(self, action):
         """
         行動内容を定義する
         行動内容に沿って機体に通信を送る
