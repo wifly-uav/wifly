@@ -8,6 +8,8 @@ import datetime as dt
 import os
 from graph import Graph
 
+YAW_INDEX = 2
+
 class logger():
     def __init__(self, folder='log'):
         self.log = []
@@ -40,7 +42,7 @@ class logger():
         #row_ = [state_list_[0][1],state_list_[0][-2],reward,time]
         
         #row_:[Yaw角,報酬,時間？]
-        row_ = [state_list_[0][5],reward,time]
+        row_ = [state_list_[0][YAW_INDEX],reward,time]
         self.log2.append(row_)
 
     def output_log(self):

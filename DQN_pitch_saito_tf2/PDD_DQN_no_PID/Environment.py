@@ -4,7 +4,7 @@ import numpy as np
 import random as rd
 import time
 from collections import deque
-
+YAW_INDEX = 2
 FRAMES = 4      #維持フレーム数
 
 """
@@ -21,9 +21,8 @@ default_params = [255, PWM_WING, 0, PWM_WING, 0]    #ここを変更しないと
 #変更後
 RIGHT_WING = 1
 LEFT_WING = 2
-PWM_WING = 0
-default_params = [255, PWM_WING, PWM_WING, 0, 0, 0]    
-
+PWM_WING = 209
+default_params = [255, PWM_WING, PWM_WING, 45, 0, 0]
 
 """
 #変更提案(2022/08/09/22:47)→没!(2022/08/20/18:24)
@@ -70,7 +69,7 @@ class Environment():
         #print("state:")
         #print(self.state)
 
-    def reset_pid_2(self, add = 0):
+    def reset2(self, add = 0):
         """
         4フレーム分の状態を格納するdequeを作成
         最初にNNの入力に必要なFRAMES個の状態をLazuriteから取得
@@ -172,18 +171,28 @@ class Environment():
         """
         #報酬の設定
         #Yaw角の0.0度からのずれに基づいて報酬を与える
-        try:
-            err = abs(float(data[0][5])-0.0)
-            if err < 10:
-                return 10
-            elif err < 20:
-                return 0
+        #報酬はクリッピングしてある。
+        
+        err = abs(float(data[0][YAW_INDEX])-0.0)
+        if err < 5:
+            return 1
+        elif err < 10:
+            return 0
+        else:
+            return -1
+
+            """
+            #-10の報酬があると、初期状態によって累積報酬が大きく変わってしまうのでなくした。
+            #大きな角度になってしまった場合、0度付近に戻るまで時間がかかり、その分負の報酬が加算される。
+            #これにより、大きな角度ほど累積報酬に対して、マイナスの影響が及ぶ。→わざわざ-10の報酬を設定しなくてよい。
             elif err <45:
                 return -1
             else:
-                return -10
-        except:
-            return 1
+                return -10  
+            """
+
+        #except:
+        #    return 1
 
     def observe_terminal(self):
         """
@@ -228,13 +237,13 @@ class Environment():
         決定した行動に基づくモータ出力の変更を機体に反映（送信）
         """
         #各送信時にparams_to_sendを書き換えて送信していく。
+        #
         self.params_to_send[RIGHT_WING] = actions[0]
         self.params_to_send[LEFT_WING] = actions[1]
-        print("params_to_send:", end = "")
-        print(self.params_to_send)
+        #print("params_to_send:", end = "")
+        #print(self.params_to_send)
         self.communicator.send_to_esp(self.params_to_send)
-    
-    
+     
     def execute_action_gain(self, action):
 
         if action == 0:
@@ -245,8 +254,10 @@ class Environment():
             return 4
         elif action == 3:
             return 4.5
-        else:
+        elif action == 4:
             return 6
+        else:
+            return 9
     
     #未使用
     def excute_action_pid(self, action, actions):

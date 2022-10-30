@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+from Communication import Communicator
 from Environment import Environment
 from Agent import MINIBATCH_SIZE, DQNAgent
 from Logger import logger
@@ -11,32 +12,33 @@ from Calc_Control import calc_PID
 import os
 import time
 
-N_EPOCHS = 1
-N_FRAMES = 500
-I_GAIN = 0.0001 #0.0001
-D_GAIN = 0
+N_EPOCHS = 1            #学習epoch数
+N_FRAMES = 200          #1epochあたりのステップ数
+I_GAIN = 0.0001         #0.0001
+D_GAIN = 0              
+PWM_DEF = 209           #kitai側では+1されて195になる。
 ER = 0
 MODEL_NAME_HEADER = "WiflyDual_DQN"
+YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
 
 if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
     #PID_param
-    saturations = [0,150]           #PID操作量の制限
-    pwm_def = 180                   #モーター出力デフォルト値
+    saturations = [0,100]           #PID操作量の制限
+    pwm_def = PWM_DEF               #モーター出力デフォルト値(Environmemtのdefault_paramsもチェック)
     pid = calc_PID(saturations)     #calc_PIDクラスのインスタンス作成（__init__が呼び出され、初期化が行われる）
     param = [1.5,I_GAIN,D_GAIN,0]   #[P-gain,I-gain,D-gain,Target Yaw angle]
     ti = 10                         #PIDの微積分計算で用いる最小の時間幅
     actions = [pwm_def, pwm_def]    #行動ベクトル（両翼のモータ出力）
     pid.update_params(param)        #paramの値をcalc_PIDクラスに反映
-
     path = os.path.dirname(__file__)                        #このスクリプトのディレクトリ名を取得
     print('save folder name:')                              #学習内容を保存するためのフォルダ名の入力を指示
     save_folder = input()                                   
-    save_file = os.path.join(path, 'result', save_folder)   #･･･/result/save_folder（入力したフォルダ名）のpath取得
-    print(save_file)                                        #pathの表示
+    save_dir = os.path.join(path, 'result', save_folder)   #･･･/result/save_folderのpath取得
+    print(save_dir)
 
-    if not os.path.exists(save_file):                       #ディレクトリが存在しない場合、ディレクトリを作成する
-        os.makedirs(save_file)                              
+    if not os.path.exists(save_dir):                       #ディレクトリが存在しない場合、ディレクトリを作成する
+        os.makedirs(save_dir)                              
     else:
         print('The folder exists.') 
         print('override? y/n')                              #上書きの確認
@@ -48,20 +50,41 @@ if __name__ == "__main__":
             sys.exit()
     
     #DQNAgentクラスのインスタンス作成（NNの初期化やReplayMemoryの用意がされる）
-    #folderには学習結果等の保存先フォルダ名を格納
-    #(スクリプトがあるフォルダのresultフォルダに結果が格納される。)
-    agent = DQNAgent(folder = save_file)                      
+    agent = DQNAgent(folder = save_dir)                      
     
-    print('Use saved model? y/n')               #既存のモデル（学習済みNN）を使うか?
+    print('Use saved progress? y/n')               #既存のモデル（学習済みNN）を使うか?
     ans_yn = input()
     if (ans_yn == 'y'):                         #既存のモデルを使用する場合…                      
         print('use model folder name:')         #使用するフォルダ名の入力を指示
-        use_folder = input()                                   
+        fldr_name = input()
+        saved_dir = save_dir + "/../" + fldr_name + "/"
+        print("Loading NN model")
+        agent.load_saved_NN(saved_dir)
+        agent.NN_avoid_overhead()
+        print("Loading log_loss")
+        agent.load_log_loss(saved_dir)
+        print("Loading parameters")
+        agent.load_param(filepath = saved_dir)
+        print("Loading replay buffer")
+        agent.load_replay_buffer(filepath = saved_dir)
+        #print(agent.memory_per.data[:60])
+        #print(list(agent.memory_per.data).count(0))
+        
+        print('training? y/n')              #学習を行うか?（training_flag）
+        ans = input()
+        if (ans == 'y'):
+            training_flag = True                
+            print('training')
+        else:
+            training_flag = False
+            print('test')
+            agent.epsilon = 0
 
+        """
+        use_folder = input()                                   
         #指定フォルダの存在確認とデータの読み込み
         #データがあればload_flagはTrueになり、データが読み込まれる。
-        load_flag = agent.load_model(model_path = use_folder)
-
+        load_flag = agent.load_model(model_path= use_folder)
         if load_flag:                           #データが存在している場合…
             print('Model load has been done')
             print('training? y/n')              #学習を行うか?（training_flag）
@@ -75,21 +98,22 @@ if __name__ == "__main__":
         else:                                   #データが存在していない場合…
             print('No model data')
             sys.exit()                          #終了
+        """
 
     else:                                       #既存のモデルを使わない場合…
         print('Progam starts without loading a model')
         training_flag = True
     
     #各種log保存先指定
-    log = logger(folder = save_file)
+    log = logger(folder = save_dir)
     env = Environment(agent.keep_frames)                         #Environmentクラスのインスタンス作成
-    vi = visual_nn(folder = save_file)        
-    mi = visual_minibach(folder = save_file)
-    ac = visual_act(folder = save_file)
+    vi = visual_nn(folder = save_dir)        
+    mi = visual_minibach(folder = save_dir)
+    ac = visual_act(folder = save_dir)
     
     #print("press y to start")                   #未実装
     #print("Start after 3 seconds")
-    #stime.sleep(3)
+    time.sleep(3)
 
     Time_start = time.time()
 #try:
@@ -103,6 +127,7 @@ if __name__ == "__main__":
         terminal = False                        #終状態フラグ（もとはTrue）
         data = True                             #?
         com_fail = False                        #通信に失敗した場合にTrueにする。
+        score = 0                               #累積報酬
 
         #状態を格納するdequeを作成
         #この中でstart_espも行われる。（現在の初期送信データ長は4）
@@ -126,13 +151,13 @@ if __name__ == "__main__":
             
             #操作量をPID計算
             #state_currentはFRAMES個の状態を保持
-            #state_current[0]が最新の状態で、state_current[0][5]が最新の状態におけるYaw角
+            #state_current[0]が最新の状態で、state_current[0][YAW_INDEX]が最新の状態におけるYaw角
             #delta_timeは微積分の近似で用いる時間幅
             #modeはSaturationブロック有効化を決めるフラグ
-            t_1 = time.time() - t_start
+            #t_1 = time.time() - t_start
             #print("t_1:", end = "")
             #print(t_1)
-            diff = pid.calculate_output(current_value = int(state_current[0][5]), delta_time = (int)(ti), mode = True)
+            diff = pid.calculate_output(current_value = int(state_current[0][YAW_INDEX]), delta_time = (int)(ti), mode = True)
 
             #出力を変えるモータが逆な気がする…
             if diff > 0:                            #操作量が正なら…
@@ -142,7 +167,7 @@ if __name__ == "__main__":
                 actions[0] = pwm_def                
                 actions[1] = pwm_def + diff - ER    #左側のモータ出力を下げる
 
-            print(actions)
+            #print(actions)
             env.execute_action_(actions)            #機体にモータ出力の変更内容を送信
 
             """
@@ -150,7 +175,7 @@ if __name__ == "__main__":
                 agent.experience_replay()           #経験再生
             """
 
-            t_2 = time.time() - t_start
+            #t_2 = time.time() - t_start
             #print("t_2:", end = "")
             #print(t_2)
 
@@ -161,33 +186,41 @@ if __name__ == "__main__":
             try:
                 state_next, ti, ti_ = env.observe_update_state_pid_2(pid = p_gain)
             except:
+                print("Communication Failure")
                 com_fail = True
-                break 
-            t_20 = time.time() - t_start
+                break
+            #t_20 = time.time() - t_start
             #print("t_20:", end = "")
             #print(t_20)
 
             reward = env.observe_reward(state_next)     #Yaw角の0.0度からのずれに基づいた報酬を観測
+            score += reward
 
-            t_21 = time.time() - t_start
+            #t_21 = time.time() - t_start
             #print("t_21:", end = "")
             #print(t_21)
+
+            #EPOCHの最後(各EpochのN_FRAMES目)ならば、terminalをTrueにする。
+            if j == N_FRAMES - 1:
+                terminal = True
 
             #経験保存
             #agent.store_experience(state_current, action, reward, state_next, terminal)
             #agent.store_transition(state_current,action,reward, state_next,terminal)
             agent.store_transition_with_priority(state_current, action, reward, state_next, terminal)
             
-            t_3 = time.time() - t_start
+            #t_3 = time.time() - t_start
             #print("t_3:", end = "")
             #print(t_3)
 
             #進捗表示
             u_i = pid.I*I_GAIN  #Igainによる操作量（=I_gain*偏差の蓄積（積分））
-            print( "Epoch:%d" % i, 
-                    "STEP:%d" % j, 
+            epoch = i + agent.episode_in_advance
+            print( "Epoch:%d" % epoch, 
+                    "STEP:%d" % j,
+                    "Grobal_STEP:%d" % agent.global_step, 
                     "Latest state:" + str(state_next[0]), 
-                    "Yaw angle:%f" % agent.log_yaw_angle[-1],
+                    "Yaw angle:%f" % float(state_next[0][YAW_INDEX]),
                     "Reward:%d" % reward,
                     "Epsilon:%4f" % agent.epsilon, 
                     "u_I:%6f" % u_i)
@@ -197,13 +230,16 @@ if __name__ == "__main__":
                 #agent.experience_replay()           #経験再生(NNパラメータのミニバッチ学習を行う)
                 agent.learn()
             
-            t_4 = time.time() - t_start
+            #t_4 = time.time() - t_start
             #print("t_4:", end = "")
             #print(t_4)
 
             #εのスケジューリング
+            
             if training_flag:                       #学習を行う場合…
-                agent.epsilon -= 0.1/3000           #ランダム行動確率を下げていく。
+                #agent.epsilon -= 0.1/3000          #ランダム行動確率を下げていく。
+                agent.update_epsilon()
+                pass                                #モデルの変化を考慮して、探索させる確率を下げない。
             else:                                   #学習を行わない場合…
                 agent.epsilon = 0                   #ランダム行動はさせない。
 
@@ -216,11 +252,27 @@ if __name__ == "__main__":
             #ステップ数のカウント
             agent.global_step += 1
 
-            t_5 = time.time() - t_start
+            #t_5 = time.time() - t_start
+
+        if com_fail:
+            print(com_fail)
+            agent.save_NN_model(filepath = save_dir)
+            agent.buffer_param(save_dir)
+            break
+
+        agent.episode += 1    
             #print("t_5:", end = "")
             #print(t_5)
-        if com_fail:
-            break
+
+        #NNの保存
+        #エピソードごとに保存しておく。(Wiflyの通信が切れたときを想定)
+        #agent.save_model(filepath = save_dir)
+        agent.save_NN_model(filepath = save_dir)
+
+        #エピソード終了時の変数の値を保持しておく。
+        #テキスト等への書き出しは、学習終了後に行う。
+        agent.buffer_param(save_dir)
+        agent.link_log_loss()
     
     #時間計測用
     Time = time.time() - Time_start
@@ -236,9 +288,10 @@ if __name__ == "__main__":
     env.execute_action_([0,0])
     env.execute_action_([0,0])
     env.execute_action_([0,0])
+    env.communicator.serial_close()     #念のため追加
 
     agent.hyper_params()
-    agent.save_model()          #NNモデルの保存
+    #agent.save_NN_model()      #NNモデルの保存
     agent.debug_nn()            #q_evalの重みとバイアスをtxtファイルで保存
     agent.debug_memory()        #リプレイバッファに保存されている遷移のうち、状態のみをcsv出力
     agent.debug_minibatch()     #minibatch_indexのlogをCSV出力(未実装)
@@ -275,5 +328,11 @@ if __name__ == "__main__":
     mi.visualize()
     #ac.visualize()
 
+    agent.save_param(filepath = save_dir)
+    agent.save_score(save_dir, score)
+    agent.save_log_loss(filepath = save_dir)
+
     print("finish")
+    print(save_dir)
+    print(score)
     print("Time:%2f" % Time)

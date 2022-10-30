@@ -1,9 +1,11 @@
 #tensorflow 2
 
+from msilib.schema import tables
 import os
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.models import load_model
 #from tensorflow.keras.models import load_model
 from collections import deque
 from datetime import datetime
@@ -19,10 +21,9 @@ import random
 
 import warnings
 warnings.filterwarnings('ignore')
-
 import time
-
 import os
+
 #--------------------------const, directory name, model name, etc...-------------------------
 MODEL_NAME = "WiflyDual_DQN"# + str(datetime.today())[0:10]
 MODEL_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
@@ -34,29 +35,32 @@ DUELING = False
 DOUBLE = False
 
 #行動空間設定
-N_ACTIONS = 5
+N_ACTIONS = 6
 ENABLE_ACTIONS = [i for i in range(N_ACTIONS)]
 
 #hyperparameter for DQN
 LEARNING_RATE = 0.02
 DISCOUNT_FACTOR = 0.95
-MINIBATCH_SIZE = 32
+MINIBATCH_SIZE = 16
 REPLAY_MEMORY_SIZE = 10000
-EPSILON = 0.1
-EPSILON_DEC = 1e-3
-EPSILON_END = 0.01
+#EPSILON = 0.1          #モデルの変化を考慮して、スケジューリングをしない。
+EPSILON = 1.0           #εの初期値
+EPSILON_DEC = 0.0009    #1000stepで1から0.1までεを減少させる。
+EPSILON_END = 0.1       #εの最終的な値
 KEEP_FRAMES = 4
-STATE_VARIABLES = 7     #状態変数の数
-COPY_PERIOD = 20
-HIDDEN_1 = 30           
-HIDDEN_2 = 30
+STATE_VARIABLES = 4     #状態変数の数(PWM,PWM,Yaw,Pgain)
+COPY_PERIOD = 50
+HIDDEN_1 = 10           
+HIDDEN_2 = 10           #先行研究では5だが、Duelingでは2等分したいので偶数の10にする。
 
 #for PER
 ALPHA = 0.4
 BETA = 0
 BETA_INCREMENT = 0
-LERANING_PERIOD = 1
+LEARNING_PERIOD = 1 #
 MARGIN = 0.0001     #優先度が0になるのを防ぐための定数
+
+YAW_INDEX = 2
 
 #----------------------------------------------------------------------------------------------
 
@@ -110,9 +114,8 @@ class ReplayBuffer():
         self.mem_cntr += 1      #保存した経験の数をカウント
 
 class ReplayBuffer_PER():
-    write = 0   #葉ノード追加の回数
-    
     def __init__(self, capacity,input_dims,keep_frames):
+        self.write = 0                                   #葉ノード追加の回数
         self.capacity = capacity                         #Sumtreeの葉の最大数（格納できる要素の数）
         self.tree = np.zeros(2*capacity - 1)             #葉を含む全ノードの値を保持
         self.data = np.zeros(capacity, dtype = object)   #葉に対応する要素を保持
@@ -279,7 +282,7 @@ def build_dueling_dqn(lr, n_actions, input_dims, keep_frames, fc1_dims, fc2_dims
 
 
 class DQNAgent:
-    def __init__(self, folder = 'log'):
+    def __init__(self, folder ='log'):
         #ファイル関係
         self.name = os.path.splitext(os.path.basename(__file__))[0] #このスクリプトの拡張子を含まないファイル名を取得
         self.path = os.path.dirname(__file__)                       #このスクリプトのディレクトリを取得
@@ -312,15 +315,28 @@ class DQNAgent:
         self.hidden_1 = HIDDEN_1
         self.hidden_2 = HIDDEN_2
         
+        #各ネットワークのモデル保存名
+        self.q_eval_model_file = "q_eval.h5"
+        self.q_target_model_file = "q_target.h5"
+        self.v_eval_model_file = "v_eval.h5"
+        self.v_target_model_file = "v_target.h5"
+        self.adv_eval_model_file = "adv_eval.h5"
+        self.adv_target_model_file = "adv_target.h5"
+
         #PER
         self.memory_per = ReplayBuffer_PER(self.mem_size,self.state_variables,self.keep_frames)    
         self.p_initial = 1                                          #経験を保存する際の優先度（最大値）
         self.margin = MARGIN                                        #サンプリング確率が0になることを防ぐ定数
         self.alpha = ALPHA                                          #サンプリング確率に対する優先度の重視度を表すパラメータ
-        self.beta = BETA                                          #優先度付きサンプリングによるバイアスの修正具合を表すパラメータ
-        self.beta_increment = BETA_INCREMENT                        #betaを増加させる量
+        if self.per:
+            self.beta = BETA                                          #優先度付きサンプリングによるバイアスの修正具合を表すパラメータ
+            self.beta_increment = BETA_INCREMENT                        #betaを増加させる量
+        else:
+            self.beta = 0
+            self.beta_increment = 0
+        
         self.is_weight = np.power(self.mem_size,-self.beta)         #重点サンプリング重みの初期値
-        self.learning_period = LEARNING_RATE
+        self.learning_period = LEARNING_PERIOD
         self.past_states = 0
         self.past_q_target = 0
 
@@ -334,6 +350,7 @@ class DQNAgent:
         self.log_act = []                       #行動aのlog
         self.log_minibatch_index = []           #ミニバッチに採用された遷移reply_buffer内のindex
         self.log_loss = []                      #損失関数のlog
+        self.log_loss_buffer = []               #1エピソード分の損失関数のlog（ep.終了時にlog_lossに連結）
         self.log_v = []                         #NNの状態価値関数Vのlog
         self.log_adv = []                       #NNのアドバンテージ関数Aのlog
         self.log_p = []
@@ -358,18 +375,15 @@ class DQNAgent:
 
         #ダミーデータ処理
         #predict_on_batchやtrain_on_batchの初回呼び出しが遅いので、先に呼び出しておく。
-        data_dummy = np.array([[[0]*STATE_VARIABLES]*self.keep_frames]*self.batch_size)
-        buf1 = self.q_eval.predict_on_batch(data_dummy)
-        buf2 = self.q_target.predict_on_batch(data_dummy)
-        buf3 = np.copy(self.q_eval)
-        self.q_eval.train_on_batch(data_dummy, buf1)
-        self.q_eval.set_weights(self.q_eval.get_weights())
-        self.q_target.set_weights(self.q_target.get_weights())
-        buf4 = self.memory_per.total_p()
-        buf5 = np.empty((self.batch_size,1))
-        if self.dueling:
-            buf6 = self.v_eval.predict_on_batch(data_dummy)
-            buf7 = self.adv_eval.predict_on_batch(data_dummy)
+        self.NN_avoid_overhead()
+
+        #学習の経過を記録
+        self.episode = 0                #episode
+        self.episode_in_advance = 0     #事前に学習済みのエピソード数
+        self.trained_episode = 0        #学習済みのエピソード数の合計
+        self.trained_step = 0           #学習済みのステップ数
+        self.buffer_param(filepath = folder)
+
     """
     def build_dqn(lr, n_actions, input_dims, fc1_dims, fc2_dims):
         
@@ -389,6 +403,20 @@ class DQNAgent:
 
         return model
     """
+
+    def NN_avoid_overhead(self):
+        data_dummy = np.array([[[0]*self.state_variables]*self.keep_frames]*self.batch_size)
+        buf1 = self.q_eval.predict_on_batch(data_dummy)
+        buf2 = self.q_target.predict_on_batch(data_dummy)
+        buf3 = np.copy(self.q_eval)
+        self.q_eval.train_on_batch(data_dummy, buf1)
+        self.q_eval.set_weights(self.q_eval.get_weights())
+        self.q_target.set_weights(self.q_target.get_weights())
+        buf4 = self.memory_per.total_p()
+        buf5 = np.empty((self.batch_size,1))
+        if self.dueling:
+            buf6 = self.v_eval.predict_on_batch(data_dummy)
+            buf7 = self.adv_eval.predict_on_batch(data_dummy)
 
     def _per_loss(self, y_target, y_pred):
         #return tf.reduce_mean(self.is_weight * tf.math.squared_difference(y_target, y_pred))
@@ -441,6 +469,9 @@ class DQNAgent:
         self.log_act.append(log_action_buffer)
 
         return action
+
+    def update_epsilon(self):
+        self.epsilon = self.epsilon - self.eps_dec if self.epsilon > self.eps_min else self.eps_min
 
     def select_action_epsilon(self, state, act_count=0):
         """
@@ -568,14 +599,28 @@ class DQNAgent:
         #print(idxes_batch)
         else:
             #idxes_batch = np.random.choice(self.num_in_buffer, batch_size, replace = False)
+            
+            #randomサンプリング
             idxes_batch = random.sample(range(self.num_in_buffer), batch_size)
+            
+            """
+            #betaサンプリング
+            idxes_batch = []
+            while len(idxes_batch) != self.batch_size:
+                beta_int = int(self.num_in_buffer * np.random.beta(4,1))
+                idxes_batch.append(beta_int)
+                idxes_batch = list(set(idxes_batch))
+            """
+
+
             transitions = self.memory_per.data[idxes_batch]
+            #print(transitions.shape)
             for tran in transitions:
                 states.append(tran[0])
                 actions.append(tran[1])
                 rewards.append(tran[2])
                 states_.append(tran[3])
-                terminal.append(1 - tran[4])
+                terminal.append(1 - tran[4])    #（1-True or 1-False）
             p_in_tree = self.memory_per.tree[-self.memory_per.capacity:]
             p_sampled = p_in_tree[idxes_batch]
             is_weights = [[1] for i in range(batch_size)]
@@ -599,7 +644,7 @@ class DQNAgent:
         """
         #保存された経験が足りない場合は学習しない
         if self.num_in_buffer < self.batch_size:
-            self.global_step += 1
+            #self.global_step += 1
             return
         #各種ミニバッチ作成
         #states, actions, rewards, states_, dones, batch_idxes = self.memory.sample_buffer(self.batch_size)
@@ -636,15 +681,16 @@ class DQNAgent:
         self.update_priorities(p_list,batch_idxes)
 
         time_start3 = time.time()
+        
         #NNのパラメータ更新
         if self.global_step % self.learning_period == 0 or self.num_in_buffer == self.batch_size:
             loss = self.q_eval.train_on_batch(states, q_target)
-            self.log_loss.append(loss)
+            self.log_loss_buffer.append(loss)
             self.past_states = np.copy(states)
             self.past_q_target = np.copy(q_target)
         else:
             loss = self.q_eval.train_on_batch(self.past_states, self.past_q_target)
-            self.log_loss.append(loss)
+            self.log_loss_buffer.append(loss)
         
         #self.log_loss.append(self.q_eval.train_on_batch(states, q_target))
         #loss = self.q_eval.train_on_batch(states, q_target)
@@ -672,7 +718,7 @@ class DQNAgent:
         #self.epsilon = self.epsilon - self.eps_dec if self.epsilon > self.eps_min else self.eps_min
 
     def get_angle(self,states):
-        self.log_yaw_angle.append(float(states[0][5]))
+        self.log_yaw_angle.append(float(states[0][YAW_INDEX]))
 
     def create_checkpoint(self):
         #self.saver.save(self.sess, os.path.join(self.model_dir, self.checkpoint_name + datetime.now().strftime('%H%M%S')))
@@ -717,6 +763,74 @@ class DQNAgent:
         np.savetxt(self.folder + '/debug_b_fc2.csv', l3.get_weights()[1], delimiter=',')
         np.savetxt(self.folder + '/debug_W_out.csv', l4.get_weights()[0], delimiter=',')
         np.savetxt(self.folder + '/debug_b_out.csv', l4.get_weights()[1], delimiter=',')
+
+    def load_saved_NN(self, save_dir):
+        self.q_eval = load_model(save_dir + self.q_eval_model_file, custom_objects = {"_per_loss": self._per_loss})
+        self.q_target = load_model(save_dir + self.q_target_model_file, custom_objects = {"_per_loss":self._per_loss})
+        if self.dueling:
+            self.v_eval = load_model(save_dir  + self.v_eval_model_file, custom_objects = {"_per_loss":self._per_loss})
+            self.v_target = load_model(save_dir + self.v_target_model_file, custom_objects = {"_per_loss":self._per_loss})
+            self.adv_eval = load_model(save_dir + self.adv_eval_model_file, custom_objects = {"_per_loss":self._per_loss})
+            self.adv_target = load_model(save_dir + self.adv_target_model_file, custom_objects = {"_per_loss":self._per_loss})
+
+    def save_NN_model(self, filepath):
+        self.q_eval.save(filepath + "/" + self.q_eval_model_file)
+        self.q_target.save(filepath + "/" + self.q_target_model_file)
+        if self.dueling:
+            self.v_eval.save(filepath + "/" +self.v_eval_model_file)
+            self.v_target.save(filepath + "/"+  self.v_target_model_file)
+            self.adv_eval.save(filepath + "/" + self.adv_eval_model_file)
+            self.adv_target.save(filepath + "/" + self.adv_target_model_file)
+
+    def load_param(self, filepath):
+        with open(filepath + "trained_episode.txt") as f:
+            self.episode_in_advance = int(f.read())
+        with open(filepath + "trained_step.txt") as f:
+            self.global_step = int(f.read())
+        with open(filepath + "epsilon.txt") as f:
+            self.epsilon = float(f.read())
+        if self.per:
+            with open(filepath + "beta.txt") as f:
+                self.beta = float(f.read())
+
+    def save_param(self,filepath):
+        with open(filepath + "/trained_episode.txt", mode = "w") as name:
+            print(self.trained_episode, file = name)
+        with open(filepath + "/trained_step.txt", mode = "w") as name:
+            print(self.trained_step, file = name)
+        with open(filepath + "/epsilon.txt", mode = "w") as name:
+            print(self.last_epsilon, file = name)
+        with open(filepath + "/num_in_buffer.txt", mode = "w") as name:
+            print(self.num_in_buffer, file = name)
+        with open(filepath + "/write.txt", mode = "w") as name:
+            print(self.last_write, file = name)
+        if self.per:
+            with open(filepath + "/beta.txt", mode  = "w") as name:
+                print(self.last_beta, file = name)
+
+    def save_score(self, filepath, score):
+        with open(filepath + "/score.txt", mode = "w") as name:
+            print(score, file = name)
+
+    def buffer_param(self, filepath):
+        #最新のエピソード終了時の変数を記録
+        self.last_epsilon = self.epsilon
+        self.trained_episode = self.episode + self.episode_in_advance
+        self.trained_step = self.global_step
+        self.last_num_in_buffer = self.num_in_buffer
+        self.last_write = self.memory_per.write
+        if self.per:
+            self.last_beta = self.beta
+        np.save(filepath + "/tree", self.memory_per.tree)
+        np.save(filepath + "/data", self.memory_per.data)
+
+    def load_replay_buffer(self, filepath):
+        with open(filepath + "num_in_buffer.txt") as f:
+            self.num_in_buffer = int(f.read())
+        with open(filepath + "write.txt") as f:
+            self.memory_per.write = int(f.read())
+        self.memory_per.tree = np.load(file = filepath + "tree.npy")
+        self.memory_per.data = np.load(file = filepath + "data.npy", allow_pickle = True)
 
     def debug_memory(self):
         with open(self.folder + '/debug_memory.csv', 'w') as f:
@@ -783,6 +897,22 @@ class DQNAgent:
             print(type(self.log_loss))
             print(self.log_loss)
             writer.writerows(list(self.log_loss))
+
+    def load_log_loss(self, filepath):
+        with open(filepath + "log_loss.csv") as name:
+            reader =list(csv.reader(name))
+            for rdr in reader[0]:
+                #print(rdr)
+                self.log_loss.append(float(rdr))
+
+    def link_log_loss(self):
+        self.log_loss += self.log_loss_buffer
+        self.log_loss_buffer = []
+
+    def save_log_loss(self, filepath):
+        with open(filepath + "/log_loss.csv", mode = "w", newline = "") as f:
+            writer = csv.writer(f, lineterminator = "\n")
+            writer.writerow(self.log_loss)
 
     def check_loss(self):
         return self.log_loss

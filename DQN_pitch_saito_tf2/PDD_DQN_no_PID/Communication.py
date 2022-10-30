@@ -38,7 +38,10 @@ class Communicator():
         #self.__ser = serial.Serial(port_controller, 115200)
         self.__ser = serial.Serial(                     #SERIAL通信の設定
                         port_controller,                #COMの番号
-                        baudrate = 460800,
+                        #baudrate = 460800,             #もとのボーレート
+                        #baudrate = 115200,             #遅くしてみた。
+                        #baudrate = 57600,              #さらに遅くしてみた。(Lazurite時代と同じ)
+                        baudrate = 38400,               #9600, 14400, 19200, 28800
                         parity = serial.PARITY_NONE,
                         bytesize = serial.EIGHTBITS,
                         stopbits = serial.STOPBITS_ONE,
@@ -108,13 +111,16 @@ class Communicator():
         while True:
             #print(self.__ser.in_waiting)
             if self.__ser.in_waiting > 0:                                   #in_waitingはキャッシュ内に受信されたデータのbyte数を返す。 
+                #print("Data found")
                 self.__raw_data =self.__ser.readline().decode('utf-8')      #受信データを1行分読み取り、文字列に変換したものを取得
                 #print(self.__raw_data) 
                 #self.__ser.flushInput()
                 persed_data = self.__raw_data.split(",")                    #__raw_dataを","区切りにしたものを取得
+                print("persed_data:", end = "")
+                print(persed_data)
 
                 #print(persed_data)                    
-                #出力:[モータ1出力,モータ2出力,サーボ1,サーボ2,受信間隔,Pitch,Yaw,]  確認！
+                #出力:[モータ1出力,モータ2出力,サーボ1,サーボ2,受信間隔,Pitch,Yaw,Roll]
 
                 if len(persed_data) == byt:                                     #受信データ長が指定通りならば...
                     if persed_data[0] != " " and persed_data[0] != "":            #先頭の文字抜けが無ければ…
@@ -123,23 +129,34 @@ class Communicator():
                         delta_time = time.time() - self.time_last_receive       #最後の受信との時間間隔をPC側で記録
                         self.time_last_receive = time.time()                    #最後の受信時刻を更新  
                         receive_time_ = int(persed_data.pop(4))                 #機体側のマイコンで計測された受信間隔の読み取り（popなので削除もされる）
-                        persed_data.pop(-1)                                     #受信時刻の読み取り（popなので削除もされる）要確認!
+                        persed_data.pop(-1)                                     #Roll角削除
+                        #persed_data:[モータ出力1,モータ出力2,尾翼サーボ,重心移動機構サーボ,Pitch,Yaw]
                         
+                        #状態の整形
+                        for i in range(3):
+                            persed_data.pop(-2)
+
+                        #persed_data:[モータ出力1,モータ出力2,Yaw]
+
                         self.dataset_from_esp = persed_data                     #受信データとして記録
-                        #dataset_from_esp:[モータ出力1,モータ出力2,尾翼サーボ,重心移動機構サーボ,Pitch,Yaw]
+                        
                         self.__fail_counter = 0                                 #受信失敗回数をリセット
 
                         #受信データ、受信間隔（機体計測）、受信間隔(PC)を返す。
                         return self.dataset_from_esp, receive_time_, delta_time
                 else:
+                    print("Data found but length error.")
                     self.__ser.flushInput()         #受信キャッシュ内のデータを破棄（初期化）
 
             elif 10 <= self.__fail_counter <= 20:       #受信失敗回数が10回以上20回以下なら
+                print("Data not found. Send try_data.")
                 self.send_to_esp(try_data)              #データを送ってLazuriteを送信モードにすることを試みる
                 
             elif self.__fail_counter > 20:              #受信失敗回数が20回を超えているなら…
                 print("data receive timeout error!")    #タイムアウト（諦める）
                 return False , 0, 0                     #この場合はFalseを返すことに注意
+            else:
+                print("Data not found. Retry.")
 
             self.__fail_counter += 1                    #受信失敗回数を更新
             #time.sleep(0.005)
@@ -157,6 +174,7 @@ class Communicator():
             time.sleep(0.001)                       #時間調整（これがないと羽ばたき出力の変更が反映されない） 
         self.__data_sent = data_to_send             #送信済みデータとして記録
         time.sleep(0.001)                           #時間調整(超重要!!!これがないとデータ受信ができない)
+        #self.__ser.flush()
 
     def termination_switch(self, deta_to_send):
         """
