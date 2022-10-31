@@ -4,6 +4,8 @@ import numpy as np
 import random as rd
 import time
 from collections import deque
+import threading
+
 YAW_INDEX = 2
 FRAMES = 4      #維持フレーム数
 
@@ -47,6 +49,8 @@ class Environment():
     """
     def __init__(self, keep_frames):
         self.communicator = Communicator()
+        self.thread1 = threading.Thread(target=self.communicator.receive_from_esp)
+        self.thread1.start()
         #self.reset()
         self.params_to_send = default_params
         self.state = deque()
@@ -89,7 +93,8 @@ class Environment():
             #Lazuriteからデータを受信
             #正常に受信できれば、受信データ、受信した時間、前回受信との間隔が返ってくる
             #正常に受信できなかった場合、False,0,0が返ってくる
-            data, _, _ = self.communicator.receive_from_esp(byt = receive_byt)
+            #data, _, _ = self.communicator.receive_from_esp(byt = receive_byt)
+            data = [self.communicator.state[-1][0],self.communicator.state[-1][1],self.communicator.state[-1][2]]
 
             data.append(add)    #受信データにPgainを付け加える（data=Falseの場合RE?)
             #data:[モータ出力1,モータ出力2,サーボ1,サーボ2,Pitch,Yaw,Pgain]                                               
@@ -148,7 +153,11 @@ class Environment():
         #ESPからデータを受信
         #正常に受信できれば、受信データ、受信した時間、前回受信との間隔が返ってくる
         #正常に受信できなかった場合、False,0,0が返ってくる
-        data, ti, ti_ = self.communicator.receive_from_esp(byt = receive_byt)
+        #data, ti, ti_ = self.communicator.receive_from_esp(byt = receive_byt)
+
+        data = [self.communicator.state[-1][0],self.communicator.state[-1][1],self.communicator.state[-1][2]]
+        ti = self.communicator.state[-1][3]
+        ti_ = self.communicator.state[-1][4]
 
         data.append(pid)                    #受信データにPgainを付け加える（pid=0は引数が指定されなかった場合の値なので注意）
         self.update_2(data)

@@ -639,6 +639,7 @@ class DQNAgent:
         #exit()
         
     def learn(self):
+        time_start = time.time()
         """
         NNの重みとバイアスを学習
         """
@@ -655,10 +656,9 @@ class DQNAgent:
         self.log_p.append(ps)
 
         #Fixed-Targetを実装
-        #time_start = time.time()
         q_eval = self.q_target.predict(states)
         q_next = self.q_target.predict(states_)       
-        #time_start2 = time.time()
+        time_start2 = time.time()
         q_target = np.copy(q_eval)      #q_targetの値を書き換えて、教師データとしていく、
 
         #0~batch_size-1までの連番リストを取得

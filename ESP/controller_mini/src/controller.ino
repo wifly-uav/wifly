@@ -142,13 +142,17 @@ void setup() {
 
 void loop() {
   
+  //sprintf(send_pc, "%d,%d,%d,%d,%d,%d,%d,%d",re_data[0],re_data[1],re_data[2],re_data[3],re_data[4],re_data[5],re_data[6],re_data[7]);
+  //Serial.println(send_pc);
+  //Serial.flush();
+
   state.switch_c = digitalRead(pin.switch_c);
   state.switch_l = digitalRead(pin.switch_l);
   state.switch_r = digitalRead(pin.switch_r);
 
+  recieve_pc();
   if ((millis() - lastTime) > timerDelay) {
     if(state.switch_l == 1){
-      recieve_pc();
       for(int i=0;i<2;++i){
         data[i] = 254 - data_pc[i];
       }
@@ -261,9 +265,11 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
       }
     }
     */
+   
    sprintf(send_pc, "%d,%d,%d,%d,%d,%d,%d,%d",re_data[0],re_data[1],re_data[2],re_data[3],re_data[4],re_data[5],re_data[6],re_data[7]);
    Serial.println(send_pc);
    Serial.flush();
+   
 }
 
 void OnDataSent(const uint8_t* mac_addr, esp_now_send_status_t status) {

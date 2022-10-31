@@ -5,6 +5,7 @@ import datetime
 import csv
 import msvcrt
 import sys
+import threading
 
 RECEIVE_BYTE = 8    #receive_from_espの引数
 
@@ -63,6 +64,8 @@ class Communicator():
         '''
         
         time.sleep(0.5)
+
+        self.state = [0,0,0,0,0]
         
         print('Connected to controller')
 
@@ -84,7 +87,7 @@ class Communicator():
         """
         self.__ser.flushInput()                 #受信キャッシュをflush
         self.__ser.flushOutput()                #送信キャッシュをflush 
-        self.send_to_esp(data_to_send)          #data_to_sendをESPに送信
+        #self.send_to_esp(data_to_send)          #data_to_sendをESPに送信
         self.time_started = time.time()         #最初に送信した時間を記録
         #self.receive_from_laz(False, 5)
         self.time_last_receive = time.time()    #未使用?
@@ -143,24 +146,23 @@ class Communicator():
                         self.__fail_counter = 0                                 #受信失敗回数をリセット
 
                         #受信データ、受信間隔（機体計測）、受信間隔(PC)を返す。
-                        return self.dataset_from_esp, receive_time_, delta_time
+                        self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time])
+                        #return self.dataset_from_esp, receive_time_, delta_time
+                        #self.__ser.flushInput()         #受信キャッシュ内のデータを破棄（初期化）
                 else:
-                    print("Data found but length error.")
+                    #print("Data found but length error.")
                     self.__ser.flushInput()         #受信キャッシュ内のデータを破棄（初期化）
-
-            elif 10 <= self.__fail_counter <= 20:       #受信失敗回数が10回以上20回以下なら
-                print("Data not found. Send try_data.")
-                #self.send_to_esp(try_data)              #データを送ってLazuriteを送信モードにすることを試みる
                 
-            elif self.__fail_counter > 20:              #受信失敗回数が20回を超えているなら…
-                print("data receive timeout error!")    #タイムアウト（諦める）
-                return False , 0, 0                     #この場合はFalseを返すことに注意
+            #elif self.__fail_counter > 40:              #受信失敗回数が20回を超えているなら…
+                #print("data receive timeout error!")    #タイムアウト（諦める）
+                #return False , 0, 0                     #この場合はFalseを返すことに注意
             else:
-                print("Data not found. Retry.")
+                pass
+                #print("Data not found. Retry.")
 
             self.__fail_counter += 1                    #受信失敗回数を更新
             #time.sleep(0.005)
-            time.sleep(0.001)
+            time.sleep(0.02)
 
     def send_to_esp(self, data_to_send):
         """
@@ -169,11 +171,15 @@ class Communicator():
             data_to_send (list): 送信するデータ
         """
         self.__ser.flushOutput()                    #送信用キャッシュのflush
+        send_binary = bytes(data_to_send)
+        self.__ser.write(send_binary)
+        '''
         for datum in data_to_send:                  #data_to_sendの各要素を...
             self.__ser.write(bytes([int(datum)]))   #2進数に変換したものを送信
-            time.sleep(0.001)                       #時間調整（これがないと羽ばたき出力の変更が反映されない） 
+            time.sleep(0.001)                       #時間調整（これがないと羽ばたき出力の変更が反映されない）
         self.__data_sent = data_to_send             #送信済みデータとして記録
-        time.sleep(0.001)                           #時間調整(超重要!!!これがないとデータ受信ができない)
+        #time.sleep(0.001)                           #時間調整(超重要!!!これがないとデータ受信ができない)
+        '''
         #self.__ser.flush()
 
     def termination_switch(self, deta_to_send):
@@ -202,10 +208,13 @@ class Communicator():
 if __name__ == "__main__":
     communicator = Communicator()
     #[ヘッダ（定数）,羽モータ1,羽モータ2,角度1,角度2,コントロールモード]
-    output_values_to_esp = [255, 10, 20, 30, 40, 50]    #この値は適当
-    communicator.start_esp(output_values_to_esp)
-    print(output_values_to_esp)
+    #output_values_to_esp = [255, 10, 20, 30, 40, 50]    #この値は適当
+    #communicator.start_esp(output_values_to_esp)
+    #print(output_values_to_esp)
+    x = threading.Thread(target=communicator.receive_from_esp)
+    x.start()
     while True:
-        data, ti, _ = communicator.receive_from_esp(byt = 8)
-        print(str(data) + " " + str(ti))
-        communicator.send_to_esp([255,0,0,0,0,0])
+        #pass
+        #data, ti, ti2 = communicator.receive_from_esp(byt = 8)
+        print(communicator.state[-1])
+        #communicator.send_to_esp([255,0,0,0,0,0])

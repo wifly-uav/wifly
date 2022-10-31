@@ -13,8 +13,8 @@ import os
 import time
 
 N_EPOCHS = 1            #学習epoch数
-N_FRAMES = 200          #1epochあたりのステップ数
-I_GAIN = 0.0001         #0.0001
+N_FRAMES = 500          #1epochあたりのステップ数
+I_GAIN = 0.00001         #0.0001
 D_GAIN = 0              
 PWM_DEF = 209           #kitai側では+1されて195になる。
 ER = 0
@@ -216,7 +216,7 @@ if __name__ == "__main__":
             #進捗表示
             u_i = pid.I*I_GAIN  #Igainによる操作量（=I_gain*偏差の蓄積（積分））
             epoch = i + agent.episode_in_advance
-            '''
+            
             print( "Epoch:%d" % epoch, 
                     "STEP:%d" % j,
                     "Grobal_STEP:%d" % agent.global_step, 
@@ -224,8 +224,9 @@ if __name__ == "__main__":
                     "Yaw angle:%f" % float(state_next[0][YAW_INDEX]),
                     "Reward:%d" % reward,
                     "Epsilon:%4f" % agent.epsilon, 
-                    "u_I:%6f" % u_i)
-            '''
+                    "u_I:%6f" % u_i,
+                    "actions:" + str(254-actions[0])+","+ str(254-actions[1]))
+            
             #if (j != 0 and training_flag == True):
             if training_flag == True:
                 #agent.experience_replay()           #経験再生(NNパラメータのミニバッチ学習を行う)
@@ -254,6 +255,9 @@ if __name__ == "__main__":
             agent.global_step += 1
 
             #t_5 = time.time() - t_start
+            #print("t_5:", end = "")
+            #print(t_5)
+            time.sleep(0.02)
 
         if com_fail:
             print(com_fail)
@@ -337,3 +341,4 @@ if __name__ == "__main__":
     print(save_dir)
     print(score)
     print("Time:%2f" % Time)
+    print("state_len:" + str(len(env.communicator.state)))
