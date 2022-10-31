@@ -1,3 +1,4 @@
+
 #include <esp_now.h>
 #include <WiFi.h>
 
@@ -8,9 +9,10 @@ unsigned long lastTime = 0;
 unsigned long timerDelay = 60;  // send readings timer
 size_t data_pc_;
 uint8_t data_pc[5] = {0};
-int re_data[5] = {0};
-double re_data_angle[4] = {0};
+int re_data[11] = {0};
+double re_data_angle[3] = {0};
 int eular[3] = {0};
+char send_pc[40];
 int left_pwm,right_pwm,servo_angle,cog_angle;
 uint8_t data[5];
 
@@ -145,12 +147,12 @@ void loop() {
   state.switch_r = digitalRead(pin.switch_r);
 
   if ((millis() - lastTime) > timerDelay) {
-    if(state.slider_l == 2){
+    if(state.switch_l == 1){
       recieve_pc();
       for(int i=0;i<2;++i){
         data[i] = 254 - data_pc[i];
       }
-      for(int i=2;i<5;++i){
+      for(int i=2;i<4;++i){
         data[i] = data_pc[i];
       }
     }else{
@@ -224,29 +226,6 @@ void qu2eu(int eular[3], double quotanion[4]){
   eular[0] = flag ? atan2(2 * y * z + 2 * x * w, 2 * w * w + 2 * y * y - 1)/PI*180 : atan2(-(2 * y * z - 2 * x * w), 2 * w * w + 2 * z * z - 1)/PI*180;
   eular[1] = flag ? atan2(2 * x * z + 2 * y * w, 2 * w * w + 2 * x * x - 1)/PI*180 : 0;
   eular[2] = a/PI*180;
-
-  /*
-  double ysqr = 0;
-  double t0,t1,t2,t3,t4 = 0;
-
-  ysqr = y * y;
-
-  // roll (x-axis rotation)
-  t0 = +2.0 * (w * x + y * z);
-  t1 = +1.0 - 2.0 * (x * x + ysqr);
-  eular[0] = atan2(t0, t1)/PI*180;
-
-  // pitch (y-axis rotation)
-  t2 = +2.0 * (w * y - z * x);
-  t2 = t2 > 1.0 ? 1.0 : t2;
-  t2 = t2 < -1.0 ? -1.0 : t2;
-  eular[1] = asin(t2)/PI*180;
-
-  // yaw (z-axis rotation)
-  t3 = +2.0 * (w * z + x * y);
-  t4 = +1.0 - 2.0 * (ysqr + z * z);  
-  eular[2] = atan2(t3, t4)/PI*180;
-  */
 }
 
 void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
@@ -258,29 +237,33 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     //Serial.printf("Last Packet Recv from: %s\n", macStr);
     //Serial.printf("Last Packet Recv Data(%d): ", data_len);
     //Serial.println();
-    
-    for (int i = 0; i < data_len; i++) {
-        if(i > 4){
-          re_data_angle[i-5] = data[i]*0.01-1;
-        }else{
-          re_data[i] = data[i];
-        }
-    }
     for (int i = 0; i < 5; i++) {
+      re_data[i] = data[i];
+      //Serial.print(re_data[i]);
+      //Serial.print(",");
+    }
+    if(data[5] != 0){
+      re_data[5] = data[5];
+    }else{
+      re_data[5] = -1*data[6];
+    }
+    if(data[7] != 0){
+      re_data[6] = data[7];
+    }else{
+      re_data[6] = -1*data[8];
+    }
+    re_data[7] = data[9]+data[10];
+    /*
+    for(int i = 5; i<8; i++){
       Serial.print(re_data[i]);
-      if(i != 4){
+      if(i!=7){
         Serial.print(",");
       }
     }
-    qu2eu(eular,re_data_angle);
-    Serial.print(",");
-    for (int i = 0; i < 3; i++) {
-      Serial.print(eular[i]);
-      if(i != 2){
-        Serial.print(",");
-      }
-    }
-    Serial.println();
+    */
+   sprintf(send_pc, "%d,%d,%d,%d,%d,%d,%d,%d",re_data[0],re_data[1],re_data[2],re_data[3],re_data[4],re_data[5],re_data[6],re_data[7]);
+   Serial.println(send_pc);
+   Serial.flush();
 }
 
 void OnDataSent(const uint8_t* mac_addr, esp_now_send_status_t status) {
