@@ -26,9 +26,15 @@ class visual_nn:
         middle_layer_2 = W_fc2.shape[1]
         output_layer = W_out.shape[1]
 
+        max_w = max(W_fc1.max(),W_fc2.max(),W_out.max())
+        weight_bias = 30/max_w
+
         b_fc1 = np.loadtxt(self.folder + '/debug_b_fc1.csv', delimiter=',')
         b_fc2 = np.loadtxt(self.folder + '/debug_b_fc2.csv', delimiter=',')
         #b_out = np.loadtxt(os.path.join(path,'debug/debug_b_out.csv'), delimiter=',')
+
+        max_b = max(b_fc1.max(),b_fc2.max())
+        b_bias = 10/max_b
 
         #position
         input = np.zeros((input_layer,2))
@@ -170,5 +176,5 @@ if __name__ == "__main__":
     save_folder = input()
     save_file = os.path.join(path, 'result', save_folder)
 
-    vi = visual_nn(folder=save_file)
+    vi = visual_nn(flag=True,folder=save_file)
     vi.visualize()
