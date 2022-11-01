@@ -50,7 +50,7 @@ if __name__ == "__main__":
             sys.exit()
     
     #DQNAgentクラスのインスタンス作成（NNの初期化やReplayMemoryの用意がされる）
-    agent = DQNAgent(folder = save_dir)                      
+    agent = DQNAgent(folder = save_dir, mode='none')                      
     
     print('Use saved progress? y/n')               #既存のモデル（学習済みNN）を使うか?
     ans_yn = input()
@@ -112,8 +112,11 @@ if __name__ == "__main__":
     ac = visual_act(folder = save_dir)
     
     #print("press y to start")                   #未実装
-    #print("Start after 3 seconds")
-    time.sleep(3)
+    print("2 sec")
+    time.sleep(1)
+    print("1 sec")
+    time.sleep(1)
+    print("start")
 
     Time_start = time.time()
 #try:
@@ -205,9 +208,8 @@ if __name__ == "__main__":
                 terminal = True
 
             #経験保存
-            #agent.store_experience(state_current, action, reward, state_next, terminal)
-            #agent.store_transition(state_current,action,reward, state_next,terminal)
-            agent.store_transition_with_priority(state_current, action, reward, state_next, terminal)
+            agent.store_transition(state_current,action,reward, state_next,terminal)
+            #agent.store_transition_with_priority(state_current, action, reward, state_next, terminal)
             
             #t_3 = time.time() - t_start
             #print("t_3:", end = "")
@@ -225,7 +227,8 @@ if __name__ == "__main__":
                     "Reward:%d" % reward,
                     "Epsilon:%4f" % agent.epsilon, 
                     "u_I:%6f" % u_i,
-                    "actions:" + str(254-actions[0])+","+ str(254-actions[1]))
+                    "actions:" + str(254-actions[0])+","+ str(254-actions[1]),
+                    "dt:%d" %ti)
             
             #if (j != 0 and training_flag == True):
             if training_flag == True:

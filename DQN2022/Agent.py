@@ -41,7 +41,7 @@ ENABLE_ACTIONS = [i for i in range(N_ACTIONS)]
 #hyperparameter for DQN
 LEARNING_RATE = 0.02
 DISCOUNT_FACTOR = 0.95
-MINIBATCH_SIZE = 16
+MINIBATCH_SIZE = 4
 REPLAY_MEMORY_SIZE = 10000
 #EPSILON = 0.1          #モデルの変化を考慮して、スケジューリングをしない。
 EPSILON = 0.1           #εの初期値
@@ -83,7 +83,7 @@ class ReplayBuffer():
         max_mem = min(self.mem_cntr, self.mem_size)
 
         #0~max_mem-1までの整数乱数batch_size個取得（重複無し）
-        batch = np.random.choice(max_mem, batch_size, replace=False)
+        batch = np.random.choice(max_mem, batch_size, replace=True)
 
         #state_memory[batch]とすると、state_memoryのうち、batchの要素と一致する添え字だけが抜き出されたリストが得られる。
         #つまり、各メモリーから乱数で選ばれた番号の要素を抜き出している（ミニバッチの作成）
@@ -93,7 +93,7 @@ class ReplayBuffer():
         actions = self.action_memory[batch]
         terminal = self.terminal_memory[batch]
 
-        return states, actions, rewards, states_, terminal, batch
+        return np.array(states), actions, rewards, states_, terminal, batch
 
     def store_transition(self, state, action, reward, state_, done):
         
@@ -303,7 +303,7 @@ class DQNAgent:
         self.n_action = N_ACTIONS
 
         #vanilla-DQN
-        #self.memory = ReplayBuffer(REPLAY_MEMORY_SIZE,STATE_VARIABLES)   #ReplayBufferクラスのインスタンス作成
+        self.memory = ReplayBuffer(REPLAY_MEMORY_SIZE,STATE_VARIABLES)   #ReplayBufferクラスのインスタンス作成
         self.learning_rate = LEARNING_RATE
         self.gamma = DISCOUNT_FACTOR
         self.epsilon = EPSILON
@@ -325,7 +325,7 @@ class DQNAgent:
         self.v_target_model_file = "v_target.h5"
         self.adv_eval_model_file = "adv_eval.h5"
         self.adv_target_model_file = "adv_target.h5"
-
+        '''
         #PER
         self.memory_per = ReplayBuffer_PER(self.mem_size,self.state_variables,self.keep_frames)    
         self.p_initial = 1                                          #経験を保存する際の優先度（最大値）
@@ -337,8 +337,8 @@ class DQNAgent:
         else:
             self.beta = 0
             self.beta_increment = 0
-        
-        self.is_weight = np.power(self.mem_size,-self.beta)         #重点サンプリング重みの初期値
+        '''
+        #self.is_weight = np.power(self.mem_size,-self.beta)         #重点サンプリング重みの初期値
         self.learning_period = LEARNING_PERIOD
         self.past_states = 0
         self.past_q_target = 0
@@ -362,6 +362,7 @@ class DQNAgent:
 
         self.folder = folder
 
+        #TODO
         self.target_nn,_,_= build_dqn(LEARNING_RATE, 1, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
         self.predictor_nn,_,_= build_dqn(LEARNING_RATE, 1, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
 
@@ -396,35 +397,18 @@ class DQNAgent:
         self.trained_step = 0           #学習済みのステップ数
         self.buffer_param(filepath = folder)
 
-    """
-    def build_dqn(lr, n_actions, input_dims, fc1_dims, fc2_dims):
-        
-        #NNの作成
-        
-        model = keras.Sequential([
-
-            #Denseは全結合ユニット
-            #ユニット数、（入力層のユニット数）、活性化関数が引数
-            #入力のユニット数の指定には、input_dim=とinput_shape=があるらしい。
-            keras.layers.Dense(fc1_dims, input_shape=(input_dims,), activation='relu'), #中間層1(入力層の情報を加えてあるので要確認)
-            keras.layers.Dense(fc2_dims, activation='relu'),                            #中間層2
-            keras.layers.Dense(n_actions, activation=None)])                            #出力層
-        
-        #最適化アルゴリズム、誤差関数を指定する
-        model.compile(optimizer=Adam(learning_rate=lr), loss='mean_squared_error')
-
-        return model
-    """
-
     def NN_avoid_overhead(self):
         data_dummy = np.array([[[0]*self.state_variables]*self.keep_frames]*self.batch_size)
+        if self.mode == 'RND':
+            extend_dummy = np.array([[[0]*2]*self.keep_frames]*self.batch_size)
+            data_dummy = np.append(data_dummy,extend_dummy,axis=2)
         buf1 = self.q_eval.predict_on_batch(data_dummy)
         buf2 = self.q_target.predict_on_batch(data_dummy)
         buf3 = np.copy(self.q_eval)
         self.q_eval.train_on_batch(data_dummy, buf1)
         self.q_eval.set_weights(self.q_eval.get_weights())
         self.q_target.set_weights(self.q_target.get_weights())
-        buf4 = self.memory_per.total_p()
+        #buf4 = self.memory_per.total_p()
         buf5 = np.empty((self.batch_size,1))
         if self.dueling:
             buf6 = self.v_eval.predict_on_batch(data_dummy)
@@ -445,6 +429,9 @@ class DQNAgent:
         random_action_flag = 0      #random行動が選択された場合は1,argmaxQ行動が選択された場合は0
 
         states = np.array([keep_states])         #観測された状態をリスト化
+        if self.mode == 'RND':
+            extend = np.zeros((1,self.keep_frames,2))
+            states = np.append(states,extend,axis=2)
 
         #NNからstateにおける各行動に対する行動価値関数の推定値を受け取る。
         #NNのモデルに対しpredict_on_batchメソッドを実行すると、出力される。
@@ -481,13 +468,6 @@ class DQNAgent:
         self.log_act.append(log_action_buffer)
 
         return action
-
-    def rnd_reward(self, keep_states):
-        states = np.array([keep_states])
-        target_val = self.target_nn.predict_on_batch(states)
-        predict_val = self.predictor_nn.predict_on_batch(states)
-
-        return (target_val-predict_val)*(target_val-predict_val)
 
     def update_epsilon(self):
         self.epsilon = self.epsilon - self.eps_dec if self.epsilon > self.eps_min else self.eps_min
@@ -543,13 +523,13 @@ class DQNAgent:
         self.log_act.append([act])
         return act
 
-    # train the network by replaying experience
 
     def store_transition(self, state, action, reward, new_state, done):
         """
         経験の保存
         """
         self.memory.store_transition(state, action, reward, new_state, done)
+        self.num_in_buffer = min(self.num_in_buffer + 1, self.mem_size) #保存されている経験の数を記録
     
     def store_transition_with_priority(self, state, action, reward, state_, done):
 
@@ -657,7 +637,7 @@ class DQNAgent:
         #print("tree_total" + str(self.memory_per.tree[0]))
         #exit()
         
-    def learn(self):
+    def learn(self, beta = 1):
         time_start = time.time()
         """
         NNの重みとバイアスを学習
@@ -667,17 +647,39 @@ class DQNAgent:
             #self.global_step += 1
             return
         #各種ミニバッチ作成
-        #states, actions, rewards, states_, dones, batch_idxes = self.memory.sample_buffer(self.batch_size)
-        states, actions, rewards, states_, dones, batch_idxes, self.is_weight, ps = self.sample_buffer_per(self.batch_size)
+        states, actions, rewards, states_, dones, batch_idxes = self.memory.sample_buffer(self.batch_size)
+        #states, actions, rewards, states_, dones, batch_idxes, self.is_weight, ps = self.sample_buffer_per(self.batch_size)
+        #TODO
+        if self.mode == 'RND':
+            rewards_in = np.zeros((self.batch_size),dtype=np.float32)
+            states_list = np.zeros((self.batch_size,self.keep_frames,2),dtype=np.float32)
+            states__list = np.zeros((self.batch_size,self.keep_frames,2),dtype=np.float32)
+            rnd_target = np.zeros(self.batch_size,dtype=np.float32)
+
+            for i in range(self.batch_size):
+                states3 = np.array([states[i]])
+                target_val = self.target_nn.predict_on_batch(states3)
+                predict_val = self.predictor_nn.predict_on_batch(states3)
+                rnd_target[i] = target_val
+                error = pow(target_val-predict_val,2)
+                print(error)
+                rewards_in[i] = beta*min(error[0][0]*0.01,50)
+                extend_state = np.array([[rewards_in[i],beta]]*self.keep_frames)
+                states_list[i] = extend_state
+
+            loss = self.predictor_nn.train_on_batch(states,rnd_target)
+
+            states = np.append(states,states_list,axis=2)
+            states_ = np.append(states_,states__list,axis=2)
+            rewards = rewards + rewards_in
 
         #minibatch_indexのlog格納
         self.log_minibatch_index.append(batch_idxes)
-        self.log_p.append(ps)
+        #self.log_p.append(ps)
 
         #Fixed-Targetを実装
         q_eval = self.q_target.predict(states)
-        q_next = self.q_target.predict(states_)       
-        time_start2 = time.time()
+        q_next = self.q_target.predict(states_)
         q_target = np.copy(q_eval)      #q_targetの値を書き換えて、教師データとしていく、
 
         #0~batch_size-1までの連番リストを取得
@@ -691,6 +693,7 @@ class DQNAgent:
         else:
             q_target[batch_index, actions] = rewards + self.gamma * np.max(q_next, axis=1)* dones
 
+        '''
         #優先度pの更新
         #clipped error(安定性のためにTDerrorを-1~1にクリッピング(論文にも書かれている))
         abs_td_error_list = np.abs(q_target[batch_index, actions] - q_eval[batch_index, actions]) + self.margin
@@ -698,9 +701,8 @@ class DQNAgent:
         p_list = np.power(clipped_error, self.alpha)
         #print(p_list)
         self.update_priorities(p_list,batch_idxes)
+        '''
 
-        time_start3 = time.time()
-        
         #NNのパラメータ更新
         if self.global_step % self.learning_period == 0 or self.num_in_buffer == self.batch_size:
             loss = self.q_eval.train_on_batch(states, q_target)
@@ -821,8 +823,8 @@ class DQNAgent:
             print(self.last_epsilon, file = name)
         with open(filepath + "/num_in_buffer.txt", mode = "w") as name:
             print(self.num_in_buffer, file = name)
-        with open(filepath + "/write.txt", mode = "w") as name:
-            print(self.last_write, file = name)
+        #with open(filepath + "/write.txt", mode = "w") as name:
+        #    print(self.last_write, file = name)
         if self.per:
             with open(filepath + "/beta.txt", mode  = "w") as name:
                 print(self.last_beta, file = name)
@@ -837,19 +839,21 @@ class DQNAgent:
         self.trained_episode = self.episode + self.episode_in_advance
         self.trained_step = self.global_step
         self.last_num_in_buffer = self.num_in_buffer
+        '''
         self.last_write = self.memory_per.write
         if self.per:
             self.last_beta = self.beta
         np.save(filepath + "/tree", self.memory_per.tree)
         np.save(filepath + "/data", self.memory_per.data)
+        '''
 
     def load_replay_buffer(self, filepath):
         with open(filepath + "num_in_buffer.txt") as f:
             self.num_in_buffer = int(f.read())
-        with open(filepath + "write.txt") as f:
-            self.memory_per.write = int(f.read())
-        self.memory_per.tree = np.load(file = filepath + "tree.npy")
-        self.memory_per.data = np.load(file = filepath + "data.npy", allow_pickle = True)
+        #with open(filepath + "write.txt") as f:
+        #    self.memory_per.write = int(f.read())
+        #self.memory_per.tree = np.load(file = filepath + "tree.npy")
+        #self.memory_per.data = np.load(file = filepath + "data.npy", allow_pickle = True)
 
     def debug_memory(self):
         with open(self.folder + '/debug_memory.csv', 'w') as f:

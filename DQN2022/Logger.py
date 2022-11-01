@@ -92,19 +92,13 @@ class logger():
         time_ = []
         for i in self.log2:
             angle.append(int(i[0]))
-            time_.append(int(i[-2]))
-        
-        med = statistics.median(time_)
+            time_.append(int(i[-1]))
+
         sum = 0
         time = []
-
         for i in time_:
-            if i < 0:
-                i = med
-            if i > 200:
-                i = med
-            sum += i
-            time.append(sum/1000)
+            sum += i*0.001
+            time.append(sum)
         
         plt.plot(time,angle)
         #plt.ylim(-90,90)
