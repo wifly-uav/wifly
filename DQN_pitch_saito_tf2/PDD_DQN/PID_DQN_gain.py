@@ -80,6 +80,8 @@ if __name__ == "__main__":
             print('test')
             agent.epsilon = 0
 
+        #agent.epsilon = 1.0
+
         """
         use_folder = input()                                   
         #指定フォルダの存在確認とデータの読み込み
