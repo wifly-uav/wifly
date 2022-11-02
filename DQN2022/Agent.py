@@ -35,20 +35,20 @@ DUELING = False
 DOUBLE = False
 
 #行動空間設定
-N_ACTIONS = 6
+N_ACTIONS = 5
 ENABLE_ACTIONS = [i for i in range(N_ACTIONS)]
 
 #hyperparameter for DQN
 LEARNING_RATE = 0.02
 DISCOUNT_FACTOR = 0.95
-MINIBATCH_SIZE = 4
+MINIBATCH_SIZE = 16
 REPLAY_MEMORY_SIZE = 10000
 #EPSILON = 0.1          #モデルの変化を考慮して、スケジューリングをしない。
 EPSILON = 0.1           #εの初期値
 EPSILON_DEC = 0    #1000stepで1から0.1までεを減少させる。
 EPSILON_END = 0.1       #εの最終的な値
 KEEP_FRAMES = 4
-STATE_VARIABLES = 4     #状態変数の数(PWM,PWM,Yaw,Pgain)
+STATE_VARIABLES = 3     #状態変数の数(PWM,PWM,Yaw,Pgain)
 COPY_PERIOD = 50
 HIDDEN_1 = 10           
 HIDDEN_2 = 10           #先行研究では5だが、Duelingでは2等分したいので偶数の10にする。
