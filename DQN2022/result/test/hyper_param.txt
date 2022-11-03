@@ -6,7 +6,7 @@ ep:0.100000
 ep_end:0.100000
 ep_dec:0.000000
 RM_size:10000
-MB_size:4
+MB_size:8
 CP:50
 hidden_1:10
 hidden_2:10

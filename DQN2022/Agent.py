@@ -35,20 +35,21 @@ DUELING = False
 DOUBLE = False
 
 #行動空間設定
-N_ACTIONS = 5
+N_ACTIONS = 6
 ENABLE_ACTIONS = [i for i in range(N_ACTIONS)]
 
 #hyperparameter for DQN
 LEARNING_RATE = 0.02
+RND_LEARNING_RATE = 0.01
 DISCOUNT_FACTOR = 0.95
-MINIBATCH_SIZE = 16
+MINIBATCH_SIZE = 8
 REPLAY_MEMORY_SIZE = 10000
 #EPSILON = 0.1          #モデルの変化を考慮して、スケジューリングをしない。
 EPSILON = 0.1           #εの初期値
 EPSILON_DEC = 0    #1000stepで1から0.1までεを減少させる。
 EPSILON_END = 0.1       #εの最終的な値
 KEEP_FRAMES = 4
-STATE_VARIABLES = 3     #状態変数の数(PWM,PWM,Yaw,Pgain)
+STATE_VARIABLES = 4     #状態変数の数(PWM,PWM,Yaw,Pgain)
 COPY_PERIOD = 50
 HIDDEN_1 = 10           
 HIDDEN_2 = 10           #先行研究では5だが、Duelingでは2等分したいので偶数の10にする。
@@ -325,7 +326,8 @@ class DQNAgent:
         self.v_target_model_file = "v_target.h5"
         self.adv_eval_model_file = "adv_eval.h5"
         self.adv_target_model_file = "adv_target.h5"
-        '''
+        self.rnd_target_model_file = "rnd_target.h5"
+        self.rnd_predictor_model_file = "rnd_predictor.h5"
         #PER
         self.memory_per = ReplayBuffer_PER(self.mem_size,self.state_variables,self.keep_frames)    
         self.p_initial = 1                                          #経験を保存する際の優先度（最大値）
@@ -337,7 +339,6 @@ class DQNAgent:
         else:
             self.beta = 0
             self.beta_increment = 0
-        '''
         #self.is_weight = np.power(self.mem_size,-self.beta)         #重点サンプリング重みの初期値
         self.learning_period = LEARNING_PERIOD
         self.past_states = 0
@@ -363,8 +364,9 @@ class DQNAgent:
         self.folder = folder
 
         #TODO
-        self.target_nn,_,_= build_dqn(LEARNING_RATE, 1, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
-        self.predictor_nn,_,_= build_dqn(LEARNING_RATE, 1, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+        self.rnd_reward = []
+        self.target_nn,_,_= build_dqn(RND_LEARNING_RATE, 1, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+        self.predictor_nn,_,_= build_dqn(RND_LEARNING_RATE, 1, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
 
         if self.mode=='RND':
             state_num = STATE_VARIABLES+2
@@ -408,7 +410,7 @@ class DQNAgent:
         self.q_eval.train_on_batch(data_dummy, buf1)
         self.q_eval.set_weights(self.q_eval.get_weights())
         self.q_target.set_weights(self.q_target.get_weights())
-        #buf4 = self.memory_per.total_p()
+        buf4 = self.memory_per.total_p()
         buf5 = np.empty((self.batch_size,1))
         if self.dueling:
             buf6 = self.v_eval.predict_on_batch(data_dummy)
@@ -647,8 +649,8 @@ class DQNAgent:
             #self.global_step += 1
             return
         #各種ミニバッチ作成
-        states, actions, rewards, states_, dones, batch_idxes = self.memory.sample_buffer(self.batch_size)
-        #states, actions, rewards, states_, dones, batch_idxes, self.is_weight, ps = self.sample_buffer_per(self.batch_size)
+        #states, actions, rewards, states_, dones, batch_idxes = self.memory.sample_buffer(self.batch_size)
+        states, actions, rewards, states_, dones, batch_idxes, self.is_weight, ps = self.sample_buffer_per(self.batch_size)
         #TODO
         if self.mode == 'RND':
             rewards_in = np.zeros((self.batch_size),dtype=np.float32)
@@ -662,15 +664,16 @@ class DQNAgent:
                 predict_val = self.predictor_nn.predict_on_batch(states3)
                 rnd_target[i] = target_val
                 error = pow(target_val-predict_val,2)
-                print(error)
+                #print(error)
                 rewards_in[i] = beta*min(error[0][0]*0.01,50)
                 extend_state = np.array([[rewards_in[i],beta]]*self.keep_frames)
                 states_list[i] = extend_state
 
-            loss = self.predictor_nn.train_on_batch(states,rnd_target)
+            self.predictor_nn.train_on_batch(states,rnd_target)
 
             states = np.append(states,states_list,axis=2)
             states_ = np.append(states_,states__list,axis=2)
+            #self.rnd_reward.append(rewards_in)
             rewards = rewards + rewards_in
 
         #minibatch_indexのlog格納
@@ -693,7 +696,7 @@ class DQNAgent:
         else:
             q_target[batch_index, actions] = rewards + self.gamma * np.max(q_next, axis=1)* dones
 
-        '''
+
         #優先度pの更新
         #clipped error(安定性のためにTDerrorを-1~1にクリッピング(論文にも書かれている))
         abs_td_error_list = np.abs(q_target[batch_index, actions] - q_eval[batch_index, actions]) + self.margin
@@ -701,7 +704,6 @@ class DQNAgent:
         p_list = np.power(clipped_error, self.alpha)
         #print(p_list)
         self.update_priorities(p_list,batch_idxes)
-        '''
 
         #NNのパラメータ更新
         if self.global_step % self.learning_period == 0 or self.num_in_buffer == self.batch_size:
@@ -785,6 +787,44 @@ class DQNAgent:
         np.savetxt(self.folder + '/debug_W_out.csv', l4.get_weights()[0], delimiter=',')
         np.savetxt(self.folder + '/debug_b_out.csv', l4.get_weights()[1], delimiter=',')
 
+    def debug_rnd_target_nn(self):
+        l1 = self.target_nn.layers[0]
+        l2 = self.target_nn.layers[1]
+        l3 = self.target_nn.layers[2]
+        l4 = self.target_nn.layers[3]
+        with open(self.folder + '/rnd_t_debug.csv', 'a') as f:
+            np.savetxt(f, l2.get_weights()[0])
+            np.savetxt(f, l2.get_weights()[1])
+            np.savetxt(f, l3.get_weights()[0])
+            np.savetxt(f, l3.get_weights()[1])
+            np.savetxt(f, l4.get_weights()[0])
+            np.savetxt(f, l4.get_weights()[1]) 
+        np.savetxt(self.folder + '/rnd_t_debug_W_fc1.csv', l2.get_weights()[0], delimiter=',')
+        np.savetxt(self.folder + '/rnd_t_debug_b_fc1.csv', l2.get_weights()[1], delimiter=',')
+        np.savetxt(self.folder + '/rnd_t_debug_W_fc2.csv', l3.get_weights()[0], delimiter=',')
+        np.savetxt(self.folder + '/rnd_t_debug_b_fc2.csv', l3.get_weights()[1], delimiter=',')
+        np.savetxt(self.folder + '/rnd_t_debug_W_out.csv', l4.get_weights()[0], delimiter=',')
+        np.savetxt(self.folder + '/rnd_t_debug_b_out.csv', l4.get_weights()[1], delimiter=',')
+
+    def debug_rnd_predictor_nn(self):
+        l1 = self.predictor_nn.layers[0]
+        l2 = self.predictor_nn.layers[1]
+        l3 = self.predictor_nn.layers[2]
+        l4 = self.predictor_nn.layers[3]
+        with open(self.folder + '/rnd_p_debug.csv', 'a') as f:
+            np.savetxt(f, l2.get_weights()[0])
+            np.savetxt(f, l2.get_weights()[1])
+            np.savetxt(f, l3.get_weights()[0])
+            np.savetxt(f, l3.get_weights()[1])
+            np.savetxt(f, l4.get_weights()[0])
+            np.savetxt(f, l4.get_weights()[1]) 
+        np.savetxt(self.folder + '/rnd_p_debug_W_fc1.csv', l2.get_weights()[0], delimiter=',')
+        np.savetxt(self.folder + '/rnd_p_debug_b_fc1.csv', l2.get_weights()[1], delimiter=',')
+        np.savetxt(self.folder + '/rnd_p_debug_W_fc2.csv', l3.get_weights()[0], delimiter=',')
+        np.savetxt(self.folder + '/rnd_p_debug_b_fc2.csv', l3.get_weights()[1], delimiter=',')
+        np.savetxt(self.folder + '/rnd_p_debug_W_out.csv', l4.get_weights()[0], delimiter=',')
+        np.savetxt(self.folder + '/rnd_p_debug_b_out.csv', l4.get_weights()[1], delimiter=',')
+
     def load_saved_NN(self, save_dir):
         self.q_eval = load_model(save_dir + self.q_eval_model_file, custom_objects = {"_per_loss": self._per_loss})
         self.q_target = load_model(save_dir + self.q_target_model_file, custom_objects = {"_per_loss":self._per_loss})
@@ -794,6 +834,10 @@ class DQNAgent:
             self.adv_eval = load_model(save_dir + self.adv_eval_model_file, custom_objects = {"_per_loss":self._per_loss})
             self.adv_target = load_model(save_dir + self.adv_target_model_file, custom_objects = {"_per_loss":self._per_loss})
 
+    def load_rnd_NN(self, save_dir):
+        self.target_nn = load_model(save_dir + self.rnd_target_model_file, custom_objects = {"_per_loss": self._per_loss})
+        self.predictor_nn = load_model(save_dir + self.rnd_predictor_model_file, custom_objects = {"_per_loss":self._per_loss})
+
     def save_NN_model(self, filepath):
         self.q_eval.save(filepath + "/" + self.q_eval_model_file)
         self.q_target.save(filepath + "/" + self.q_target_model_file)
@@ -802,6 +846,11 @@ class DQNAgent:
             self.v_target.save(filepath + "/"+  self.v_target_model_file)
             self.adv_eval.save(filepath + "/" + self.adv_eval_model_file)
             self.adv_target.save(filepath + "/" + self.adv_target_model_file)
+
+
+    def save_rnd_model(self, filepath):
+        self.target_nn.save(filepath + "/" + self.rnd_target_model_file)
+        self.predictor_nn.save(filepath + "/" + self.rnd_predictor_model_file)
 
     def load_param(self, filepath):
         with open(filepath + "trained_episode.txt") as f:
@@ -862,6 +911,7 @@ class DQNAgent:
 
     def debug_minibatch(self):
         #print(self.minibatch_ind)
+        self.minibatch_index_log = np.array(self.log_minibatch_index)
         np.savetxt(self.folder + '/debug_minibatch.csv', self.minibatch_index_log, delimiter=',', fmt='%s')
 
     def debug_minibatch_2(self):
@@ -893,6 +943,11 @@ class DQNAgent:
         with open(self.folder + '/debug_yaw.csv', 'w') as f:
             writer = csv.writer(f, lineterminator ='\n')
             writer.writerow(list(self.log_yaw_angle))
+
+    def debug_rnd(self):
+        with open(self.folder + '/debug_rnd.csv', 'w') as f:
+            writer = csv.writer(f, lineterminator ='\n')
+            writer.writerows(self.rnd_reward)
 
     def hyper_params(self):
         with open(self.folder + "/hyper_param.txt", mode = "w") as name:

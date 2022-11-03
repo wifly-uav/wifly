@@ -20,10 +20,10 @@ PWM_DEF = 209           #kitai側では+1されて195になる。
 ER = 0
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
-PID = 'False'
-FFPID = 'True'
-INC = 'True'
-MODE = 'none'
+PID = 'True'
+FFPID = 'False'
+INC = 'False'
+MODE = 'RND'
 
 if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     saturations = [0,100]           #PID操作量の制限
     pwm_def = PWM_DEF               #モーター出力デフォルト値(Environmemtのdefault_paramsもチェック)
     pid = calc_PID(saturations)     #calc_PIDクラスのインスタンス作成（__init__が呼び出され、初期化が行われる）
-    param = [1.5,I_GAIN,D_GAIN,0]   #[P-gain,I-gain,D-gain,Target Yaw angle]
+    param = [3,I_GAIN,D_GAIN,0]   #[P-gain,I-gain,D-gain,Target Yaw angle]
     ti = 10                         #PIDの微積分計算で用いる最小の時間幅
     actions = [pwm_def, pwm_def]    #行動ベクトル（両翼のモータ出力）
     pid.update_params(param)        #paramの値をcalc_PIDクラスに反映
@@ -65,6 +65,8 @@ if __name__ == "__main__":
         saved_dir = save_dir + "/../" + fldr_name + "/"
         print("Loading NN model")
         agent.load_saved_NN(saved_dir)
+        if MODE == "RND":
+            agent.load_rnd_NN(saved_dir)
         agent.NN_avoid_overhead()
         print("Loading log_loss")
         agent.load_log_loss(saved_dir)
@@ -102,9 +104,10 @@ if __name__ == "__main__":
     time.sleep(1)
     print("start")
 
-    Time_start = time.time()
 #try:
     for i in range(N_EPOCHS):                   #N_EPOCHSごとに各パラメータを初期化
+
+        start = time.time()
         #init
         #frame = 0                              #未使用                    
         loss = 0.0                              #NN損失関数
@@ -128,14 +131,14 @@ if __name__ == "__main__":
         state_next = env.observe_state()        #次状態（FRAMES=4個分の初期状態が格納されたstate）を観測
 
         for j in range(N_FRAMES):
-            t_start = time.time()
+            Time_start = time.time()
             state_current = state_next                      #次状態を現在の状態とする
             agent.get_angle(state_current)                  #現在の状態から、Yaw角を取得して記録する(log用)
 
             action = agent.choose_action(state_current)     #ε-greedy方策によってactionを決定
 
             if PID == 'True':
-                p_gain = env.execute_action_gain(action)        #actionに対応するPgainを取得
+                p_gain = env.execute_action_gain((int)(action))        #actionに対応するPgainを取得
                 param = [p_gain,I_GAIN,D_GAIN,0]                #paramを更新（Pgainを更新）
                 pid.update_params(param)                        #calc_PIDクラスにparamの変更を反映
                 
@@ -149,12 +152,21 @@ if __name__ == "__main__":
                 #出力を変えるモータが逆な気がする…
                 if diff > 0:                            #操作量が正なら…
                     actions[0] = pwm_def - diff         #右側のモータ出力を下げる
-                    actions[1] = pwm_def - ER           #ER=0なので気にしなくて良い
+                    actions[1] = pwm_def           #ER=0なので気にしなくて良い
                 else:                                   #操作量が負なら…
                     actions[0] = pwm_def                
-                    actions[1] = pwm_def + diff - ER    #左側のモータ出力を下げる
+                    actions[1] = pwm_def + diff    #左側のモータ出力を下げる
 
                 env.execute_action_(actions)            #機体にモータ出力の変更内容を送信
+            elif FFPID == 'True':
+                diff = pid.calculate_output(current_value = int(state_current[0][YAW_INDEX]), delta_time = (int)(ti), mode = True)
+                if diff > 0:                            #操作量が正なら…
+                    actions[0] = pwm_def - diff         #右側のモータ出力を下げる
+                    actions[1] = pwm_def           #ER=0なので気にしなくて良い
+                else:                                   #操作量が負なら…
+                    actions[0] = pwm_def                
+                    actions[1] = pwm_def + diff    #左側のモータ出力を下げる
+                env.excute_action_pid((int)(action), actions)
             
             else:
                 if INC == 'True':
@@ -200,8 +212,8 @@ if __name__ == "__main__":
                 terminal = True
 
             #経験保存
-            agent.store_transition(state_current,action,reward, state_next,terminal)
-            #agent.store_transition_with_priority(state_current, action, reward, state_next, terminal)
+            #agent.store_transition(state_current,action,reward, state_next,terminal)
+            agent.store_transition_with_priority(state_current, action, reward, state_next, terminal)
             
             #t_3 = time.time() - t_start
             #print("t_3:", end = "")
@@ -253,12 +265,16 @@ if __name__ == "__main__":
             #t_5 = time.time() - t_start
             #print("t_5:", end = "")
             #print(t_5)
-            time.sleep(0.02)
+            Time_end = time.time()
+            while (Time_end-Time_start<0.04):
+                Time_end = time.time()
 
         if com_fail:
             print(com_fail)
             agent.save_NN_model(filepath = save_dir)
             agent.buffer_param(save_dir)
+            if MODE == 'RND':
+                agent.save_rnd_model(filepath = save_dir)
             break
 
         agent.episode += 1    
@@ -269,6 +285,8 @@ if __name__ == "__main__":
         #エピソードごとに保存しておく。(Wiflyの通信が切れたときを想定)
         #agent.save_model(filepath = save_dir)
         agent.save_NN_model(filepath = save_dir)
+        if MODE == 'RND':
+            agent.save_rnd_model(filepath = save_dir)
 
         #エピソード終了時の変数の値を保持しておく。
         #テキスト等への書き出しは、学習終了後に行う。
@@ -276,7 +294,7 @@ if __name__ == "__main__":
         agent.link_log_loss()
     
     #時間計測用
-    Time = time.time() - Time_start
+    Time = time.time() - start
     
 #except :
 #except KeyboardInterrupt:
@@ -294,6 +312,10 @@ if __name__ == "__main__":
     agent.hyper_params()
     #agent.save_NN_model()      #NNモデルの保存
     agent.debug_nn()            #q_evalの重みとバイアスをtxtファイルで保存
+    if MODE == 'RND':
+        agent.debug_rnd_target_nn()
+        agent.debug_rnd_predictor_nn()
+        agent.debug_rnd()
     agent.debug_memory()        #リプレイバッファに保存されている遷移のうち、状態のみをcsv出力
     agent.debug_minibatch()     #minibatch_indexのlogをCSV出力(未実装)
     agent.debug_minibatch_2()   #自作ver!

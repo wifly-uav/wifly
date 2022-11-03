@@ -245,7 +245,7 @@ class Environment():
             return 4.5
         elif action == 4:
             return 6
-        else:
+        elif action == 5:
             return 9
     
     def excute_action_inc(self, action, actions):
@@ -277,26 +277,32 @@ class Environment():
         return self.params_to_send[RIGHT_WING],self.params_to_send[LEFT_WING]
     
     def excute_action_pid(self, action, actions):
-        if action == 1:
-            self.params_to_send[RIGHT_WING]=actions[0]
+        if action == 0:
+            self.params_to_send[RIGHT_WING]=actions[0]-30
+            self.params_to_send[LEFT_WING]=actions[1]
+        elif action == 1:
+            self.params_to_send[RIGHT_WING]=actions[0]-20
             self.params_to_send[LEFT_WING]=actions[1]
         elif action == 2:
-            self.params_to_send[RIGHT_WING]=actions[0]+10
+            self.params_to_send[RIGHT_WING]=actions[0]-10
             self.params_to_send[LEFT_WING]=actions[1]
         elif action == 3:
             self.params_to_send[RIGHT_WING]=actions[0]
-            self.params_to_send[LEFT_WING]=actions[1]+10
+            self.params_to_send[LEFT_WING]=actions[1]
         elif action == 4:
-            self.params_to_send[RIGHT_WING]=actions[0]+20
+            self.params_to_send[RIGHT_WING]=actions[0]
             self.params_to_send[LEFT_WING]=actions[1]
         elif action == 5:
             self.params_to_send[RIGHT_WING]=actions[0]
-            self.params_to_send[LEFT_WING]=actions[1]+20
-        elif action == 6:
-            self.params_to_send[RIGHT_WING]=actions[0]+30
             self.params_to_send[LEFT_WING]=actions[1]
-        else:
+        elif action == 6:
             self.params_to_send[RIGHT_WING]=actions[0]
-            self.params_to_send[LEFT_WING]=actions[1]+30
+            self.params_to_send[LEFT_WING]=actions[1]-10
+        elif action == 7:
+            self.params_to_send[RIGHT_WING]=actions[0]
+            self.params_to_send[LEFT_WING]=actions[1]-20
+        elif action == 8:
+            self.params_to_send[RIGHT_WING]=actions[0]
+            self.params_to_send[LEFT_WING]=actions[1]-30
 
-        self.communicator.send_to_laz(self.params_to_send)
+        self.communicator.send_to_esp(self.params_to_send)

@@ -95,6 +95,7 @@ class Communicator():
             list or bool: 通信が成功した場合は、マイコンから送られてきたデータのlist、失敗した場合は、False
             float: 前回受信してからの時間
         """
+        start = time.time()
         while True:
             if self.__ser.in_waiting > 0:                                   #in_waitingはキャッシュ内に受信されたデータのbyte数を返す。 
                 self.__raw_data =self.__ser.readline().decode('utf-8')      #受信データを1行分読み取り、文字列に変換したものを取得
@@ -124,6 +125,10 @@ class Communicator():
 
                         #受信データ、受信間隔（機体計測）、受信間隔(PC)を返す。
                         self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time])
+                        end = time.time()
+                        while(end-start<0.04):
+                            end=time.time()
+                        start = end
                 else:
                     #print("Data found but length error.")
                     self.__ser.flushInput()         #受信キャッシュ内のデータを破棄（初期化）
@@ -132,7 +137,6 @@ class Communicator():
                 #print("Data not found. Retry.")
 
             self.__fail_counter += 1                    #受信失敗回数を更新
-            time.sleep(0.02)
 
     def send_to_esp(self, data_to_send):
         """

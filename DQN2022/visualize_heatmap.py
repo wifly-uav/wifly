@@ -16,9 +16,10 @@ class visual_minibach():
 
     def visualize(self):
 
+        #TODO
         #print(list(min))
         self.m = np.loadtxt(self.folder + '/debug_minibatch.csv', delimiter=',')
-        for i in list(self.m):
+        for i in list(self.m[0]):
             if i != -1.0:
                 self.n.append(i)
                 self.minibatch.append(i)
