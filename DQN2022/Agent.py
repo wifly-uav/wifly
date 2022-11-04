@@ -35,21 +35,21 @@ DUELING = False
 DOUBLE = False
 
 #行動空間設定
-N_ACTIONS = 6
+N_ACTIONS = 17
 ENABLE_ACTIONS = [i for i in range(N_ACTIONS)]
 
 #hyperparameter for DQN
 LEARNING_RATE = 0.02
 RND_LEARNING_RATE = 0.01
 DISCOUNT_FACTOR = 0.95
-MINIBATCH_SIZE = 8
-REPLAY_MEMORY_SIZE = 10000
+MINIBATCH_SIZE = 16
+REPLAY_MEMORY_SIZE = 30000
 #EPSILON = 0.1          #モデルの変化を考慮して、スケジューリングをしない。
 EPSILON = 0.1           #εの初期値
 EPSILON_DEC = 0    #1000stepで1から0.1までεを減少させる。
 EPSILON_END = 0.1       #εの最終的な値
 KEEP_FRAMES = 4
-STATE_VARIABLES = 4     #状態変数の数(PWM,PWM,Yaw,Pgain)
+STATE_VARIABLES = 3     #状態変数の数(PWM,PWM,Yaw,Pgain,Igain)
 COPY_PERIOD = 50
 HIDDEN_1 = 10           
 HIDDEN_2 = 10           #先行研究では5だが、Duelingでは2等分したいので偶数の10にする。
@@ -94,7 +94,7 @@ class ReplayBuffer():
         actions = self.action_memory[batch]
         terminal = self.terminal_memory[batch]
 
-        return np.array(states), actions, rewards, states_, terminal, batch
+        return states, actions, rewards, states_, terminal, batch
 
     def store_transition(self, state, action, reward, state_, done):
         
@@ -113,6 +113,25 @@ class ReplayBuffer():
         self.terminal_memory[index] = int(done)
 
         self.mem_cntr += 1      #保存した経験の数をカウント
+
+    def save_buffer(self, folder):
+        np.save(folder+'/state_memory.npy',self.state_memory)
+        np.save(folder+'/new_state_memory.npy',self.new_state_memory)
+        np.save(folder+'/reward_memory.npy',self.reward_memory)
+        np.save(folder+'/action_memory.npy',self.action_memory)
+        np.save(folder+'/terminal_memory.npy',self.terminal_memory)
+        np.save(folder+'/mem_cntr.npy',np.array(self.mem_cntr))
+
+    def load_buffer(self, folder):
+        self.state_memory = np.load(folder+'/state_memory.npy')
+        self.new_state_memory = np.load(folder+'/new_state_memory.npy')
+        self.reward_memory = np.load(folder+'/reward_memory.npy')
+        self.action_memory = np.load(folder+'/action_memory.npy')
+        self.terminal_memory = np.load(folder+'/terminal_memory.npy')
+        self.mem_cntr = np.load(folder+'/mem_cntr.npy')
+        print(self.mem_cntr)
+        
+
 
 class ReplayBuffer_PER():
     def __init__(self, capacity,input_dims,keep_frames):
@@ -286,6 +305,7 @@ class DQNAgent:
     def __init__(self, folder ='log', mode='none'):
 
         self.mode = mode
+        self.folder = folder
 
         #ファイル関係
         self.name = os.path.splitext(os.path.basename(__file__))[0] #このスクリプトの拡張子を含まないファイル名を取得
@@ -361,7 +381,6 @@ class DQNAgent:
         #self.epsilon_act = 0
         #self.action_old = 0
 
-        self.folder = folder
 
         #TODO
         self.rnd_reward = []
@@ -391,6 +410,8 @@ class DQNAgent:
         #ダミーデータ処理
         #predict_on_batchやtrain_on_batchの初回呼び出しが遅いので、先に呼び出しておく。
         self.NN_avoid_overhead()
+        if self.mode =='RND':
+            self.NN_RND_avoid_overhead()
 
         #学習の経過を記録
         self.episode = 0                #episode
@@ -415,6 +436,12 @@ class DQNAgent:
         if self.dueling:
             buf6 = self.v_eval.predict_on_batch(data_dummy)
             buf7 = self.adv_eval.predict_on_batch(data_dummy)
+
+    def NN_RND_avoid_overhead(self):
+        data_dummy = np.array([[[0]*self.state_variables]*self.keep_frames]*self.batch_size)
+        buf1 = self.target_nn.predict_on_batch(data_dummy)
+        buf2 = self.predictor_nn.predict_on_batch(data_dummy)
+        self.predictor_nn.train_on_batch(data_dummy, buf2)
 
     def _per_loss(self, y_target, y_pred):
         #return tf.reduce_mean(self.is_weight * tf.math.squared_difference(y_target, y_pred))
@@ -640,7 +667,7 @@ class DQNAgent:
         #exit()
         
     def learn(self, beta = 1):
-        time_start = time.time()
+        #time_start = time.time()
         """
         NNの重みとバイアスを学習
         """
@@ -649,32 +676,32 @@ class DQNAgent:
             #self.global_step += 1
             return
         #各種ミニバッチ作成
-        #states, actions, rewards, states_, dones, batch_idxes = self.memory.sample_buffer(self.batch_size)
-        states, actions, rewards, states_, dones, batch_idxes, self.is_weight, ps = self.sample_buffer_per(self.batch_size)
+        states, actions, rewards, states_, dones, batch_idxes = self.memory.sample_buffer(self.batch_size)
+        
+        #states, actions, rewards, states_, dones, batch_idxes, self.is_weight, ps = self.sample_buffer_per(self.batch_size)
         #TODO
         if self.mode == 'RND':
-            rewards_in = np.zeros((self.batch_size),dtype=np.float32)
-            states_list = np.zeros((self.batch_size,self.keep_frames,2),dtype=np.float32)
             states__list = np.zeros((self.batch_size,self.keep_frames,2),dtype=np.float32)
-            rnd_target = np.zeros(self.batch_size,dtype=np.float32)
+            beta_list = np.array([[[beta]]*self.keep_frames]*self.batch_size)
 
-            for i in range(self.batch_size):
-                states3 = np.array([states[i]])
-                target_val = self.target_nn.predict_on_batch(states3)
-                predict_val = self.predictor_nn.predict_on_batch(states3)
-                rnd_target[i] = target_val
-                error = pow(target_val-predict_val,2)
-                #print(error)
-                rewards_in[i] = beta*min(error[0][0]*0.01,50)
-                extend_state = np.array([[rewards_in[i],beta]]*self.keep_frames)
-                states_list[i] = extend_state
+            target_val = self.target_nn.predict_on_batch(states)
+            predict_val = self.predictor_nn.predict_on_batch(states)
+            error = np.square(target_val-predict_val)*0.01
+            rewards_in = np.ravel(np.clip(error,0,50)*beta)
+            rewards_in_ = np.array([[[rewards_in[0]]]*self.keep_frames])
+            for i in range(self.batch_size-1):
+                rewards_in__ = np.array([[[rewards_in[i+1]]]*self.keep_frames])
+                rewards_in_ = np.append(rewards_in_,rewards_in__,axis=0)
+            
+            self.predictor_nn.train_on_batch(states,target_val)
 
-            self.predictor_nn.train_on_batch(states,rnd_target)
-
-            states = np.append(states,states_list,axis=2)
+            states = np.append(states,rewards_in_,axis=2)
+            states = np.append(states,beta_list,axis=2)
             states_ = np.append(states_,states__list,axis=2)
-            #self.rnd_reward.append(rewards_in)
+            rewards_in = np.ravel(rewards_in)
+            self.rnd_reward.append(rewards_in)
             rewards = rewards + rewards_in
+            #time_start2 = time.time()
 
         #minibatch_indexのlog格納
         self.log_minibatch_index.append(batch_idxes)
@@ -696,7 +723,7 @@ class DQNAgent:
         else:
             q_target[batch_index, actions] = rewards + self.gamma * np.max(q_next, axis=1)* dones
 
-
+        '''
         #優先度pの更新
         #clipped error(安定性のためにTDerrorを-1~1にクリッピング(論文にも書かれている))
         abs_td_error_list = np.abs(q_target[batch_index, actions] - q_eval[batch_index, actions]) + self.margin
@@ -704,6 +731,7 @@ class DQNAgent:
         p_list = np.power(clipped_error, self.alpha)
         #print(p_list)
         self.update_priorities(p_list,batch_idxes)
+        '''
 
         #NNのパラメータ更新
         if self.global_step % self.learning_period == 0 or self.num_in_buffer == self.batch_size:
@@ -724,7 +752,6 @@ class DQNAgent:
         self.log_loss.append(float_loss)
         """
         #print(self.log_loss)
-        a = time.time()
 
         if (self.global_step % self.copy_period == 0):
             print("Copy Weight")
@@ -737,7 +764,7 @@ class DQNAgent:
             self.q_target.set_weights(self.q_eval.get_weights())
 
         #print(loss)
-        #print("time:" + str(a-time_start) + " , " + str(time_start2-time_start) + " , "  + str(time_start3-time_start2) + " , "  + str(a-time_start3))
+        #print("time:" + str(time_start2-time_start))
         #self.epsilon = self.epsilon - self.eps_dec if self.epsilon > self.eps_min else self.eps_min
 
     def get_angle(self,states):

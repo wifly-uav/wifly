@@ -20,7 +20,8 @@ PWM_DEF = 209           #kitai側では+1されて195になる。
 ER = 0
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
-PID = 'True'
+PID = 'False'
+ADD_I = 'False'
 FFPID = 'False'
 INC = 'False'
 MODE = 'RND'
@@ -32,7 +33,7 @@ if __name__ == "__main__":
     pwm_def = PWM_DEF               #モーター出力デフォルト値(Environmemtのdefault_paramsもチェック)
     pid = calc_PID(saturations)     #calc_PIDクラスのインスタンス作成（__init__が呼び出され、初期化が行われる）
     param = [3,I_GAIN,D_GAIN,0]   #[P-gain,I-gain,D-gain,Target Yaw angle]
-    ti = 10                         #PIDの微積分計算で用いる最小の時間幅
+    ti = 40                         #PIDの微積分計算で用いる最小の時間幅
     actions = [pwm_def, pwm_def]    #行動ベクトル（両翼のモータ出力）
     pid.update_params(param)        #paramの値をcalc_PIDクラスに反映
 
@@ -67,6 +68,7 @@ if __name__ == "__main__":
         agent.load_saved_NN(saved_dir)
         if MODE == "RND":
             agent.load_rnd_NN(saved_dir)
+            agent.NN_RND_avoid_overhead()
         agent.NN_avoid_overhead()
         print("Loading log_loss")
         agent.load_log_loss(saved_dir)
@@ -74,6 +76,7 @@ if __name__ == "__main__":
         agent.load_param(filepath = saved_dir)
         print("Loading replay buffer")
         agent.load_replay_buffer(filepath = saved_dir)
+        agent.memory.load_buffer(folder = saved_dir)
         #print(agent.memory_per.data[:60])
         #print(list(agent.memory_per.data).count(0))
         
@@ -107,7 +110,6 @@ if __name__ == "__main__":
 #try:
     for i in range(N_EPOCHS):                   #N_EPOCHSごとに各パラメータを初期化
 
-        start = time.time()
         #init
         #frame = 0                              #未使用                    
         loss = 0.0                              #NN損失関数
@@ -124,12 +126,16 @@ if __name__ == "__main__":
         #最初にNNの入力に必要なKEEP_FRAMES個の状態をLazuriteから取得し、#state([deque])に格納
         #ver2では、dequeにmaxlenを設定して、古い状態の削除を自動で行っている。
         if PID == 'True':
-            env.reset_pid_2(add = p_gain)
+            if ADD_I == 'True':
+                env.reset_pid_3(add=p_gain,add2=0)
+            else:
+                env.reset_pid_2(add = p_gain)
         else:
             env.reset_nopid()  
 
         state_next = env.observe_state()        #次状態（FRAMES=4個分の初期状態が格納されたstate）を観測
 
+        start = time.time()
         for j in range(N_FRAMES):
             Time_start = time.time()
             state_current = state_next                      #次状態を現在の状態とする
@@ -189,7 +195,11 @@ if __name__ == "__main__":
             #state_next, ti, ti_ = env.observe_update_state_pid(pid=p_gain)
             try:
                 if PID == 'True':
-                    state_next, ti, ti_ = env.observe_update_state_pid_2(pid = p_gain)
+                    if ADD_I == 'True':
+                        inte = pid.get_i()
+                        state_next, ti, ti_ = env.observe_update_state_pid_3(p=p_gain,i=inte)
+                    else:
+                        state_next, ti, ti_ = env.observe_update_state_pid_2(pid = p_gain)
                 else:
                     state_next, ti, ti_ = env.observe_update_state_nopid()
             except:
@@ -212,8 +222,8 @@ if __name__ == "__main__":
                 terminal = True
 
             #経験保存
-            #agent.store_transition(state_current,action,reward, state_next,terminal)
-            agent.store_transition_with_priority(state_current, action, reward, state_next, terminal)
+            agent.store_transition(state_current,action,reward, state_next,terminal)
+            #agent.store_transition_with_priority(state_current, action, reward, state_next, terminal)
             
             #t_3 = time.time() - t_start
             #print("t_3:", end = "")
@@ -277,6 +287,9 @@ if __name__ == "__main__":
                 agent.save_rnd_model(filepath = save_dir)
             break
 
+        #時間計測用
+        Time = time.time() - start
+
         agent.episode += 1    
             #print("t_5:", end = "")
             #print(t_5)
@@ -293,8 +306,6 @@ if __name__ == "__main__":
         agent.buffer_param(save_dir)
         agent.link_log_loss()
     
-    #時間計測用
-    Time = time.time() - start
     
 #except :
 #except KeyboardInterrupt:
@@ -309,6 +320,7 @@ if __name__ == "__main__":
     env.execute_action_([0,0])
     env.communicator.serial_close()     #念のため追加
 
+    agent.memory.save_buffer(folder=save_dir)
     agent.hyper_params()
     #agent.save_NN_model()      #NNモデルの保存
     agent.debug_nn()            #q_evalの重みとバイアスをtxtファイルで保存

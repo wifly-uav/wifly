@@ -37,6 +37,9 @@ class calc_PID():
         self.__param_D = param[2]
         self.__target = param[3]
 
+    def get_i(self):
+        return int(self.__param_I * self.__error_I)
+
     def calculate_output(self, current_value, delta_time, mode):
         """
         PIDの計算をする関数
