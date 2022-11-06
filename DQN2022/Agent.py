@@ -420,6 +420,9 @@ class DQNAgent:
         self.trained_step = 0           #学習済みのステップ数
         self.buffer_param(filepath = folder)
 
+    def set_batchsize(self, size):
+        self.batch_size = size
+
     def NN_avoid_overhead(self):
         data_dummy = np.array([[[0]*self.state_variables]*self.keep_frames]*self.batch_size)
         if self.mode == 'RND':
@@ -447,6 +450,17 @@ class DQNAgent:
         #return tf.reduce_mean(self.is_weight * tf.math.squared_difference(y_target, y_pred))
         huber_loss = tf.keras.losses.Huber()
         return tf.reduce_mean(self.is_weight * huber_loss(y_target, y_pred))
+
+    def rmd_thr(self, keep_states, thr):
+        states = np.array([keep_states])
+        target_val = self.target_nn.predict_on_batch(states)
+        predict_val = self.predictor_nn.predict_on_batch(states)
+        error = np.square(target_val-predict_val)
+        if error > thr:
+            flag = 1
+        else:
+            flag = 0
+        return flag
 
     def choose_action(self, keep_states):
         """
@@ -682,7 +696,8 @@ class DQNAgent:
         #TODO
         if self.mode == 'RND':
             states__list = np.zeros((self.batch_size,self.keep_frames,2),dtype=np.float32)
-            beta_list = np.array([[[beta]]*self.keep_frames]*self.batch_size)
+            #beta_list = np.array([[[beta]]*self.keep_frames]*self.batch_size)
+            beta_list = np.array([[[beta]]*self.keep_frames]*20000)
 
             target_val = self.target_nn.predict_on_batch(states)
             predict_val = self.predictor_nn.predict_on_batch(states)

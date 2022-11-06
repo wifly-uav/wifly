@@ -318,3 +318,57 @@ class Environment():
             self.params_to_send[LEFT_WING]=actions[1]-30
 
         self.communicator.send_to_esp(self.params_to_send)
+
+    def state2action(self, actions):
+        act = 0
+        if actions[1] == PWM_WING:
+            if actions[0] > PWM_WING-35:
+                if actions[0] > PWM_WING-15:
+                    if actions[0] > PWM_WING-8:
+                        if actions[0] > PWM_WING-3:
+                            act = 8
+                        else:
+                            act = 7
+                    else:
+                        act = 6
+                else:
+                    if actions[0] > PWM_WING-25:
+                        act = 5
+                    else: 
+                        act = 4
+            else:
+                if actions[0] > PWM_WING-70:
+                    if actions[0] > PWM_WING-50:
+                        act = 3
+                    else:
+                        act = 2
+                else:
+                    if actions[0] > PWM_WING-90:
+                        act = 1
+                    else:
+                        act = 0
+        else:
+            if actions[1] > PWM_WING-35:
+                if actions[1] > PWM_WING-15:
+                    if actions[1] > PWM_WING-8:
+                        act = 9
+                    else:
+                        act = 10
+                else:
+                    if actions[1] > PWM_WING-25:
+                        act = 11
+                    else: 
+                        act = 12
+            else:
+                if actions[1] > PWM_WING-70:
+                    if actions[1] > PWM_WING-50:
+                        act = 13
+                    else:
+                        act = 14
+                else:
+                    if actions[1] > PWM_WING-90:
+                        act = 15
+                    else:
+                        act = 16
+        
+        return act

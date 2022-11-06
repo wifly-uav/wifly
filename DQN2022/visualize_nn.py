@@ -167,7 +167,7 @@ class visual_nn:
 
         if self.flag:
             im.show()
-        im.save(self.folder + '/nn.jpg', quality=100)
+        im.save(self.folder + '/nn.jpg', quality=10)
 
 
 if __name__ == "__main__":    
@@ -176,5 +176,5 @@ if __name__ == "__main__":
     save_folder = input()
     save_file = os.path.join(path, 'result', save_folder)
 
-    vi = visual_nn(flag=True,folder=save_file)
+    vi = visual_nn(flag=False,folder=save_file)
     vi.visualize()
