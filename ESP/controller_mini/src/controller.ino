@@ -242,9 +242,11 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     //Serial.printf("Last Packet Recv Data(%d): ", data_len);
     //Serial.println();
     for (int i = 0; i < 5; i++) {
-      re_data[i] = data[i];
-      //Serial.print(re_data[i]);
-      //Serial.print(",");
+      if(i<2){
+        re_data[i] = 254-data[i];
+      }else{
+        re_data[i] = data[i];
+      }
     }
     if(data[5] != 0){
       re_data[5] = data[5];

@@ -39,7 +39,7 @@ N_ACTIONS = 17
 ENABLE_ACTIONS = [i for i in range(N_ACTIONS)]
 
 #hyperparameter for DQN
-LEARNING_RATE = 0.0001
+LEARNING_RATE = 0.02
 RND_LEARNING_RATE = 0.01
 DISCOUNT_FACTOR = 0.95
 MINIBATCH_SIZE = 16
@@ -131,8 +131,6 @@ class ReplayBuffer():
         self.mem_cntr = np.load(folder+'/mem_cntr.npy')
         print(self.mem_cntr)
         
-
-
 class ReplayBuffer_PER():
     def __init__(self, capacity,input_dims,keep_frames):
         self.write = 0                                   #葉ノード追加の回数
@@ -226,10 +224,8 @@ def build_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
     -NNの出力:状態sにおける各Q
     -state dequeの先頭に状態sが入っている
     """
-
     #Sequential API
     model = keras.Sequential([
-
         #Denseは全結合ユニット
         #Denseの引数:ユニット数、（入力層のユニット数）、活性化関数
         #入力のユニット数の指定には、"input_dim="と"input_shape="があるらしい。
@@ -238,7 +234,17 @@ def build_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
         keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層1
         keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層2
         keras.layers.Dense(n_actions, activation = None, kernel_initializer = "he_normal")])       #出力層
-    
+    '''
+    model = keras.Sequential([
+        #Denseは全結合ユニット
+        #Denseの引数:ユニット数、（入力層のユニット数）、活性化関数
+        #入力のユニット数の指定には、"input_dim="と"input_shape="があるらしい。
+        keras.layers.Input(shape = (keep_frames,input_dims,)),  #入力の数はinput_dims*4フレーム（shapeでの指定時は順序が逆なので注意）
+        keras.layers.Flatten(),                                 #平滑化‼
+        keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = keras.initializers.Ones()),        #中間層1
+        keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層2
+        keras.layers.Dense(n_actions, activation = None, kernel_initializer = "he_normal")])       #出力層    
+    '''
     #最適化アルゴリズム、誤差関数を指定する
     model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
 
@@ -451,15 +457,15 @@ class DQNAgent:
         huber_loss = tf.keras.losses.Huber()
         return tf.reduce_mean(self.is_weight * huber_loss(y_target, y_pred))
 
-    def rmd_thr(self, keep_states, thr):
+    def rnd_thr(self, keep_states, thr):
         states = np.array([keep_states])
         target_val = self.target_nn.predict_on_batch(states)
         predict_val = self.predictor_nn.predict_on_batch(states)
         error = np.square(target_val-predict_val)
         if error > thr:
-            flag = 1
-        else:
             flag = 0
+        else:
+            flag = 1
         return flag
 
     def choose_action(self, keep_states):
@@ -697,7 +703,7 @@ class DQNAgent:
         if self.mode == 'RND':
             states__list = np.zeros((self.batch_size,self.keep_frames,2),dtype=np.float32)
             #beta_list = np.array([[[beta]]*self.keep_frames]*self.batch_size)
-            beta_list = np.array([[[beta]]*self.keep_frames]*20000)
+            beta_list = np.array([[[beta]]*self.keep_frames]*16)
 
             target_val = self.target_nn.predict_on_batch(states)
             predict_val = self.predictor_nn.predict_on_batch(states)
@@ -714,12 +720,12 @@ class DQNAgent:
             states = np.append(states,beta_list,axis=2)
             states_ = np.append(states_,states__list,axis=2)
             rewards_in = np.ravel(rewards_in)
-            #self.rnd_reward.append(rewards_in)
+            self.rnd_reward.append(rewards_in)
             rewards = rewards + rewards_in
             #time_start2 = time.time()
 
         #minibatch_indexのlog格納
-        #self.log_minibatch_index.append(batch_idxes)
+        self.log_minibatch_index.append(batch_idxes)
         #self.log_p.append(ps)
 
         #Fixed-Targetを実装
@@ -751,12 +757,12 @@ class DQNAgent:
         #NNのパラメータ更新
         if self.global_step % self.learning_period == 0 or self.num_in_buffer == self.batch_size:
             loss = self.q_eval.train_on_batch(states, q_target)
-            #self.log_loss_buffer.append(loss)
+            self.log_loss_buffer.append(loss)
             self.past_states = np.copy(states)
             self.past_q_target = np.copy(q_target)
         else:
             loss = self.q_eval.train_on_batch(self.past_states, self.past_q_target)
-            #self.log_loss_buffer.append(loss)
+            self.log_loss_buffer.append(loss)
         
         #self.log_loss.append(self.q_eval.train_on_batch(states, q_target))
         #loss = self.q_eval.train_on_batch(states, q_target)

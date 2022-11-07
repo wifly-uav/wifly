@@ -12,6 +12,7 @@ class visual_nn:
         nn_layer = 4
         weight_bias = 1
         b_bias = 1
+        frame = 16
 
         th_max = 10000
         th_min = 0
@@ -34,7 +35,7 @@ class visual_nn:
         #b_out = np.loadtxt(os.path.join(path,'debug/debug_b_out.csv'), delimiter=',')
 
         max_b = max(b_fc1.max(),b_fc2.max())
-        b_bias = 10/max_b
+        #b_bias = 10/max_b
 
         #position
         input = np.zeros((input_layer,2))
@@ -42,19 +43,19 @@ class visual_nn:
         middle_2 = np.zeros((middle_layer_1,2))
         output = np.zeros((output_layer,2))
 
-        im = Image.new("RGB", (5120,2700), (128,128,128))
+        im = Image.new("RGB", (10240,5400), (128,128,128))
         draw = ImageDraw.Draw(im)
 
         width_x = im.width/nn_layer
         start_x = width_x/2-circle_size/2
 
 
-
+        
         #input_layer
         height = im.height/input_layer
         width = start_x
         for i in range (input_layer):
-            draw.ellipse((width, height*(i+0.5)-circle_size/2, width+circle_size, height*(i+0.5)+circle_size-circle_size/2), fill=(0, 255, 0))
+            #draw.ellipse((width, height*(i+0.5)-circle_size/2, width+circle_size, height*(i+0.5)+circle_size-circle_size/2), fill=(50, 255, 0))
             input[i][0] = width+circle_size/2
             input[i][1] = height*(i+0.5)+circle_size/2-circle_size/2
         #print(input)
@@ -66,7 +67,7 @@ class visual_nn:
         for i in range (middle_layer_1):
             circle_size_1 = circle_size + b_fc1[i]*b_bias
             #print(b_fc1[i])
-            draw.ellipse((width, height*(i+0.5)-circle_size_1/2, width+circle_size_1, height*(i+0.5)+circle_size_1-circle_size_1/2), fill=(0, 255, 0))
+            #draw.ellipse((width, height*(i+0.5)-circle_size_1/2, width+circle_size_1, height*(i+0.5)+circle_size_1-circle_size_1/2), fill=(0, 255, 0))
             middle_1[i][0] = width+circle_size_1/2
             middle_1[i][1] = height*(i+0.5)+circle_size_1/2-circle_size_1/2
 
@@ -76,7 +77,7 @@ class visual_nn:
         for i in range (middle_layer_2):
             circle_size_2 = circle_size + b_fc2[i]*b_bias
             #print(b_fc2[i])
-            draw.ellipse((width, height*(i+0.5)-circle_size_2/2, width+circle_size_2, height*(i+0.5)+circle_size_2-circle_size_2/2), fill=(0, 255, 0))
+            #draw.ellipse((width, height*(i+0.5)-circle_size_2/2, width+circle_size_2, height*(i+0.5)+circle_size_2-circle_size_2/2), fill=(0, 255, 0))
             middle_2[i][0] = width+circle_size_2/2
             middle_2[i][1] = height*(i+0.5)+circle_size_2/2-circle_size_2/2
 
@@ -89,7 +90,7 @@ class visual_nn:
             draw.ellipse((width, height*(i+0.5)-circle_size_output/2, width+circle_size_output, height*(i+0.5)+circle_size_output-circle_size_output/2), fill=(0, 255, 0))
             output[i][0] = width+circle_size_output/2
             output[i][1] = height*(i+0.5)+circle_size_output/2-circle_size_output/2
-
+        
 
 
         #line_input_to_middle_1
@@ -128,8 +129,10 @@ class visual_nn:
         #input_layer
         height = im.height/input_layer
         width = start_x
+        j = input_layer/frame
         for i in range (input_layer):
-            draw.ellipse((width, height*(i+0.5)-circle_size/2, width+circle_size, height*(i+0.5)+circle_size-circle_size/2), fill=(0, 255, 0))
+            color = (int)(i/j)
+            draw.ellipse((width, height*(i+0.5)-circle_size/2, width+circle_size, height*(i+0.5)+circle_size-circle_size/2), fill=(int(color*240/frame), int((frame-color)*240/frame), 100))
             input[i][0] = width+circle_size/2
             input[i][1] = height*(i+0.5)+circle_size/2-circle_size/2
         #print(input)
@@ -161,7 +164,7 @@ class visual_nn:
         for i in range (output_layer):
             circle_size_output = circle_size# + b_out[i]*b_bias
             #print(b_out[i])
-            draw.ellipse((width, height*(i+0.5)-circle_size_output/2, width+circle_size_output, height*(i+0.5)+circle_size_output-circle_size_output/2), fill=(0, 255, 0))
+            draw.ellipse((width, height*(i+0.5)-circle_size_output/2, width+circle_size_output, height*(i+0.5)+circle_size_output-circle_size_output/2), fill=(0, 255, 255))
             output[i][0] = width+circle_size_output/2
             output[i][1] = height*(i+0.5)+circle_size_output/2-circle_size_output/2
 
@@ -176,5 +179,5 @@ if __name__ == "__main__":
     save_folder = input()
     save_file = os.path.join(path, 'result', save_folder)
 
-    vi = visual_nn(flag=False,folder=save_file)
+    vi = visual_nn(flag=True,folder=save_file)
     vi.visualize()

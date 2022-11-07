@@ -55,6 +55,9 @@ class Environment():
         self.params_to_send = default_params
         self.state = deque()
         self.keep_frames = keep_frames
+    
+    def stop_com(self):
+        self.thread1.join()
 
     def reset_pid_2(self, add = 0):
         """
@@ -86,7 +89,7 @@ class Environment():
         for i in range(self.keep_frames):
             self.params_to_send = default_params    #送信用データを格納（未使用?）
             data = [self.communicator.state[-1][0],self.communicator.state[-1][1],self.communicator.state[-1][2]]
-            data.append(add)    #受信データにPgainを付け加える（data=Falseの場合RE?)
+            data.append(add)
             data.append(add2)
             #data:[モータ出力1,モータ出力2,サーボ1,サーボ2,Pitch,Yaw,Pgain]
             self.update_2(data)

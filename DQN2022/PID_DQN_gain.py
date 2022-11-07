@@ -11,6 +11,7 @@ from visualize_act import visual_act
 from Calc_Control import calc_PID
 import os
 import time
+import csv
 
 N_EPOCHS = 1            #学習epoch数
 N_FRAMES = 500          #1epochあたりのステップ数
@@ -19,13 +20,15 @@ D_GAIN = 0
 PWM_DEF = 209           #kitai側では+1されて195になる。
 ER = 0
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
-PID = 'False'
-ADD_I = 'False'
-FFPID = 'False'
-INC = 'False'
+PID = True
+ADD_I = True
+FFPID = False
+INC = False
 MODE = 'RND'
-LOAD_BATCH = 'True'
-LOAD_RND = 'True'
+LOAD = True
+LOAD_BATCH = True
+LOAD_RND = True
+MIX = True
 
 if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
@@ -68,20 +71,21 @@ if __name__ == "__main__":
         print("Loading NN model")
         agent.load_saved_NN(saved_dir)
         if MODE == "RND":
-            if LOAD_RND == 'True':
+            if LOAD_RND:
                 agent.load_rnd_NN(saved_dir)
                 agent.NN_RND_avoid_overhead()
         agent.NN_avoid_overhead()
-        print("Loading log_loss")
-        agent.load_log_loss(saved_dir)
-        print("Loading parameters")
-        agent.load_param(filepath = saved_dir)
-        print("Loading replay buffer")
-        if LOAD_BATCH == 'True':
-            agent.load_replay_buffer(filepath = saved_dir)
-            agent.memory.load_buffer(folder = saved_dir)
-        #print(agent.memory_per.data[:60])
-        #print(list(agent.memory_per.data).count(0))
+        if LOAD:
+            print("Loading log_loss")
+            agent.load_log_loss(saved_dir)
+            print("Loading parameters")
+            agent.load_param(filepath = saved_dir)
+            print("Loading replay buffer")
+            if LOAD_BATCH:
+                agent.load_replay_buffer(filepath = saved_dir)
+                agent.memory.load_buffer(folder = saved_dir)
+            #print(agent.memory_per.data[:60])
+            #print(list(agent.memory_per.data).count(0))
         
         print('training? y/n')              #学習を行うか?（training_flag）
         ans = input()
@@ -123,13 +127,16 @@ if __name__ == "__main__":
         data = True                             #?
         com_fail = False                        #通信に失敗した場合にTrueにする。
         score = 0                               #累積報酬
+        rnd_f = []
 
         #状態を格納するdequeを作成
         #この中でstart_espも行われる。（現在の初期送信データ長は4）
         #最初にNNの入力に必要なKEEP_FRAMES個の状態をLazuriteから取得し、#state([deque])に格納
         #ver2では、dequeにmaxlenを設定して、古い状態の削除を自動で行っている。
-        if PID == 'True':
-            if ADD_I == 'True':
+        if MIX:
+            env.reset_nopid()  
+        elif PID:
+            if ADD_I:
                 env.reset_pid_3(add=p_gain,add2=0)
             else:
                 env.reset_pid_2(add = p_gain)
@@ -144,30 +151,36 @@ if __name__ == "__main__":
             state_current = state_next                      #次状態を現在の状態とする
             agent.get_angle(state_current)                  #現在の状態から、Yaw角を取得して記録する(log用)
 
-            action = agent.choose_action(state_current)     #ε-greedy方策によってactionを決定
+            if MIX:
+                rnd_flag = agent.rnd_thr(state_current,10)
+                rnd_f.append(rnd_flag)
+                if rnd_flag:
+                    action = agent.choose_action(state_current)
+            else:
+                action = agent.choose_action(state_current)
 
-            if PID == 'True':
-                p_gain = env.execute_action_gain((int)(action))        #actionに対応するPgainを取得
+            if PID:
+                if MIX:
+                    p_gain = 3
+                else:
+                    p_gain = env.execute_action_gain((int)(action))        #actionに対応するPgainを取得
                 param = [p_gain,I_GAIN,D_GAIN,0]                #paramを更新（Pgainを更新）
-                pid.update_params(param)                        #calc_PIDクラスにparamの変更を反映
-                
-                #操作量をPID計算
-                #state_currentはFRAMES個の状態を保持
-                #state_current[0]が最新の状態で、state_current[0][YAW_INDEX]が最新の状態におけるYaw角
-                #delta_timeは微積分の近似で用いる時間幅
-                #modeはSaturationブロック有効化を決めるフラグ
+                pid.update_params(param)                        #calc_PIDクラスにparamの変更を反映              
                 diff = pid.calculate_output(current_value = int(state_current[0][YAW_INDEX]), delta_time = (int)(ti), mode = True)
-
-                #出力を変えるモータが逆な気がする…
                 if diff > 0:                            #操作量が正なら…
                     actions[0] = pwm_def - diff         #右側のモータ出力を下げる
                     actions[1] = pwm_def           #ER=0なので気にしなくて良い
                 else:                                   #操作量が負なら…
                     actions[0] = pwm_def                
                     actions[1] = pwm_def + diff    #左側のモータ出力を下げる
-
-                env.execute_action_(actions)            #機体にモータ出力の変更内容を送信
-            elif FFPID == 'True':
+                if MIX:
+                    if rnd_flag:
+                        env.excute_action(action)
+                    else:
+                        env.execute_action_(actions)            #機体にモータ出力の変更内容を送信
+                else:
+                    env.execute_action_(actions)            #機体にモータ出力の変更内容を送信
+            elif FFPID:
                 diff = pid.calculate_output(current_value = int(state_current[0][YAW_INDEX]), delta_time = (int)(ti), mode = True)
                 if diff > 0:                            #操作量が正なら…
                     actions[0] = pwm_def - diff         #右側のモータ出力を下げる
@@ -176,29 +189,17 @@ if __name__ == "__main__":
                     actions[0] = pwm_def                
                     actions[1] = pwm_def + diff    #左側のモータ出力を下げる
                 env.excute_action_pid((int)(action), actions)
-            
             else:
-                if INC == 'True':
+                if INC:
                     actions[0],actions[1] = env.excute_action_inc((int)(action), actions)
                 else:
                     env.excute_action((int)(action))
 
-            """
-            if (j != 0 and training_flag == True):
-                agent.experience_replay()           #経験再生
-            """
-
-            #t_2 = time.time() - t_start
-            #print("t_2:", end = "")
-            #print(t_2)
-
-            #新たな状態を観測
-            #state_next:新たな状態が1つ加わり、古い状態が削除されたもの
-            #更新されたstateデック、受信間隔（機体計測）、受信側（PC計測）が返ってくる
-            #state_next, ti, ti_ = env.observe_update_state_pid(pid=p_gain)
             try:
-                if PID == 'True':
-                    if ADD_I == 'True':
+                if MIX:
+                    state_next, ti, ti_ = env.observe_update_state_nopid()
+                elif PID:
+                    if ADD_I:
                         inte = pid.get_i()
                         state_next, ti, ti_ = env.observe_update_state_pid_3(p=p_gain,i=inte)
                     else:
@@ -224,6 +225,9 @@ if __name__ == "__main__":
             if j == N_FRAMES - 1:
                 terminal = True
 
+            if MIX:
+                if rnd_flag==0:
+                    action = env.state2action(actions)
             #経験保存
             agent.store_transition(state_current,action,reward, state_next,terminal)
             #agent.store_transition_with_priority(state_current, action, reward, state_next, terminal)
@@ -321,11 +325,14 @@ if __name__ == "__main__":
     env.execute_action_([0,0])
     env.execute_action_([0,0])
     env.execute_action_([0,0])
-    env.communicator.serial_close()     #念のため追加
+    #env.stop_com()
 
+    print('saving buffer')
     agent.memory.save_buffer(folder=save_dir)
+    print('saving hyper params')
     agent.hyper_params()
     #agent.save_NN_model()      #NNモデルの保存
+    print('saving debug files')
     agent.debug_nn()            #q_evalの重みとバイアスをtxtファイルで保存
     if MODE == 'RND':
         agent.debug_rnd_target_nn()
@@ -363,12 +370,19 @@ if __name__ == "__main__":
     log.angle_graph_2(x,agent.log_yaw_angle)
     
     vi.visualize()
-    mi.visualize()
+    #mi.visualize()
     #ac.visualize()
 
     agent.save_param(filepath = save_dir)
     agent.save_score(save_dir, score)
     agent.save_log_loss(filepath = save_dir)
+    
+    env.communicator.serial_close()     #念のため追加
+
+    if MIX:
+        with open(save_dir + "/log_rnd_flag.csv", mode = "w", newline = "") as f:
+            writer = csv.writer(f, lineterminator = "\n")
+            writer.writerow(rnd_f)
 
     print("finish")
     print(save_dir)
