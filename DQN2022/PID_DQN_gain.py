@@ -18,13 +18,14 @@ I_GAIN = 0.00001         #0.0001
 D_GAIN = 0              
 PWM_DEF = 209           #kitai側では+1されて195になる。
 ER = 0
-MODEL_NAME_HEADER = "WiflyDual_DQN"
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
 PID = 'False'
 ADD_I = 'False'
 FFPID = 'False'
 INC = 'False'
 MODE = 'RND'
+LOAD_BATCH = 'True'
+LOAD_RND = 'True'
 
 if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
@@ -67,16 +68,18 @@ if __name__ == "__main__":
         print("Loading NN model")
         agent.load_saved_NN(saved_dir)
         if MODE == "RND":
-            agent.load_rnd_NN(saved_dir)
-            agent.NN_RND_avoid_overhead()
+            if LOAD_RND == 'True':
+                agent.load_rnd_NN(saved_dir)
+                agent.NN_RND_avoid_overhead()
         agent.NN_avoid_overhead()
         print("Loading log_loss")
         agent.load_log_loss(saved_dir)
         print("Loading parameters")
         agent.load_param(filepath = saved_dir)
         print("Loading replay buffer")
-        agent.load_replay_buffer(filepath = saved_dir)
-        agent.memory.load_buffer(folder = saved_dir)
+        if LOAD_BATCH == 'True':
+            agent.load_replay_buffer(filepath = saved_dir)
+            agent.memory.load_buffer(folder = saved_dir)
         #print(agent.memory_per.data[:60])
         #print(list(agent.memory_per.data).count(0))
         

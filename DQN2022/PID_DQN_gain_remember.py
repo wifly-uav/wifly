@@ -17,7 +17,7 @@ ADD_I = 'False'
 FFPID = 'False'
 INC = 'False'
 MODE = 'RND'
-LOAD = 'NN'
+LOAD = 'None'
 
 if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()

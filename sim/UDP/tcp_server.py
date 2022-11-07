@@ -3,11 +3,17 @@ import json
 import struct
 import numpy as np
 import time
+import matlab.engine
+
+eng = matlab.engine.start_matlab()
+#eng.open_system('com_test')
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind(('127.0.0.1',9999))
 s.listen(1)
 print('waiting for connection...')
+#eng.sym('com_test')
+#time.sleep(1)
 sock, addr = s.accept()
 print('connected!')
 
@@ -26,5 +32,6 @@ while count<50:
     re = sock.recv(1024)
     re_ = re.decode('utf-8')
     print("receive"+str(len(re_))+":"+str(re_))
+    time.sleep(1)
 
 sock.close()

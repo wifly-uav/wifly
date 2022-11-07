@@ -39,7 +39,7 @@ N_ACTIONS = 17
 ENABLE_ACTIONS = [i for i in range(N_ACTIONS)]
 
 #hyperparameter for DQN
-LEARNING_RATE = 0.02
+LEARNING_RATE = 0.0001
 RND_LEARNING_RATE = 0.01
 DISCOUNT_FACTOR = 0.95
 MINIBATCH_SIZE = 16
@@ -714,12 +714,12 @@ class DQNAgent:
             states = np.append(states,beta_list,axis=2)
             states_ = np.append(states_,states__list,axis=2)
             rewards_in = np.ravel(rewards_in)
-            self.rnd_reward.append(rewards_in)
+            #self.rnd_reward.append(rewards_in)
             rewards = rewards + rewards_in
             #time_start2 = time.time()
 
         #minibatch_indexのlog格納
-        self.log_minibatch_index.append(batch_idxes)
+        #self.log_minibatch_index.append(batch_idxes)
         #self.log_p.append(ps)
 
         #Fixed-Targetを実装
@@ -751,12 +751,12 @@ class DQNAgent:
         #NNのパラメータ更新
         if self.global_step % self.learning_period == 0 or self.num_in_buffer == self.batch_size:
             loss = self.q_eval.train_on_batch(states, q_target)
-            self.log_loss_buffer.append(loss)
+            #self.log_loss_buffer.append(loss)
             self.past_states = np.copy(states)
             self.past_q_target = np.copy(q_target)
         else:
             loss = self.q_eval.train_on_batch(self.past_states, self.past_q_target)
-            self.log_loss_buffer.append(loss)
+            #self.log_loss_buffer.append(loss)
         
         #self.log_loss.append(self.q_eval.train_on_batch(states, q_target))
         #loss = self.q_eval.train_on_batch(states, q_target)
