@@ -55,6 +55,9 @@ class Environment():
         self.params_to_send = default_params
         self.state = deque()
         self.keep_frames = keep_frames
+
+    def set_cut_off(self, cut_off):
+        self.params_to_send[5] = cut_off
     
     def stop_com(self):
         self.thread1.join()

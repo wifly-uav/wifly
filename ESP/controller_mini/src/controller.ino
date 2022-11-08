@@ -15,6 +15,12 @@ int eular[3] = {0};
 char send_pc[40];
 int left_pwm,right_pwm,servo_angle,cog_angle;
 uint8_t data[5];
+float cut_off = 9;
+float RC_angle_roll = 0;
+float RC_angle_yaw = 0;
+float RC_angle_pitch = 0;
+
+float a = 1/(2*3.14*cut_off*0.04+1);
 
 uint8_t address[][9] = {{0x8C, 0xCE, 0x4E, 0xEA, 0xB1, 0xC9},
                         {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60},
@@ -69,6 +75,7 @@ void qu2eu(int eular[3], double quotanion[4]);
 void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len);
 void OnDataSent(const uint8_t* mac_addr, esp_now_send_status_t status);
 void recieve_pc();
+void RC_filter(int pitch,int yaw,int roll);
 
 void setup() {
 
@@ -151,6 +158,12 @@ void loop() {
   state.switch_r = digitalRead(pin.switch_r);
 
   recieve_pc();
+  if(data_pc[4]==0){
+    a=0;
+  }else{
+    cut_off=(float)data_pc[4];
+    a = 1/(2*3.14*cut_off*0.04+1);
+  }
   if ((millis() - lastTime) > timerDelay) {
     if(state.switch_l == 1){
       for(int i=0;i<2;++i){
@@ -241,13 +254,13 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     //Serial.printf("Last Packet Recv from: %s\n", macStr);
     //Serial.printf("Last Packet Recv Data(%d): ", data_len);
     //Serial.println();
-    for (int i = 0; i < 5; i++) {
-      if(i<2){
-        re_data[i] = 254-data[i];
-      }else{
-        re_data[i] = data[i];
-      }
+    RC_filter(data[2],data[3],data[4]);
+    for (int i = 0; i < 2; i++) {
+      re_data[i] = 254-data[i];
     }
+    re_data[2] = (int)RC_angle_pitch;
+    re_data[3] = (int)RC_angle_yaw;
+    re_data[4] = (int)RC_angle_roll;
     if(data[5] != 0){
       re_data[5] = data[5];
     }else{
@@ -292,4 +305,10 @@ void recieve_pc(){
       data_pc_ = Serial.readBytesUntil('\n',data_pc,5);
     }
   }
+}
+
+float RC_filter(int pitch,int yaw,int roll){
+  RC_angle_pitch = a*RC_angle+(float)(1-a)*pitch;
+  RC_angle_yaw = a*RC_angle+(float)(1-a)*yaw;
+  RC_angle_roll = a*RC_angle+(float)(1-a)*roll;
 }

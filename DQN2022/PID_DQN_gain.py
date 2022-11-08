@@ -20,15 +20,18 @@ D_GAIN = 0
 PWM_DEF = 209           #kitai側では+1されて195になる。
 ER = 0
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
+
 PID = True
 ADD_I = True
 FFPID = False
 INC = False
-MODE = 'RND'
+MIX = True
+MODE = 'RND' #None,RND,LSTM
 LOAD = True
 LOAD_BATCH = True
 LOAD_RND = True
-MIX = True
+RC_filter = 0
+FORGET = 'None' #None,RND,LOSS
 
 if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
@@ -107,6 +110,8 @@ if __name__ == "__main__":
     vi = visual_nn(folder = save_dir)        
     mi = visual_minibach(folder = save_dir)
     ac = visual_act(folder = save_dir)
+
+    env.set_cut_off((int)(RC_filter))
     
     print("2 sec")
     time.sleep(1)
