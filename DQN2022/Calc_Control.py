@@ -60,7 +60,7 @@ class calc_PID():
         self.__error_P = error                                  #偏差（__は関数の内部でのみ呼び出されることを意味する。）
         self.__error_I = self.__error_I + error*delta_time      #偏差の蓄積（偏差の積分を長方形の面積を使って近似）
         self.I = self.__error_I                                 #進捗表示の際に、Igainによる操作量を計算するために使う変数
-        out = int(self.__param_P * self.__error_P + self.__param_I * self.__error_I)# + self.__param_D * self.__error_D)
+        out = (int)(self.__param_P * self.__error_P + self.__param_I * self.__error_I)# + self.__param_D * self.__error_D)
         if mode == True:
             out = self.saturation_block(out)
         #print(out)

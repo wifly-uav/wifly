@@ -110,21 +110,21 @@ class Communicator():
                         delta_time = time.time() - self.time_last_receive       #最後の受信との時間間隔をPC側で記録
                         self.time_last_receive = time.time()                    #最後の受信時刻を更新  
                         receive_time_ = int(persed_data.pop(4))                 #機体側のマイコンで計測された受信間隔の読み取り（popなので削除もされる）
-                        persed_data.pop(-1)                                     #Roll角削除
-                        #persed_data:[モータ出力1,モータ出力2,尾翼サーボ,重心移動機構サーボ,Pitch,Yaw]
+                        #persed_data.pop(-1)
+                        #persed_data:[モータ出力1,モータ出力2,尾翼サーボ,重心移動機構サーボ,Pitch,Yaw,RC_Yaw]
                         
                         #状態の整形
                         for i in range(3):
-                            persed_data.pop(-2)
+                            persed_data.pop(2)
 
                         #persed_data:[モータ出力1,モータ出力2,Yaw]
 
                         self.dataset_from_esp = persed_data                     #受信データとして記録
                         
                         self.__fail_counter = 0                                 #受信失敗回数をリセット
-
+                        persed_data[3] = persed_data[3].strip('\r\n')
                         #受信データ、受信間隔（機体計測）、受信間隔(PC)を返す。
-                        self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time])
+                        self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time,persed_data[3]])
                         end = time.time()
                         while(end-start<0.04):
                             end=time.time()

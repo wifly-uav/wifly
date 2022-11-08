@@ -20,7 +20,7 @@ float RC_angle_roll = 0;
 float RC_angle_yaw = 0;
 float RC_angle_pitch = 0;
 
-float a = 1/(2*3.14*cut_off*0.04+1);
+float a = 0;
 
 uint8_t address[][9] = {{0x8C, 0xCE, 0x4E, 0xEA, 0xB1, 0xC9},
                         {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60},
@@ -254,13 +254,12 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     //Serial.printf("Last Packet Recv from: %s\n", macStr);
     //Serial.printf("Last Packet Recv Data(%d): ", data_len);
     //Serial.println();
-    RC_filter(data[2],data[3],data[4]);
     for (int i = 0; i < 2; i++) {
       re_data[i] = 254-data[i];
     }
-    re_data[2] = (int)RC_angle_pitch;
-    re_data[3] = (int)RC_angle_yaw;
-    re_data[4] = (int)RC_angle_roll;
+    re_data[2] = data[2];
+    re_data[3] = data[3];
+    re_data[4] = data[4];
     if(data[5] != 0){
       re_data[5] = data[5];
     }else{
@@ -272,6 +271,8 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
       re_data[6] = -1*data[8];
     }
     re_data[7] = data[9]+data[10];
+    RC_filter(re_data[5],re_data[6],re_data[7]);
+    re_data[7] = RC_angle_yaw;
     /*
     for(int i = 5; i<8; i++){
       Serial.print(re_data[i]);
@@ -307,8 +308,8 @@ void recieve_pc(){
   }
 }
 
-float RC_filter(int pitch,int yaw,int roll){
-  RC_angle_pitch = a*RC_angle+(float)(1-a)*pitch;
-  RC_angle_yaw = a*RC_angle+(float)(1-a)*yaw;
-  RC_angle_roll = a*RC_angle+(float)(1-a)*roll;
+void RC_filter(int pitch,int yaw,int roll){
+  RC_angle_pitch = a*RC_angle_pitch+(float)(1-a)*pitch;
+  RC_angle_yaw = a*RC_angle_yaw+(float)(1-a)*yaw;
+  RC_angle_roll = a*RC_angle_roll+(float)(1-a)*roll;
 }

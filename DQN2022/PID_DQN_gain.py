@@ -25,8 +25,8 @@ PID = True
 ADD_I = True
 FFPID = False
 INC = False
-MIX = True
-MODE = 'RND' #None,RND,LSTM
+MIX = False
+MODE = 'LSTM' #None,RND,LSTM
 LOAD = True
 LOAD_BATCH = True
 LOAD_RND = True
@@ -170,7 +170,7 @@ if __name__ == "__main__":
                 else:
                     p_gain = env.execute_action_gain((int)(action))        #actionに対応するPgainを取得
                 param = [p_gain,I_GAIN,D_GAIN,0]                #paramを更新（Pgainを更新）
-                pid.update_params(param)                        #calc_PIDクラスにparamの変更を反映              
+                pid.update_params(param)                        #calc_PIDクラスにparamの変更を反映
                 diff = pid.calculate_output(current_value = int(state_current[0][YAW_INDEX]), delta_time = (int)(ti), mode = True)
                 if diff > 0:                            #操作量が正なら…
                     actions[0] = pwm_def - diff         #右側のモータ出力を下げる
@@ -374,7 +374,7 @@ if __name__ == "__main__":
     #print(type(agent.log_yaw_angle))
     log.angle_graph_2(x,agent.log_yaw_angle)
     
-    vi.visualize()
+    #vi.visualize()
     #mi.visualize()
     #ac.visualize()
 

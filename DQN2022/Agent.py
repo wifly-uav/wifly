@@ -35,7 +35,7 @@ DUELING = False
 DOUBLE = False
 
 #行動空間設定
-N_ACTIONS = 17
+N_ACTIONS = 6
 ENABLE_ACTIONS = [i for i in range(N_ACTIONS)]
 
 #hyperparameter for DQN
@@ -48,8 +48,8 @@ REPLAY_MEMORY_SIZE = 30000
 EPSILON = 0.1           #εの初期値
 EPSILON_DEC = 0    #1000stepで1から0.1までεを減少させる。
 EPSILON_END = 0.1       #εの最終的な値
-KEEP_FRAMES = 4
-STATE_VARIABLES = 3     #状態変数の数(PWM,PWM,Yaw,Pgain,Igain)
+KEEP_FRAMES = 2
+STATE_VARIABLES = 5     #状態変数の数(PWM,PWM,Yaw,Pgain,Igain)
 COPY_PERIOD = 50
 HIDDEN_1 = 10           
 HIDDEN_2 = 10           #先行研究では5だが、Duelingでは2等分したいので偶数の10にする。
@@ -251,6 +251,27 @@ def build_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
     model.summary()     #構築されたモデルの情報を表示
     return model,0,0    #Dueling_Networkと返り値の数を合わせている。
 
+def build_lstm_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
+    """
+    NNの作成
+    -NNの入力:4つの状態（Qを求めたい状態sとその3フレーム前までの3つの状態を合わせた合計4つの状態）
+    -NNの出力:状態sにおける各Q
+    -state dequeの先頭に状態sが入っている
+    """
+    #tf.compat.v1.experimental.output_all_intermediates(True)
+    #Sequential API
+    model = keras.Sequential([
+        keras.layers.Input(shape = (keep_frames,input_dims)),
+        #keras.layers.Flatten(),                                 #平滑化‼
+        keras.layers.LSTM(input_dims, input_shape=(keep_frames, input_dims), return_sequences=True, activation='relu'),
+        keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層1
+        keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層2
+        keras.layers.Dense(n_actions, activation = None, kernel_initializer = "he_normal")])       #出力層
+    model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
+
+    model.summary()     #構築されたモデルの情報を表示
+    return model,0,0    #Dueling_Networkと返り値の数を合わせている。
+
 def build_dueling_dqn(lr, n_actions, input_dims, keep_frames, fc1_dims, fc2_dims):
     """
     dueling networkの作成
@@ -403,6 +424,9 @@ class DQNAgent:
         if self.dueling:
             self.q_eval,self.v_eval,self.adv_eval = build_dueling_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
             self.q_target, self.v_target, self.adv_target = build_dueling_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+        elif self.mode=='LSTM':
+            self.q_eval, self.v_eval,self.adv_eval = build_lstm_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+            self.q_target, self.target, self.adv_target = build_lstm_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
         else:
             self.q_eval, self.v_eval,self.adv_eval = build_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
             self.q_target, self.target, self.adv_target = build_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
@@ -434,6 +458,8 @@ class DQNAgent:
         if self.mode == 'RND':
             extend_dummy = np.array([[[0]*2]*self.keep_frames]*self.batch_size)
             data_dummy = np.append(data_dummy,extend_dummy,axis=2)
+        if self.mode == 'LSTM':
+            data_dummy = data_dummy.reshape(-1,self.keep_frames,self.state_variables)
         buf1 = self.q_eval.predict_on_batch(data_dummy)
         buf2 = self.q_target.predict_on_batch(data_dummy)
         buf3 = np.copy(self.q_eval)
@@ -482,6 +508,8 @@ class DQNAgent:
             extend = np.zeros((1,self.keep_frames,2))
             states = np.append(states,extend,axis=2)
 
+        if self.mode == 'LSTM':
+            states = states.reshape(-1,self.keep_frames,self.state_variables)
         #NNからstateにおける各行動に対する行動価値関数の推定値を受け取る。
         #NNのモデルに対しpredict_on_batchメソッドを実行すると、出力される。
         Q_values = self.q_eval.predict_on_batch(states)
@@ -727,8 +755,8 @@ class DQNAgent:
         #minibatch_indexのlog格納
         self.log_minibatch_index.append(batch_idxes)
         #self.log_p.append(ps)
-
         #Fixed-Targetを実装
+        print(states)
         q_eval = self.q_target.predict(states)
         q_next = self.q_target.predict(states_)
         q_target = np.copy(q_eval)      #q_targetの値を書き換えて、教師データとしていく、
