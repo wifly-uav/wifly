@@ -11,6 +11,8 @@ from collections import deque
 from datetime import datetime
 from matplotlib import pyplot as plt
 
+from keras.utils import plot_model
+
 #import tensorflow.compat.v1 as tf
 #tf.disable_v2_behavior()
 tf.get_logger().setLevel("ERROR")
@@ -42,7 +44,7 @@ ENABLE_ACTIONS = [i for i in range(N_ACTIONS)]
 LEARNING_RATE = 0.02
 RND_LEARNING_RATE = 0.01
 DISCOUNT_FACTOR = 0.95
-MINIBATCH_SIZE = 16
+MINIBATCH_SIZE = 4
 REPLAY_MEMORY_SIZE = 30000
 #EPSILON = 0.1          #モデルの変化を考慮して、スケジューリングをしない。
 EPSILON = 0.1           #εの初期値
@@ -258,18 +260,20 @@ def build_lstm_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
     -NNの出力:状態sにおける各Q
     -state dequeの先頭に状態sが入っている
     """
-    #tf.compat.v1.experimental.output_all_intermediates(True)
+    tf.compat.v1.experimental.output_all_intermediates(True)
     #Sequential API
     model = keras.Sequential([
         keras.layers.Input(shape = (keep_frames,input_dims)),
         #keras.layers.Flatten(),                                 #平滑化‼
         keras.layers.LSTM(input_dims, input_shape=(keep_frames, input_dims), return_sequences=True, activation='relu'),
+        #keras.layers.LSTM(input_dims, activation='relu'),
         keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層1
         keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層2
         keras.layers.Dense(n_actions, activation = None, kernel_initializer = "he_normal")])       #出力層
     model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
 
     model.summary()     #構築されたモデルの情報を表示
+    plot_model(model,show_shapes=True, to_file='nn_model.png')
     return model,0,0    #Dueling_Networkと返り値の数を合わせている。
 
 def build_dueling_dqn(lr, n_actions, input_dims, keep_frames, fc1_dims, fc2_dims):
@@ -329,9 +333,10 @@ def build_dueling_dqn(lr, n_actions, input_dims, keep_frames, fc1_dims, fc2_dims
 
 
 class DQNAgent:
-    def __init__(self, folder ='log', mode='none'):
+    def __init__(self, folder ='log', mode='none', forget='None'):
 
         self.mode = mode
+        self.forget = forget
         self.folder = folder
 
         #ファイル関係
@@ -510,9 +515,15 @@ class DQNAgent:
 
         if self.mode == 'LSTM':
             states = states.reshape(-1,self.keep_frames,self.state_variables)
-        #NNからstateにおける各行動に対する行動価値関数の推定値を受け取る。
-        #NNのモデルに対しpredict_on_batchメソッドを実行すると、出力される。
+
         Q_values = self.q_eval.predict_on_batch(states)
+
+        if self.mode == 'LSTM':
+            buf = Q_values
+            for i in range(self.keep_frames-1):
+                buf = np.delete(buf,0,1)
+            Q_values = buf.reshape(self.batch_size,self.n_actions)
+
 
         #行動選択
         if np.random.random() < self.epsilon:
@@ -599,7 +610,6 @@ class DQNAgent:
             
         self.log_act.append([act])
         return act
-
 
     def store_transition(self, state, action, reward, new_state, done):
         """
@@ -714,7 +724,7 @@ class DQNAgent:
         #print("tree_total" + str(self.memory_per.tree[0]))
         #exit()
         
-    def learn(self, beta = 1):
+    def learn(self, beta=1):
         #time_start = time.time()
         """
         NNの重みとバイアスを学習
@@ -761,16 +771,22 @@ class DQNAgent:
         q_next = self.q_target.predict(states_)
         q_target = np.copy(q_eval)      #q_targetの値を書き換えて、教師データとしていく、
 
+        batch_idxex_ = np.zeros((self.keep_frames,self.batch_size), dtype=np.int32)
+        if self.mode == 'LSTM':
+            for i in range(self.keep_frames):
+                batch_idxex_[i] = batch_idxes-i
         #0~batch_size-1までの連番リストを取得
         batch_index = np.arange(self.batch_size, dtype = np.int32)
 
-        #
-        #Double or Fixed Target Network
-        if self.double:
-            a = np.argmax(q_eval, axis = 1)
-            q_target[batch_index, actions] = rewards + self.gamma * q_next[batch_index,a] * dones
-        else:
+        if self.mode == 'LSTM':
             q_target[batch_index, actions] = rewards + self.gamma * np.max(q_next, axis=1)* dones
+        else:
+            #Double or Fixed Target Network
+            if self.double:
+                a = np.argmax(q_eval, axis = 1)
+                q_target[batch_index, actions] = rewards + self.gamma * q_next[batch_index,a] * dones
+            else:
+                q_target[batch_index, actions] = rewards + self.gamma * np.max(q_next, axis=1)* dones
 
         '''
         #優先度pの更新
@@ -781,7 +797,7 @@ class DQNAgent:
         #print(p_list)
         self.update_priorities(p_list,batch_idxes)
         '''
-
+        states = states.reshape(-1,self.keep_frames,self.state_variables)
         #NNのパラメータ更新
         if self.global_step % self.learning_period == 0 or self.num_in_buffer == self.batch_size:
             loss = self.q_eval.train_on_batch(states, q_target)

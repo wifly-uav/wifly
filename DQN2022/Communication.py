@@ -1,15 +1,10 @@
 import serial
 import time
 import serial.tools.list_ports
-import datetime
-import csv
-import msvcrt
-import sys
 import threading
 
 RECEIVE_BYTE = 8    #receive_from_espの引数
 
-KEYS_LOG = ["Slope", "Pitch", "R-servo", "L-servo", "R-DC", "L-DC", "time"]
 #[受信データ , 送信データ , time]
 class Communicator():
     """
@@ -59,7 +54,6 @@ class Communicator():
         self.__raw_data = ""
         self.terminal_flag = 1
         self.dataset_from_esp = []
-        self.log = [KEYS_LOG]
         self.time_started = None
         self.time_last_receive = time.time()
 
@@ -76,14 +70,6 @@ class Communicator():
         self.time_started = time.time()         #最初に送信した時間を記録
         #self.receive_from_laz(False, 5)
         self.time_last_receive = time.time()    #未使用?
-    
-    def save_communicate_log(self):
-        """
-        通信のログをcsvに出力する関数
-        """
-        with open('com_log_{0:%Y%m%d_%H%M%S}'.format(datetime.datetime.now())+ ".csv", 'w') as f:
-            writer = csv.writer(f, lineterminator='\n')
-            writer.writerows(self.log)
 
     def receive_from_esp(self, byt = RECEIVE_BYTE):
         """

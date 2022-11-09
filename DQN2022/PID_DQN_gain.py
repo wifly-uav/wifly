@@ -30,6 +30,7 @@ MODE = 'LSTM' #None,RND,LSTM
 LOAD = True
 LOAD_BATCH = True
 LOAD_RND = True
+Filter = False
 RC_filter = 0
 FORGET = 'None' #None,RND,LOSS
 
@@ -119,7 +120,6 @@ if __name__ == "__main__":
     time.sleep(1)
     print("start")
 
-#try:
     for i in range(N_EPOCHS):                   #N_EPOCHSごとに各パラメータを初期化
 
         #init
@@ -129,24 +129,23 @@ if __name__ == "__main__":
         reward = 0.0                              #報酬
         p_gain = 1.5                            #初期Pgain
         terminal = False                        #終状態フラグ（もとはTrue）
-        data = True                             #?
         com_fail = False                        #通信に失敗した場合にTrueにする。
         score = 0                               #累積報酬
         rnd_f = []
+        if Filter:
+            yaw_index = -1
+        else:
+            yaw_index = 2
 
-        #状態を格納するdequeを作成
-        #この中でstart_espも行われる。（現在の初期送信データ長は4）
-        #最初にNNの入力に必要なKEEP_FRAMES個の状態をLazuriteから取得し、#state([deque])に格納
-        #ver2では、dequeにmaxlenを設定して、古い状態の削除を自動で行っている。
         if MIX:
-            env.reset_nopid()  
+            env.reset_pid(yaw_index=yaw_index)  
         elif PID:
             if ADD_I:
-                env.reset_pid_3(add=p_gain,add2=0)
+                env.reset_pid(p_gain=p_gain,i_=0,yaw_index=yaw_index)
             else:
-                env.reset_pid_2(add = p_gain)
+                env.reset_pid(p_gain=p_gain,yaw_index=yaw_index)
         else:
-            env.reset_nopid()  
+            env.reset_pid(yaw_index=yaw_index)  
 
         state_next = env.observe_state()        #次状態（FRAMES=4個分の初期状態が格納されたstate）を観測
 
@@ -168,16 +167,16 @@ if __name__ == "__main__":
                 if MIX:
                     p_gain = 3
                 else:
-                    p_gain = env.execute_action_gain((int)(action))        #actionに対応するPgainを取得
-                param = [p_gain,I_GAIN,D_GAIN,0]                #paramを更新（Pgainを更新）
-                pid.update_params(param)                        #calc_PIDクラスにparamの変更を反映
-                diff = pid.calculate_output(current_value = int(state_current[0][YAW_INDEX]), delta_time = (int)(ti), mode = True)
-                if diff > 0:                            #操作量が正なら…
-                    actions[0] = pwm_def - diff         #右側のモータ出力を下げる
-                    actions[1] = pwm_def           #ER=0なので気にしなくて良い
-                else:                                   #操作量が負なら…
+                    p_gain = env.execute_action_gain((int)(action))
+                param = [p_gain,I_GAIN,D_GAIN,0]
+                pid.update_params(param)
+                diff = pid.calculate_output(current_value = int(state_current[0][yaw_index]), delta_time = (int)(ti), mode = True)
+                if diff > 0:
+                    actions[0] = pwm_def - diff
+                    actions[1] = pwm_def
+                else:
                     actions[0] = pwm_def                
-                    actions[1] = pwm_def + diff    #左側のモータ出力を下げる
+                    actions[1] = pwm_def + diff
                 if MIX:
                     if rnd_flag:
                         env.excute_action(action)
@@ -186,7 +185,7 @@ if __name__ == "__main__":
                 else:
                     env.execute_action_(actions)            #機体にモータ出力の変更内容を送信
             elif FFPID:
-                diff = pid.calculate_output(current_value = int(state_current[0][YAW_INDEX]), delta_time = (int)(ti), mode = True)
+                diff = pid.calculate_output(current_value = int(state_current[0][yaw_index]), delta_time = (int)(ti), mode = True)
                 if diff > 0:                            #操作量が正なら…
                     actions[0] = pwm_def - diff         #右側のモータ出力を下げる
                     actions[1] = pwm_def           #ER=0なので気にしなくて良い
@@ -202,31 +201,23 @@ if __name__ == "__main__":
 
             try:
                 if MIX:
-                    state_next, ti, ti_ = env.observe_update_state_nopid()
+                    state_next, ti, ti_ = env.observe_update_state_pid(yaw_index=yaw_index)
                 elif PID:
                     if ADD_I:
                         inte = pid.get_i()
-                        state_next, ti, ti_ = env.observe_update_state_pid_3(p=p_gain,i=inte)
+                        state_next, ti, ti_ = env.observe_update_state_pid(p_gain=p_gain,i_=inte,yaw_index=yaw_index)
                     else:
-                        state_next, ti, ti_ = env.observe_update_state_pid_2(pid = p_gain)
+                        state_next, ti, ti_ = env.observe_update_state_pid(p_gain=p_gain,yaw_index=yaw_index)
                 else:
-                    state_next, ti, ti_ = env.observe_update_state_nopid()
+                    state_next, ti, ti_ = env.observe_update_state_pid(yaw_index=yaw_index)
             except:
                 print("Communication Failure")
                 com_fail = True
                 break
-            #t_20 = time.time() - t_start
-            #print("t_20:", end = "")
-            #print(t_20)
 
-            reward = env.observe_reward(state_next)     #Yaw角の0.0度からのずれに基づいた報酬を観測
+            reward = env.observe_reward(state_next, yaw_index=yaw_index)     #Yaw角の0.0度からのずれに基づいた報酬を観測
             score += reward
 
-            #t_21 = time.time() - t_start
-            #print("t_21:", end = "")
-            #print(t_21)
-
-            #EPOCHの最後(各EpochのN_FRAMES目)ならば、terminalをTrueにする。
             if j == N_FRAMES - 1:
                 terminal = True
 
@@ -236,13 +227,9 @@ if __name__ == "__main__":
             #経験保存
             agent.store_transition(state_current,action,reward, state_next,terminal)
             #agent.store_transition_with_priority(state_current, action, reward, state_next, terminal)
-            
-            #t_3 = time.time() - t_start
-            #print("t_3:", end = "")
-            #print(t_3)
 
             #進捗表示
-            u_i = pid.I*I_GAIN  #Igainによる操作量（=I_gain*偏差の蓄積（積分））
+            u_i = pid.get_i()
             epoch = i + agent.episode_in_advance
             
             print( "Epoch:%d" % epoch, 
@@ -256,18 +243,12 @@ if __name__ == "__main__":
                     "actions:" + str(254-actions[0])+","+ str(254-actions[1]),
                     "act:" + str(action),
                     "dt:%d" %ti)
-            
-            #if (j != 0 and training_flag == True):
+
             if training_flag == True:
                 #agent.experience_replay()           #経験再生(NNパラメータのミニバッチ学習を行う)
                 agent.learn()
-            
-            #t_4 = time.time() - t_start
-            #print("t_4:", end = "")
-            #print(t_4)
 
-            #εのスケジューリング
-            
+            #εのスケジューリング            
             if training_flag:                       #学習を行う場合…
                 #agent.epsilon -= 0.1/3000          #ランダム行動確率を下げていく。
                 agent.update_epsilon()
@@ -284,9 +265,6 @@ if __name__ == "__main__":
             #ステップ数のカウント
             agent.global_step += 1
 
-            #t_5 = time.time() - t_start
-            #print("t_5:", end = "")
-            #print(t_5)
             Time_end = time.time()
             while (Time_end-Time_start<0.04):
                 Time_end = time.time()
@@ -302,9 +280,7 @@ if __name__ == "__main__":
         #時間計測用
         Time = time.time() - start
 
-        agent.episode += 1    
-            #print("t_5:", end = "")
-            #print(t_5)
+        agent.episode += 1
 
         #NNの保存
         #エピソードごとに保存しておく。(Wiflyの通信が切れたときを想定)
@@ -317,26 +293,16 @@ if __name__ == "__main__":
         #テキスト等への書き出しは、学習終了後に行う。
         agent.buffer_param(save_dir)
         agent.link_log_loss()
-    
-    
-#except :
-#except KeyboardInterrupt:
-    #print("except finish")
-    #print(state_current)
-    #print(state_next)
 
     #学習が終了したら各種出力を0
-    #保険用に3回繰り返し
     env.execute_action_([0,0])
     env.execute_action_([0,0])
     env.execute_action_([0,0])
-    #env.stop_com()
 
     print('saving buffer')
     agent.memory.save_buffer(folder=save_dir)
     print('saving hyper params')
     agent.hyper_params()
-    #agent.save_NN_model()      #NNモデルの保存
     print('saving debug files')
     agent.debug_nn()            #q_evalの重みとバイアスをtxtファイルで保存
     if MODE == 'RND':
