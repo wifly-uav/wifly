@@ -14,25 +14,25 @@ import time
 import csv
 
 N_EPOCHS = 1            #学習epoch数
-N_FRAMES = 500          #1epochあたりのステップ数
-I_GAIN = 0.00001         #0.0001
+N_FRAMES = 250          #1epochあたりのステップ数
+I_GAIN = 0.00004         #0.00001
 D_GAIN = 0              
 PWM_DEF = 209           #kitai側では+1されて195になる。
 ER = 0
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
 
-PID = True
-ADD_I = True
-FFPID = False
-INC = False
-MIX = False
-MODE = 'LSTM' #None,RND,LSTM
+PID = True #STATE_VARIABLES=4
+ADD_I = True #STATE_VARIABLES=5
+FFPID = False #N_ACTIONS=9
+INC = False #N_ACTIONS=5
+MIX = False #N_ACTIONS=17,STATE_VARIABLES=3
+RND = True
+LSTM = True
 LOAD = True
 LOAD_BATCH = True
 LOAD_RND = True
 Filter = False
-RC_filter = 0
-FORGET = 'None' #None,RND,LOSS
+RC_filter = 7
 
 if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
@@ -64,7 +64,7 @@ if __name__ == "__main__":
             sys.exit()
     
     #DQNAgentクラスのインスタンス作成（NNの初期化やReplayMemoryの用意がされる）
-    agent = DQNAgent(folder = save_dir, mode=MODE)                      
+    agent = DQNAgent(folder = save_dir, RND=RND, LSTM=LSTM)                      
     
     print('Use saved progress? y/n')               #既存のモデル（学習済みNN）を使うか?
     ans_yn = input()
@@ -74,7 +74,7 @@ if __name__ == "__main__":
         saved_dir = save_dir + "/../" + fldr_name + "/"
         print("Loading NN model")
         agent.load_saved_NN(saved_dir)
-        if MODE == "RND":
+        if RND:
             if LOAD_RND:
                 agent.load_rnd_NN(saved_dir)
                 agent.NN_RND_avoid_overhead()
@@ -268,12 +268,14 @@ if __name__ == "__main__":
             Time_end = time.time()
             while (Time_end-Time_start<0.04):
                 Time_end = time.time()
+            if Time_end-start > 30.0:
+                break
 
         if com_fail:
             print(com_fail)
             agent.save_NN_model(filepath = save_dir)
             agent.buffer_param(save_dir)
-            if MODE == 'RND':
+            if RND:
                 agent.save_rnd_model(filepath = save_dir)
             break
 
@@ -286,7 +288,7 @@ if __name__ == "__main__":
         #エピソードごとに保存しておく。(Wiflyの通信が切れたときを想定)
         #agent.save_model(filepath = save_dir)
         agent.save_NN_model(filepath = save_dir)
-        if MODE == 'RND':
+        if RND:
             agent.save_rnd_model(filepath = save_dir)
 
         #エピソード終了時の変数の値を保持しておく。
@@ -305,7 +307,7 @@ if __name__ == "__main__":
     agent.hyper_params()
     print('saving debug files')
     agent.debug_nn()            #q_evalの重みとバイアスをtxtファイルで保存
-    if MODE == 'RND':
+    if RND:
         agent.debug_rnd_target_nn()
         agent.debug_rnd_predictor_nn()
         agent.debug_rnd()

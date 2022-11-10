@@ -1,5 +1,7 @@
 import time
 from logging import getLogger
+import logging
+logging.basicConfig(level=logging.INFO)
 logger = getLogger(__name__)
 
 import odrive
@@ -79,7 +81,7 @@ class ODriveNode(object):
                 logger.error(error_str)
                 self.reboot()
                 return False
-        logger.info("Connected to ODrive. " + self.get_version_string())
+        logger.info("Connected to ODrive. ")# + self.get_version_string())
         serial_number = str(self.driver.serial_number)
         return serial_number
 
@@ -112,8 +114,8 @@ class ODriveNode(object):
             logger.error(error_string)
             logger.error(dump_errors(self.driver))
         else:
-            pass
-            #logger.info("No error")
+            logger.info("No error")
+            #pass
         
         if clear:
             for axis in self.axes:
@@ -197,7 +199,7 @@ class ODriveNode(object):
         if self.axes[axis].error != 0:
             logger.error("Failed calibration with axis error 0x%x, motor error 0x%x" % (self.axes[axis].error, self.axes[axis].motor.error))
             return False
-        self.driver.save_configuration()
+        #self.driver.save_configuration()
         return True
 
     def set_PID(self, axis=0, pos_P=20, vel_P=0.16, vel_I=0.33):

@@ -1,17 +1,16 @@
-import sys
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
-import sip
- 
-class MainWindow(QWidget):
-    def __init__(self, parent=None):
-        super(MainWindow, self).__init__(parent)
- 
-        self.setGeometry(300, 50, 400, 350)
-        self.setWindowTitle('QCheckBox')
- 
+from odrive_node import ODriveNode
+import threading
+import time
+
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    main_window = MainWindow()
-    main_window.show()
-    sys.exit(app.exec_())
+    odrv = ODriveNode()
+    odrv.connect_any()
+    time.sleep(1)
+    #odrv.calibrate()
+    odrv.get_errors(clear=False)
+    #odrv.control_mode(mode="VEL")
+    odrv.engage()
+    odrv.drive_vel(val=0)
+    time.sleep(0.1)
+    odrv.idle()
+    odrv.disconnect()

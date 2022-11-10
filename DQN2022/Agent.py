@@ -41,17 +41,18 @@ N_ACTIONS = 6
 ENABLE_ACTIONS = [i for i in range(N_ACTIONS)]
 
 #hyperparameter for DQN
+MINIBATCH_SIZE = 4
+KEEP_FRAMES = 4
+STATE_VARIABLES = 5     #状態変数の数(PWM,PWM,Yaw,Pgain,Igain)
+
 LEARNING_RATE = 0.02
 RND_LEARNING_RATE = 0.01
 DISCOUNT_FACTOR = 0.95
-MINIBATCH_SIZE = 4
 REPLAY_MEMORY_SIZE = 30000
 #EPSILON = 0.1          #モデルの変化を考慮して、スケジューリングをしない。
 EPSILON = 0.1           #εの初期値
 EPSILON_DEC = 0    #1000stepで1から0.1までεを減少させる。
 EPSILON_END = 0.1       #εの最終的な値
-KEEP_FRAMES = 2
-STATE_VARIABLES = 5     #状態変数の数(PWM,PWM,Yaw,Pgain,Igain)
 COPY_PERIOD = 50
 HIDDEN_1 = 10           
 HIDDEN_2 = 10           #先行研究では5だが、Duelingでは2等分したいので偶数の10にする。
@@ -273,7 +274,7 @@ def build_lstm_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
     model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
 
     model.summary()     #構築されたモデルの情報を表示
-    plot_model(model,show_shapes=True, to_file='nn_model.png')
+    #plot_model(model,show_shapes=True, to_file='nn_model.png')
     return model,0,0    #Dueling_Networkと返り値の数を合わせている。
 
 def build_dueling_dqn(lr, n_actions, input_dims, keep_frames, fc1_dims, fc2_dims):
@@ -333,9 +334,10 @@ def build_dueling_dqn(lr, n_actions, input_dims, keep_frames, fc1_dims, fc2_dims
 
 
 class DQNAgent:
-    def __init__(self, folder ='log', mode='none', forget='None'):
+    def __init__(self, folder ='log', RND=False, LSTM=False, forget='None'):
 
-        self.mode = mode
+        self.RND = RND
+        self.LSTM = LSTM
         self.forget = forget
         self.folder = folder
 
@@ -353,7 +355,7 @@ class DQNAgent:
 
         #行動空間
         self.action_space = ENABLE_ACTIONS
-        self.n_action = N_ACTIONS
+        self.n_actions = N_ACTIONS
 
         #vanilla-DQN
         self.memory = ReplayBuffer(REPLAY_MEMORY_SIZE,STATE_VARIABLES)   #ReplayBufferクラスのインスタンス作成
@@ -367,6 +369,8 @@ class DQNAgent:
         self.num_in_buffer = 0
         self.keep_frames = KEEP_FRAMES
         self.state_variables = STATE_VARIABLES
+        if self.RND:
+            self.state_variables += 2
         self.copy_period = COPY_PERIOD
         self.hidden_1 = HIDDEN_1
         self.hidden_2 = HIDDEN_2
@@ -419,7 +423,7 @@ class DQNAgent:
         self.target_nn,_,_= build_dqn(RND_LEARNING_RATE, 1, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
         self.predictor_nn,_,_= build_dqn(RND_LEARNING_RATE, 1, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
 
-        if self.mode=='RND':
+        if self.RND:
             state_num = STATE_VARIABLES+2
         else:
             state_num = STATE_VARIABLES
@@ -429,7 +433,7 @@ class DQNAgent:
         if self.dueling:
             self.q_eval,self.v_eval,self.adv_eval = build_dueling_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
             self.q_target, self.v_target, self.adv_target = build_dueling_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
-        elif self.mode=='LSTM':
+        elif self.LSTM:
             self.q_eval, self.v_eval,self.adv_eval = build_lstm_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
             self.q_target, self.target, self.adv_target = build_lstm_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
         else:
@@ -445,7 +449,7 @@ class DQNAgent:
         #ダミーデータ処理
         #predict_on_batchやtrain_on_batchの初回呼び出しが遅いので、先に呼び出しておく。
         self.NN_avoid_overhead()
-        if self.mode =='RND':
+        if self.RND:
             self.NN_RND_avoid_overhead()
 
         #学習の経過を記録
@@ -460,10 +464,7 @@ class DQNAgent:
 
     def NN_avoid_overhead(self):
         data_dummy = np.array([[[0]*self.state_variables]*self.keep_frames]*self.batch_size)
-        if self.mode == 'RND':
-            extend_dummy = np.array([[[0]*2]*self.keep_frames]*self.batch_size)
-            data_dummy = np.append(data_dummy,extend_dummy,axis=2)
-        if self.mode == 'LSTM':
+        if self.LSTM:
             data_dummy = data_dummy.reshape(-1,self.keep_frames,self.state_variables)
         buf1 = self.q_eval.predict_on_batch(data_dummy)
         buf2 = self.q_target.predict_on_batch(data_dummy)
@@ -478,7 +479,7 @@ class DQNAgent:
             buf7 = self.adv_eval.predict_on_batch(data_dummy)
 
     def NN_RND_avoid_overhead(self):
-        data_dummy = np.array([[[0]*self.state_variables]*self.keep_frames]*self.batch_size)
+        data_dummy = np.array([[[0]*STATE_VARIABLES]*self.keep_frames]*self.batch_size)
         buf1 = self.target_nn.predict_on_batch(data_dummy)
         buf2 = self.predictor_nn.predict_on_batch(data_dummy)
         self.predictor_nn.train_on_batch(data_dummy, buf2)
@@ -509,20 +510,20 @@ class DQNAgent:
         random_action_flag = 0      #random行動が選択された場合は1,argmaxQ行動が選択された場合は0
 
         states = np.array([keep_states])         #観測された状態をリスト化
-        if self.mode == 'RND':
+        if self.RND:
             extend = np.zeros((1,self.keep_frames,2))
             states = np.append(states,extend,axis=2)
 
-        if self.mode == 'LSTM':
+        if self.LSTM:
             states = states.reshape(-1,self.keep_frames,self.state_variables)
 
         Q_values = self.q_eval.predict_on_batch(states)
 
-        if self.mode == 'LSTM':
+        if self.LSTM:
             buf = Q_values
             for i in range(self.keep_frames-1):
                 buf = np.delete(buf,0,1)
-            Q_values = buf.reshape(self.batch_size,self.n_actions)
+            Q_values = buf
 
 
         #行動選択
@@ -730,7 +731,11 @@ class DQNAgent:
         NNの重みとバイアスを学習
         """
         #保存された経験が足りない場合は学習しない
-        if self.num_in_buffer < self.batch_size:
+        if self.LSTM:
+            if self.num_in_buffer < self.batch_size+self.keep_frames-1:
+                #self.global_step += 1
+                return
+        elif self.num_in_buffer < self.batch_size:
             #self.global_step += 1
             return
         #各種ミニバッチ作成
@@ -738,10 +743,10 @@ class DQNAgent:
         
         #states, actions, rewards, states_, dones, batch_idxes, self.is_weight, ps = self.sample_buffer_per(self.batch_size)
         #TODO
-        if self.mode == 'RND':
+        if self.RND:
             states__list = np.zeros((self.batch_size,self.keep_frames,2),dtype=np.float32)
             #beta_list = np.array([[[beta]]*self.keep_frames]*self.batch_size)
-            beta_list = np.array([[[beta]]*self.keep_frames]*16)
+            beta_list = np.array([[[beta]]*self.keep_frames]*self.batch_size)
 
             target_val = self.target_nn.predict_on_batch(states)
             predict_val = self.predictor_nn.predict_on_batch(states)
@@ -755,31 +760,55 @@ class DQNAgent:
             self.predictor_nn.train_on_batch(states,target_val)
 
             states = np.append(states,rewards_in_,axis=2)
+
+            #print(states)
+            #print(beta_list)
             states = np.append(states,beta_list,axis=2)
             states_ = np.append(states_,states__list,axis=2)
             rewards_in = np.ravel(rewards_in)
             self.rnd_reward.append(rewards_in)
             rewards = rewards + rewards_in
-            #time_start2 = time.time()
 
+        if self.LSTM:
+            states = states.reshape(-1,self.keep_frames,self.state_variables)
+            states_ = states_.reshape(-1,self.keep_frames,self.state_variables)
         #minibatch_indexのlog格納
         self.log_minibatch_index.append(batch_idxes)
         #self.log_p.append(ps)
         #Fixed-Targetを実装
-        print(states)
         q_eval = self.q_target.predict(states)
-        q_next = self.q_target.predict(states_)
-        q_target = np.copy(q_eval)      #q_targetの値を書き換えて、教師データとしていく、
+        if self.LSTM:
+            q_next = self.q_target.predict(states_)
 
-        batch_idxex_ = np.zeros((self.keep_frames,self.batch_size), dtype=np.int32)
-        if self.mode == 'LSTM':
-            for i in range(self.keep_frames):
-                batch_idxex_[i] = batch_idxes-i
+        q_target = np.copy(q_eval)      #q_targetの値を書き換えて、教師データとしていく
+        batch_index_ = batch_idxes
         #0~batch_size-1までの連番リストを取得
         batch_index = np.arange(self.batch_size, dtype = np.int32)
 
-        if self.mode == 'LSTM':
-            q_target[batch_index, actions] = rewards + self.gamma * np.max(q_next, axis=1)* dones
+        frames = np.zeros(self.batch_size, dtype=np.int32)
+        if self.LSTM:
+            for i in range(self.keep_frames-1):
+                actions_ = self.memory.action_memory[batch_index_]
+                rewards_ = self.memory.reward_memory[batch_index_]
+                states_ = self.memory.new_state_memory[batch_index_]
+                if self.RND:
+                    extend_dummy = np.array([[[0]*2]*self.keep_frames]*self.batch_size)
+                    states_ = np.append(states_,extend_dummy,axis=2)
+                states_ = states_.reshape(-1,self.keep_frames,self.state_variables)
+                q_next = self.q_target.predict(states_)
+
+                buf = q_next
+                for i in range(self.keep_frames-1):
+                    buf = np.delete(buf,0,1)
+                q_next = buf.reshape(self.batch_size,self.n_actions)
+                #print(q_target)
+                #print(batch_index)
+                #print(frames)
+                #print(actions_)
+                #print(q_next)
+                q_target[batch_index, frames, actions_] = rewards + self.gamma * np.max(q_next, axis=1)* dones
+                batch_index_ -= 1
+                frames -= 1
         else:
             #Double or Fixed Target Network
             if self.double:
@@ -797,7 +826,8 @@ class DQNAgent:
         #print(p_list)
         self.update_priorities(p_list,batch_idxes)
         '''
-        states = states.reshape(-1,self.keep_frames,self.state_variables)
+        if self.LSTM:
+            states = states.reshape(-1,self.keep_frames,self.state_variables)
         #NNのパラメータ更新
         if self.global_step % self.learning_period == 0 or self.num_in_buffer == self.batch_size:
             loss = self.q_eval.train_on_batch(states, q_target)
@@ -831,6 +861,17 @@ class DQNAgent:
         #print(loss)
         #print("time:" + str(time_start2-time_start))
         #self.epsilon = self.epsilon - self.eps_dec if self.epsilon > self.eps_min else self.eps_min
+
+    def observe_reward(self, data, yaw_index=2):
+        """
+        報酬を定義する
+        Args:
+            data ([list]): 状態（1フレーム）
+        Returns:
+            [int]: 報酬
+        """
+        err = abs(float(data[0][yaw_index])-0.0)
+        return 1.0-err/90.0
 
     def get_angle(self,states):
         self.log_yaw_angle.append(float(states[0][YAW_INDEX]))
@@ -871,7 +912,7 @@ class DQNAgent:
             np.savetxt(f, l3.get_weights()[1])
             np.savetxt(f, l4.get_weights()[0])
             np.savetxt(f, l4.get_weights()[1])
-        
+
         np.savetxt(self.folder + '/debug_W_fc1.csv', l2.get_weights()[0], delimiter=',')
         np.savetxt(self.folder + '/debug_b_fc1.csv', l2.get_weights()[1], delimiter=',')
         np.savetxt(self.folder + '/debug_W_fc2.csv', l3.get_weights()[0], delimiter=',')
@@ -880,10 +921,10 @@ class DQNAgent:
         np.savetxt(self.folder + '/debug_b_out.csv', l4.get_weights()[1], delimiter=',')
 
     def debug_rnd_target_nn(self):
-        l1 = self.target_nn.layers[0]
-        l2 = self.target_nn.layers[1]
-        l3 = self.target_nn.layers[2]
-        l4 = self.target_nn.layers[3]
+        l1 = self.q_eval.layers[0]
+        l2 = self.q_eval.layers[1]
+        l3 = self.q_eval.layers[2]
+        l4 = self.q_eval.layers[3]
         with open(self.folder + '/rnd_t_debug.csv', 'a') as f:
             np.savetxt(f, l2.get_weights()[0])
             np.savetxt(f, l2.get_weights()[1])
@@ -899,10 +940,10 @@ class DQNAgent:
         np.savetxt(self.folder + '/rnd_t_debug_b_out.csv', l4.get_weights()[1], delimiter=',')
 
     def debug_rnd_predictor_nn(self):
-        l1 = self.predictor_nn.layers[0]
-        l2 = self.predictor_nn.layers[1]
-        l3 = self.predictor_nn.layers[2]
-        l4 = self.predictor_nn.layers[3]
+        l1 = self.q_eval.layers[0]
+        l2 = self.q_eval.layers[1]
+        l3 = self.q_eval.layers[2]
+        l4 = self.q_eval.layers[3]
         with open(self.folder + '/rnd_p_debug.csv', 'a') as f:
             np.savetxt(f, l2.get_weights()[0])
             np.savetxt(f, l2.get_weights()[1])
