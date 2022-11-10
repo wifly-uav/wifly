@@ -116,8 +116,8 @@ class Communicator():
                 #print(self.__raw_data) 
                 #self.__ser.flushInput()
                 persed_data = self.__raw_data.split(",")                    #__raw_dataを","区切りにしたものを取得
-                print("persed_data:", end = "")
-                print(persed_data)
+                #print("persed_data:", end = "")
+                #print(persed_data)
 
                 #print(persed_data)                    
                 #出力:[モータ1出力,モータ2出力,サーボ1,サーボ2,受信間隔,Pitch,Yaw,Roll]
@@ -145,7 +145,7 @@ class Communicator():
                         #受信データ、受信間隔（機体計測）、受信間隔(PC)を返す。
                         return self.dataset_from_esp, receive_time_, delta_time
                 else:
-                    print("Data found but length error.")
+                    #print("Data found but length error.")
                     self.__ser.flushInput()         #受信キャッシュ内のデータを破棄（初期化）
 
             elif 10 <= self.__fail_counter <= 20:       #受信失敗回数が10回以上20回以下なら
@@ -156,7 +156,8 @@ class Communicator():
                 print("data receive timeout error!")    #タイムアウト（諦める）
                 return False , 0, 0                     #この場合はFalseを返すことに注意
             else:
-                print("Data not found. Retry.")
+                #print("Data not found. Retry.")
+                pass
 
             self.__fail_counter += 1                    #受信失敗回数を更新
             #time.sleep(0.005)
