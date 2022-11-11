@@ -28,7 +28,7 @@ FFPID = False #N_ACTIONS=9
 INC = False #N_ACTIONS=5
 MIX = False #N_ACTIONS=17,STATE_VARIABLES=3
 RND = True
-LSTM = True
+LSTM = False
 LOAD = True
 LOAD_BATCH = True
 LOAD_RND = True
@@ -36,6 +36,8 @@ Filter = False
 RC_filter = 7
 PARALLEL = False
 EPISODE_TIME = 30.0
+NEIGHBOR = True
+PRE_REWARD = True
 
 if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
@@ -67,7 +69,7 @@ if __name__ == "__main__":
             sys.exit()
     
     #DQNAgentクラスのインスタンス作成（NNの初期化やReplayMemoryの用意がされる）
-    agent = DQNAgent(folder = save_dir, RND=RND, LSTM=LSTM)                      
+    agent = DQNAgent(folder = save_dir, RND=RND, LSTM=LSTM, parallel=PARALLEL, neighbor=NEIGHBOR)                      
     
     print('Use saved progress? y/n')               #既存のモデル（学習済みNN）を使うか?
     ans_yn = input()

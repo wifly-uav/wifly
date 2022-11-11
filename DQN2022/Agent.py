@@ -113,7 +113,7 @@ class ReplayBuffer():
         self.new_state_memory[index] = state_
         self.reward_memory[index] = reward
         self.action_memory[index] = action
-        self.terminal_memory[index] = int(done)
+        self.terminal_memory[index] = int(1-done)
 
         self.mem_cntr += 1      #保存した経験の数をカウント
 
@@ -334,12 +334,14 @@ def build_dueling_dqn(lr, n_actions, input_dims, keep_frames, fc1_dims, fc2_dims
 
 
 class DQNAgent:
-    def __init__(self, folder ='log', RND=False, LSTM=False, parallel='None'):
+    def __init__(self, folder ='log', RND=False, LSTM=False, parallel=False, neighbor=False, pre_reward=False):
 
         self.RND = RND
         self.LSTM = LSTM
         self.parallel = parallel
         self.folder = folder
+        self.neighbor = neighbor
+        self.pre_reward = pre_reward
 
         if self.parallel:
             self.learn_counter = 0
@@ -445,9 +447,12 @@ class DQNAgent:
 
         if self.parallel:
             self.q_choose = self.q_eval
+
+        if self.pre_reward:
+            self.q_state, _, _ = build_dqn(LEARNING_RATE, 1, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+
         # create TensorFlow graph (model)(tf1)
         #self.init_model()
-
 
         # reset current loss
         self.current_loss = 0.0
@@ -489,6 +494,11 @@ class DQNAgent:
         buf1 = self.target_nn.predict_on_batch(data_dummy)
         buf2 = self.predictor_nn.predict_on_batch(data_dummy)
         self.predictor_nn.train_on_batch(data_dummy, buf2)
+    
+    def NN_state_avoid_overhead(self):
+        data_dummy = np.array([[[0]*STATE_VARIABLES]*self.keep_frames]*self.batch_size)
+        buf1 = self.q_state.predict_on_batch(data_dummy)
+        self.q_state.train_on_batch(data_dummy, buf1)
 
     def _per_loss(self, y_target, y_pred):
         #return tf.reduce_mean(self.is_weight * tf.math.squared_difference(y_target, y_pred))
@@ -733,7 +743,13 @@ class DQNAgent:
             #print("update")
         #print("tree_total" + str(self.memory_per.tree[0]))
         #exit()
-        
+
+    def learn_state(self):
+        if self.num_in_buffer < self.batch_size:
+            return
+        states, actions, rewards, states_, dones, batch_idxes = self.memory.sample_buffer(self.batch_size)
+        self.q_state.train_on_batch(states, rewards)
+
     def learn(self, beta=1):
         #time_start = time.time()
         """
@@ -786,8 +802,7 @@ class DQNAgent:
         #self.log_p.append(ps)
         #Fixed-Targetを実装
         q_eval = self.q_target.predict(states)
-        if self.LSTM:
-            q_next = self.q_target.predict(states_)
+        q_next = self.q_target.predict(states_)
 
         q_target = np.copy(q_eval)      #q_targetの値を書き換えて、教師データとしていく
         batch_index_ = batch_idxes
@@ -818,6 +833,24 @@ class DQNAgent:
                 q_target[batch_index, frames, actions_] = rewards + self.gamma * np.max(q_next, axis=1)* dones
                 batch_index_ -= 1
                 frames -= 1
+        elif self.neighbor:
+            q_target[batch_index, actions] = rewards + self.gamma * np.max(q_next, axis=1)* dones
+            actions_ = actions-1
+            n_ = np.where(actions_<0,0,1)
+            n__ = np.where(actions_>self.n_actions,0,1)
+            dones_ = n_*n__
+            print(actions_)
+            print(dones_)
+            actions_ = actions_*dones
+            q_target[batch_index, actions_] = dones_*(0.5*rewards + self.gamma * np.max(q_next, axis=1)* dones)+(1-dones_)*q_target[batch_index, actions]
+            actions_ = actions+1
+            n_ = np.where(actions_<0,0,1)
+            n__ = np.where(actions_>self.n_actions-1,0,1)
+            dones_ = n_*n__
+            print(actions_)
+            print(dones_)
+            actions_ = actions_*dones
+            q_target[batch_index, actions] = dones_*(0.5*rewards + self.gamma * np.max(q_next, axis=1)* dones)+(1-dones_)*q_target[batch_index, actions]
         else:
             #Double or Fixed Target Network
             if self.double:
@@ -825,7 +858,6 @@ class DQNAgent:
                 q_target[batch_index, actions] = rewards + self.gamma * q_next[batch_index,a] * dones
             else:
                 q_target[batch_index, actions] = rewards + self.gamma * np.max(q_next, axis=1)* dones
-
         '''
         #優先度pの更新
         #clipped error(安定性のためにTDerrorを-1~1にクリッピング(論文にも書かれている))
