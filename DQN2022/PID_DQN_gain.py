@@ -12,9 +12,10 @@ from Calc_Control import calc_PID
 import os
 import time
 import csv
+import threading
 
 N_EPOCHS = 1            #学習epoch数
-N_FRAMES = 250          #1epochあたりのステップ数
+N_FRAMES = 800          #1epochあたりのステップ数
 I_GAIN = 0.00004         #0.00001
 D_GAIN = 0              
 PWM_DEF = 209           #kitai側では+1されて195になる。
@@ -33,6 +34,8 @@ LOAD_BATCH = True
 LOAD_RND = True
 Filter = False
 RC_filter = 7
+PARALLEL = False
+EPISODE_TIME = 30.0
 
 if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
@@ -150,6 +153,9 @@ if __name__ == "__main__":
         state_next = env.observe_state()        #次状態（FRAMES=4個分の初期状態が格納されたstate）を観測
 
         start = time.time()
+        if PARALLEL:
+            thread = threading.Thread(target=agent.learn)
+            thread.start()
         for j in range(N_FRAMES):
             Time_start = time.time()
             state_current = state_next                      #次状態を現在の状態とする
@@ -245,8 +251,9 @@ if __name__ == "__main__":
                     "dt:%d" %ti)
 
             if training_flag == True:
-                #agent.experience_replay()           #経験再生(NNパラメータのミニバッチ学習を行う)
-                agent.learn()
+                if PARALLEL == False:
+                    #agent.experience_replay()           #経験再生(NNパラメータのミニバッチ学習を行う)
+                    agent.learn()
 
             #εのスケジューリング            
             if training_flag:                       #学習を行う場合…
@@ -268,7 +275,7 @@ if __name__ == "__main__":
             Time_end = time.time()
             while (Time_end-Time_start<0.04):
                 Time_end = time.time()
-            if Time_end-start > 30.0:
+            if Time_end-start > EPISODE_TIME:
                 break
 
         if com_fail:
@@ -281,7 +288,6 @@ if __name__ == "__main__":
 
         #時間計測用
         Time = time.time() - start
-
         agent.episode += 1
 
         #NNの保存
@@ -349,8 +355,10 @@ if __name__ == "__main__":
     agent.save_param(filepath = save_dir)
     agent.save_score(save_dir, score)
     agent.save_log_loss(filepath = save_dir)
+    if PARALLEL:
+        agent.save_counter(filepath= save_dir)
     
-    env.communicator.serial_close()     #念のため追加
+    env.communicator.serial_close()
 
     if MIX:
         with open(save_dir + "/log_rnd_flag.csv", mode = "w", newline = "") as f:

@@ -334,12 +334,15 @@ def build_dueling_dqn(lr, n_actions, input_dims, keep_frames, fc1_dims, fc2_dims
 
 
 class DQNAgent:
-    def __init__(self, folder ='log', RND=False, LSTM=False, forget='None'):
+    def __init__(self, folder ='log', RND=False, LSTM=False, parallel='None'):
 
         self.RND = RND
         self.LSTM = LSTM
-        self.forget = forget
+        self.parallel = parallel
         self.folder = folder
+
+        if self.parallel:
+            self.learn_counter = 0
 
         #ファイル関係
         self.name = os.path.splitext(os.path.basename(__file__))[0] #このスクリプトの拡張子を含まないファイル名を取得
@@ -439,6 +442,9 @@ class DQNAgent:
         else:
             self.q_eval, self.v_eval,self.adv_eval = build_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
             self.q_target, self.target, self.adv_target = build_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+
+        if self.parallel:
+            self.q_choose = self.q_eval
         # create TensorFlow graph (model)(tf1)
         #self.init_model()
 
@@ -517,7 +523,10 @@ class DQNAgent:
         if self.LSTM:
             states = states.reshape(-1,self.keep_frames,self.state_variables)
 
-        Q_values = self.q_eval.predict_on_batch(states)
+        if self.parallel:
+            Q_values = self.q_choose.predict_on_batch(states)
+        else:
+            Q_values = self.q_eval.predict_on_batch(states)
 
         if self.LSTM:
             buf = Q_values
@@ -858,6 +867,10 @@ class DQNAgent:
             '''
             self.q_target.set_weights(self.q_eval.get_weights())
 
+        if self.parallel:
+            self.q_choose.set_weights(self.q_eval.get_weights())
+            self.learn_counter += 1
+
         #print(loss)
         #print("time:" + str(time_start2-time_start))
         #self.epsilon = self.epsilon - self.eps_dec if self.epsilon > self.eps_min else self.eps_min
@@ -995,6 +1008,10 @@ class DQNAgent:
         if self.per:
             with open(filepath + "beta.txt") as f:
                 self.beta = float(f.read())
+
+    def save_counter(self,filepath):
+        with open(filepath + "/learn_counter.txt", mode = "w") as name:
+            print(self.learn_counter, file = name)
 
     def save_param(self,filepath):
         with open(filepath + "/trained_episode.txt", mode = "w") as name:
