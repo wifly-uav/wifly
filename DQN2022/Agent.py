@@ -6,6 +6,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.models import load_model
+from keras.layers import Merge
 #from tensorflow.keras.models import load_model
 from collections import deque
 from datetime import datetime
@@ -332,6 +333,18 @@ def build_dueling_dqn(lr, n_actions, input_dims, keep_frames, fc1_dims, fc2_dims
 
     return model_Q, model_V, model_A
 
+def build_act_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims, act_dims):
+    state_branch = keras.Sequential([keras.layers.Dence(fc1_dims, activation ='relu', input_dims=(keep_frames,input_dims,), kernel_initializer = "he_normal")])
+    action_branch = keras.Sequential([keras.layers.Dence(fc1_dims, activation ='relu', input_dims=(act_dims,), kernel_initializer = "he_normal")])
+    merged = Merge([state_branch, action_branch], mode='concat')
+    model = keras.Sequential([
+        merged,
+        keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = "he_normal"),
+        keras.layers.Dense(n_actions, activation = None, kernel_initializer = "he_normal")])
+
+    model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
+    model.summary()
+    return model,0,0 
 
 class DQNAgent:
     def __init__(self, folder ='log', RND=False, LSTM=False, parallel=False, neighbor=False, pre_reward=False):
@@ -449,7 +462,7 @@ class DQNAgent:
             self.q_choose = self.q_eval
 
         if self.pre_reward:
-            self.q_state, _, _ = build_dqn(LEARNING_RATE, 1, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+            self.q_state, _, _ = build_act_dqn(LEARNING_RATE, 1, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2, N_ACTIONS)
 
         # create TensorFlow graph (model)(tf1)
         #self.init_model()
