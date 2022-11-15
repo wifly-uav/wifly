@@ -13,21 +13,24 @@ import os
 import time
 import csv
 import threading
+from odrive_node import ODriveNode
 
 N_EPOCHS = 1            #学習epoch数
 N_FRAMES = 800          #1epochあたりのステップ数
-I_GAIN = 0.00004         #0.00001
+P_GAIN = 3
+I_GAIN = 0.0002         #0.00001
 D_GAIN = 0              
 PWM_DEF = 209           #kitai側では+1されて195になる。
 ER = 0
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
 
+PID_ONLY = True
 PID = True #STATE_VARIABLES=4
 ADD_I = True #STATE_VARIABLES=5
 FFPID = False #N_ACTIONS=9
 INC = False #N_ACTIONS=5
 MIX = False #N_ACTIONS=17,STATE_VARIABLES=3
-RND = True
+RND = False
 LSTM = False
 LOAD = True
 LOAD_BATCH = True
@@ -36,13 +39,23 @@ Filter = False
 RC_filter = 7
 PARALLEL = False
 EPISODE_TIME = 30.0
-NEIGHBOR = True
-PRE_REWARD = True
+NEIGHBOR = False
+PRE_REWARD = False
+DISTURB = True
 
 if __name__ == "__main__":
+    if DISTURB:
+        odrv = ODriveNode()
+        odrv.connect_any()
+        time.sleep(1)
+        odrv.get_errors(clear=False)    
+        odrv.engage()
+        odrv.drive_vel(val=0)
+        time.sleep(0.5)
+        odrv.idle()
     tf.compat.v1.disable_eager_execution()
     #PID_param
-    saturations = [0,100]           #PID操作量の制限
+    saturations = [0,PWM_DEF]           #PID操作量の制限
     pwm_def = PWM_DEF               #モーター出力デフォルト値(Environmemtのdefault_paramsもチェック)
     pid = calc_PID(saturations)     #calc_PIDクラスのインスタンス作成（__init__が呼び出され、初期化が行われる）
     param = [3,I_GAIN,D_GAIN,0]   #[P-gain,I-gain,D-gain,Target Yaw angle]
@@ -132,11 +145,12 @@ if __name__ == "__main__":
         loss = 0.0                              #NN損失関数
         Q_max = 0.0                             #行動価値関数最大値
         reward = 0.0                              #報酬
-        p_gain = 1.5                            #初期Pgain
+        p_gain = P_GAIN                            #初期Pgain
         terminal = False                        #終状態フラグ（もとはTrue）
         com_fail = False                        #通信に失敗した場合にTrueにする。
         score = 0                               #累積報酬
         rnd_f = []
+        disturb_flag = 0
         if Filter:
             yaw_index = -1
         else:
@@ -173,8 +187,8 @@ if __name__ == "__main__":
 
             if PID:
                 if MIX:
-                    p_gain = 3
-                else:
+                    p_gain = P_GAIN
+                elif PID_ONLY == False:
                     p_gain = env.execute_action_gain((int)(action))
                 param = [p_gain,I_GAIN,D_GAIN,0]
                 pid.update_params(param)
@@ -279,6 +293,19 @@ if __name__ == "__main__":
                 Time_end = time.time()
             if Time_end-start > EPISODE_TIME:
                 break
+            if DISTURB:
+                if time.time()-start>20 and disturb_flag == 1:
+                    disturb_flag = 2
+                    odrv.engage()
+                    odrv.drive_vel(val=0)
+                    time.sleep(0.2)
+                    odrv.idle()
+                if time.time()-start>10 and disturb_flag == 0:
+                    disturb_flag = 1
+                    odrv.engage()
+                    odrv.drive_vel(val=15)
+                    time.sleep(0.2)
+                    odrv.idle()
 
         if com_fail:
             print(com_fail)
@@ -292,6 +319,8 @@ if __name__ == "__main__":
         Time = time.time() - start
         agent.episode += 1
 
+        if DISTURB:
+            odrv.disconnect()
         #NNの保存
         #エピソードごとに保存しておく。(Wiflyの通信が切れたときを想定)
         #agent.save_model(filepath = save_dir)
