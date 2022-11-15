@@ -1,0 +1,12 @@
+dueling:False
+double:False
+lr:0.020000
+df:0.950000
+ep:0.300000
+ep_end:0.300000
+ep_dec:0.000000
+RM_size:10000
+MB_size:16
+CP:50
+hidden_1:10
+hidden_2:10
