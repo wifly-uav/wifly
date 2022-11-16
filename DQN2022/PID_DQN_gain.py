@@ -40,11 +40,12 @@ RC_filter = 7
 PARALLEL = False
 EPISODE_TIME = 30.0
 NEIGHBOR = False
-PRE_REWARD = False
-DISTURB = True
+PRE_REWARD = True
+DISTURB = False
 
 if __name__ == "__main__":
     if DISTURB:
+        print("connecting odrive")
         odrv = ODriveNode()
         odrv.connect_any()
         time.sleep(1)
@@ -82,7 +83,7 @@ if __name__ == "__main__":
             sys.exit()
     
     #DQNAgentクラスのインスタンス作成（NNの初期化やReplayMemoryの用意がされる）
-    agent = DQNAgent(folder = save_dir, RND=RND, LSTM=LSTM, parallel=PARALLEL, neighbor=NEIGHBOR)                      
+    agent = DQNAgent(folder = save_dir, RND=RND, LSTM=LSTM, parallel=PARALLEL, neighbor=NEIGHBOR, pre_reward=PRE_REWARD)                      
     
     print('Use saved progress? y/n')               #既存のモデル（学習済みNN）を使うか?
     ans_yn = input()

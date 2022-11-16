@@ -6,7 +6,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.models import load_model
-from keras.layers import Merge
+#from keras.layers import Merge
 #from tensorflow.keras.models import load_model
 from collections import deque
 from datetime import datetime
@@ -238,17 +238,6 @@ def build_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
         keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層1
         keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層2
         keras.layers.Dense(n_actions, activation = None, kernel_initializer = "he_normal")])       #出力層
-    '''
-    model = keras.Sequential([
-        #Denseは全結合ユニット
-        #Denseの引数:ユニット数、（入力層のユニット数）、活性化関数
-        #入力のユニット数の指定には、"input_dim="と"input_shape="があるらしい。
-        keras.layers.Input(shape = (keep_frames,input_dims,)),  #入力の数はinput_dims*4フレーム（shapeでの指定時は順序が逆なので注意）
-        keras.layers.Flatten(),                                 #平滑化‼
-        keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = keras.initializers.Ones()),        #中間層1
-        keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層2
-        keras.layers.Dense(n_actions, activation = None, kernel_initializer = "he_normal")])       #出力層    
-    '''
     #最適化アルゴリズム、誤差関数を指定する
     model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
 
@@ -282,26 +271,10 @@ def build_dueling_dqn(lr, n_actions, input_dims, keep_frames, fc1_dims, fc2_dims
     """
     dueling networkの作成
     """
-    
     #Functional API
     #まず順伝搬を定義していく。
     x = keras.layers.Input(shape = (keep_frames,input_dims,))    #入力の数はinput_dims*4フレーム（shapeでの指定時は順序が逆なので注意）
     f = keras.layers.Flatten()(x)                                  #平滑化‼
-    
-    """
-    #案1 2層共有
-    h = keras.layers.Dense(fc1_dims, activation='relu', kernel_initializer = 'he_normal')(f)    #中間層1(入力層の情報を加えてあるので要確認)
-    h = keras.layers.Dense(fc2_dims, activation='relu', kernel_initializer = 'he_normal')(h)    #中間層2
-
-    V = keras.layers.Dense(1, activation=None, kernel_initializer = 'he_normal')(h)             #V(s)出力
-    A = keras.layers.Dense(n_actions, activation=None, kernel_initializer = 'he_normal')(h)     #A(s,a)出力
-
-    #q = keras.layers.Add()([V, A - tf.math.reduce_mean(A, axis = 1, keepdims = True)])
-    #q = keras.layers.Add()([V, A - tf.stop_gradient(tf.math.reduce_mean(A, axis = 1, keepdims = True))])
-    #Q = keras.layers.Dense(n_actions)(q)
-
-    Q = V +  A - tf.math.reduce_mean(A, axis = 1, keepdims = True)
-    """
     
     #案2 1層のみ共有
     h = keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = 'he_normal')(f)    #中間層1(入力層の情報を加えてあるので要確認)
@@ -320,30 +293,44 @@ def build_dueling_dqn(lr, n_actions, input_dims, keep_frames, fc1_dims, fc2_dims
     model_V = keras.Model(inputs = [x], outputs = [V])
     model_A = keras.Model(inputs = [x], outputs = [A])
 
-    """
-    #最適化アルゴリズム、誤差関数を指定する
-    model_Q.compile(optimizer = Adam(learning_rate=lr), loss='huber_loss')
-    model_V.compile(optimizer = Adam(learning_rate=lr), loss='huber_loss')
-    model_A.compile(optimizer = Adam(learning_rate=lr), loss='huber_loss')
-    """
-
     #最適化アルゴリズム、誤差関数を指定する
     model_Q.compile(optimizer = Adam(learning_rate=lr), loss='huber_loss')
     model_Q.summary()
 
     return model_Q, model_V, model_A
 
-def build_act_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims, act_dims):
-    state_branch = keras.Sequential([keras.layers.Dence(fc1_dims, activation ='relu', input_dims=(keep_frames,input_dims,), kernel_initializer = "he_normal")])
-    action_branch = keras.Sequential([keras.layers.Dence(fc1_dims, activation ='relu', input_dims=(act_dims,), kernel_initializer = "he_normal")])
-    merged = Merge([state_branch, action_branch], mode='concat')
-    model = keras.Sequential([
-        merged,
-        keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = "he_normal"),
-        keras.layers.Dense(n_actions, activation = None, kernel_initializer = "he_normal")])
+def build_act_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
+    state_branch = keras.layers.Input(shape=(keep_frames,input_dims,))
+    f_state_branch = keras.layers.Flatten()(state_branch)
+    action_branch = keras.layers.Input(shape=(n_actions,))
+    act_fc = keras.layers.Dense(keep_frames*input_dims, activation ='relu', kernel_initializer = 'he_normal')(action_branch)
+    marged = keras.layers.Add()([f_state_branch, act_fc])
+    fc1 = keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = 'he_normal')(marged)
+    fc2 = keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = 'he_normal')(fc1)
+    Q = keras.layers.Dense(n_actions, activation = None)(fc2)
+
+    model = keras.Model(inputs=[state_branch,action_branch], outputs=[Q])
 
     model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
     model.summary()
+    plot_model(model,show_shapes=True, to_file='nn_model.png')
+    return model,0,0 
+
+def build_rnd_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
+    state_branch = keras.layers.Input(shape=(keep_frames,input_dims,))
+    f_state_branch = keras.layers.Flatten()(state_branch)
+    reward_branch = keras.layers.Input(shape=(3,))
+    reward_fc = keras.layers.Dense(keep_frames*input_dims, activation ='relu', kernel_initializer = 'he_normal')(reward_branch)
+    marged = keras.layers.Add()([f_state_branch, reward_fc])
+    fc1 = keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = 'he_normal')(marged)
+    fc2 = keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = 'he_normal')(fc1)
+    Q = keras.layers.Dense(n_actions, activation = None)(fc2)
+
+    model = keras.Model(inputs=[state_branch,reward_branch], outputs=[Q])
+
+    model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
+    model.summary()
+    plot_model(model,show_shapes=True, to_file='nn_model.png')
     return model,0,0 
 
 class DQNAgent:
@@ -454,6 +441,9 @@ class DQNAgent:
         elif self.LSTM:
             self.q_eval, self.v_eval,self.adv_eval = build_lstm_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
             self.q_target, self.target, self.adv_target = build_lstm_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+        elif self.pre_reward:
+            self.q_eval, self.v_eval,self.adv_eval = build_act_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+            self.q_target, self.target, self.adv_target = build_act_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
         else:
             self.q_eval, self.v_eval,self.adv_eval = build_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
             self.q_target, self.target, self.adv_target = build_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
@@ -490,6 +480,8 @@ class DQNAgent:
         data_dummy = np.array([[[0]*self.state_variables]*self.keep_frames]*self.batch_size)
         if self.LSTM:
             data_dummy = data_dummy.reshape(-1,self.keep_frames,self.state_variables)
+        if self.pre_reward:
+            act_data_dummy = np.array([0]*self.n_actions)
         buf1 = self.q_eval.predict_on_batch(data_dummy)
         buf2 = self.q_target.predict_on_batch(data_dummy)
         buf3 = np.copy(self.q_eval)
