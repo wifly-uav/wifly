@@ -19,6 +19,7 @@ float cut_off = 9;
 float RC_angle_roll = 0;
 float RC_angle_yaw = 0;
 float RC_angle_pitch = 0;
+float old_yaw = 0;
 
 float a = 0;
 
@@ -273,6 +274,7 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     re_data[7] = data[9]+data[10];
     RC_filter(re_data[5],re_data[6],re_data[7]);
     re_data[7] = RC_angle_yaw;
+
     /*
     for(int i = 5; i<8; i++){
       Serial.print(re_data[i]);
@@ -282,10 +284,10 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     }
     */
    
-   sprintf(send_pc, "%d,%d,%d,%d,%d,%d,%d,%d",re_data[0],re_data[1],re_data[2],re_data[3],re_data[4],re_data[5],re_data[6],re_data[7]);
+   sprintf(send_pc, "%d,%d,%d,%d,%d,%d,%d,%d,%d",re_data[0],re_data[1],re_data[2],re_data[3],re_data[4],re_data[5],re_data[6],re_data[7],re_data[5]-old_yaw);
    Serial.println(send_pc);
    Serial.flush();
-   
+   old_yaw = re_data[5];
 }
 
 void OnDataSent(const uint8_t* mac_addr, esp_now_send_status_t status) {

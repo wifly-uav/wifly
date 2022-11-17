@@ -83,6 +83,7 @@ class ReplayBuffer():
         self.action_memory = np.zeros(self.mem_size, dtype=np.int32)
         self.reward_memory = np.zeros(self.mem_size, dtype=np.float32)
         self.terminal_memory = np.zeros(self.mem_size, dtype=np.int32)
+        self.dyaw_memory = np.zeros(self.mem_size, dtype=np.int32)
 
     def sample_buffer(self, batch_size):
         max_mem = min(self.mem_cntr, self.mem_size)
@@ -97,10 +98,11 @@ class ReplayBuffer():
         rewards = self.reward_memory[batch]
         actions = self.action_memory[batch]
         terminal = self.terminal_memory[batch]
+        dyaw = self.dyaw_memory[batch]
 
-        return states, actions, rewards, states_, terminal, batch
+        return states, actions, rewards, states_, terminal, batch, dyaw
 
-    def store_transition(self, state, action, reward, state_, done):
+    def store_transition(self, state, action, reward, state_, done, dyaw):
         
         #mem_cntrは保存した経験の数
         #mem_sizeを超えると、古いものから上書きされていく。
@@ -115,6 +117,7 @@ class ReplayBuffer():
         self.reward_memory[index] = reward
         self.action_memory[index] = action
         self.terminal_memory[index] = int(1-done)
+        self.dyaw_memory[index] = dyaw
 
         self.mem_cntr += 1      #保存した経験の数をカウント
 
@@ -124,6 +127,7 @@ class ReplayBuffer():
         np.save(folder+'/reward_memory.npy',self.reward_memory)
         np.save(folder+'/action_memory.npy',self.action_memory)
         np.save(folder+'/terminal_memory.npy',self.terminal_memory)
+        np.save(folder+'/dyaw_memory.npy',self.dyaw_memory)
         np.save(folder+'/mem_cntr.npy',np.array(self.mem_cntr))
 
     def load_buffer(self, folder):
@@ -132,6 +136,7 @@ class ReplayBuffer():
         self.reward_memory = np.load(folder+'/reward_memory.npy')
         self.action_memory = np.load(folder+'/action_memory.npy')
         self.terminal_memory = np.load(folder+'/terminal_memory.npy')
+        self.dyaw_memory = np.load(folder+'/dyaw_memory.npy')
         self.mem_cntr = np.load(folder+'/mem_cntr.npy')
         print(self.mem_cntr)
         
@@ -245,12 +250,6 @@ def build_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
     return model,0,0    #Dueling_Networkと返り値の数を合わせている。
 
 def build_lstm_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
-    """
-    NNの作成
-    -NNの入力:4つの状態（Qを求めたい状態sとその3フレーム前までの3つの状態を合わせた合計4つの状態）
-    -NNの出力:状態sにおける各Q
-    -state dequeの先頭に状態sが入っている
-    """
     tf.compat.v1.experimental.output_all_intermediates(True)
     #Sequential API
     model = keras.Sequential([
@@ -268,9 +267,6 @@ def build_lstm_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
     return model,0,0    #Dueling_Networkと返り値の数を合わせている。
 
 def build_dueling_dqn(lr, n_actions, input_dims, keep_frames, fc1_dims, fc2_dims):
-    """
-    dueling networkの作成
-    """
     #Functional API
     #まず順伝搬を定義していく。
     x = keras.layers.Input(shape = (keep_frames,input_dims,))    #入力の数はinput_dims*4フレーム（shapeでの指定時は順序が逆なので注意）
@@ -307,10 +303,9 @@ def build_act_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
     marged = keras.layers.Add()([f_state_branch, act_fc])
     fc1 = keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = 'he_normal')(marged)
     fc2 = keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = 'he_normal')(fc1)
-    Q = keras.layers.Dense(n_actions, activation = None)(fc2)
+    Q = keras.layers.Dense(1, activation = None)(fc2)
 
     model = keras.Model(inputs=[state_branch,action_branch], outputs=[Q])
-
     model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
     model.summary()
     plot_model(model,show_shapes=True, to_file='nn_model.png')
@@ -327,14 +322,41 @@ def build_rnd_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
     Q = keras.layers.Dense(n_actions, activation = None)(fc2)
 
     model = keras.Model(inputs=[state_branch,reward_branch], outputs=[Q])
-
     model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
     model.summary()
     plot_model(model,show_shapes=True, to_file='nn_model.png')
     return model,0,0 
 
+def build_condition_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
+    state_branch = keras.layers.Input(shape=(keep_frames,input_dims,))
+    f_state_branch = keras.layers.Flatten()(state_branch)
+    condition_branch = keras.layers.Input(shape=(1,))
+    condition_fc = keras.layers.Dense(keep_frames*input_dims, activation ='relu', kernel_initializer = 'he_normal')(condition_branch)
+    marged = keras.layers.Add()([f_state_branch, condition_fc])
+    fc1 = keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = 'he_normal')(marged)
+    fc2 = keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = 'he_normal')(fc1)
+    Q = keras.layers.Dense(n_actions, activation = None)(fc2)
+
+    model = keras.Model(inputs=[state_branch,condition_branch], outputs=[Q])
+    model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
+    model.summary()
+    plot_model(model,show_shapes=True, to_file='nn_model.png')
+    return model,0,0 
+
+def build_condition(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
+    model = keras.Sequential([
+        keras.layers.Input(shape = (keep_frames,input_dims,)),  #入力の数はinput_dims*4フレーム（shapeでの指定時は順序が逆なので注意）
+        keras.layers.Flatten(),                                 #平滑化‼
+        keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層1
+        keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層2
+        keras.layers.Dense(1, activation = None, kernel_initializer = "he_normal")])       #出力層
+    model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
+
+    model.summary()     #構築されたモデルの情報を表示
+    return model,0,0    #Dueling_Networkと返り値の数を合わせている。
+
 class DQNAgent:
-    def __init__(self, folder ='log', RND=False, LSTM=False, parallel=False, neighbor=False, pre_reward=False):
+    def __init__(self, folder ='log', RND=False, LSTM=False, parallel=False, neighbor=False, pre_reward=False, condition=False):
 
         self.RND = RND
         self.LSTM = LSTM
@@ -342,6 +364,8 @@ class DQNAgent:
         self.folder = folder
         self.neighbor = neighbor
         self.pre_reward = pre_reward
+        self.condition = condition
+        self.con = 0
 
         if self.parallel:
             self.learn_counter = 0
@@ -374,8 +398,6 @@ class DQNAgent:
         self.num_in_buffer = 0
         self.keep_frames = KEEP_FRAMES
         self.state_variables = STATE_VARIABLES
-        if self.RND:
-            self.state_variables += 2
         self.copy_period = COPY_PERIOD
         self.hidden_1 = HIDDEN_1
         self.hidden_2 = HIDDEN_2
@@ -386,9 +408,11 @@ class DQNAgent:
         self.v_eval_model_file = "v_eval.h5"
         self.v_target_model_file = "v_target.h5"
         self.adv_eval_model_file = "adv_eval.h5"
+        self.q_state_model_file = "pre_reward.h5"
         self.adv_target_model_file = "adv_target.h5"
         self.rnd_target_model_file = "rnd_target.h5"
         self.rnd_predictor_model_file = "rnd_predictor.h5"
+        self.condition_model_file = "condition.h5"
         #PER
         self.memory_per = ReplayBuffer_PER(self.mem_size,self.state_variables,self.keep_frames)    
         self.p_initial = 1                                          #経験を保存する際の優先度（最大値）
@@ -428,10 +452,7 @@ class DQNAgent:
         self.target_nn,_,_= build_dqn(RND_LEARNING_RATE, 1, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
         self.predictor_nn,_,_= build_dqn(RND_LEARNING_RATE, 1, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
 
-        if self.RND:
-            state_num = STATE_VARIABLES+2
-        else:
-            state_num = STATE_VARIABLES
+        state_num = STATE_VARIABLES
 
         #NNの構築
         #Dueling or Normal
@@ -441,18 +462,22 @@ class DQNAgent:
         elif self.LSTM:
             self.q_eval, self.v_eval,self.adv_eval = build_lstm_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
             self.q_target, self.target, self.adv_target = build_lstm_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
-        elif self.pre_reward:
-            self.q_eval, self.v_eval,self.adv_eval = build_act_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
-            self.q_target, self.target, self.adv_target = build_act_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+        elif self.RND:
+            self.q_eval, self.v_eval,self.adv_eval = build_rnd_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+            self.q_target, self.target, self.adv_target = build_rnd_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+        elif self.condition:
+            self.q_eval, self.v_eval,self.adv_eval = build_condition_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+            self.q_target, self.target, self.adv_target = build_condition_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
         else:
             self.q_eval, self.v_eval,self.adv_eval = build_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
             self.q_target, self.target, self.adv_target = build_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
 
         if self.parallel:
             self.q_choose = self.q_eval
-
         if self.pre_reward:
-            self.q_state, _, _ = build_act_dqn(LEARNING_RATE, 1, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2, N_ACTIONS)
+            self.q_state, _, _ = build_act_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+        if self.condition:
+            self.con_net, _, _ = build_condition(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
 
         # create TensorFlow graph (model)(tf1)
         #self.init_model()
@@ -462,9 +487,17 @@ class DQNAgent:
 
         #ダミーデータ処理
         #predict_on_batchやtrain_on_batchの初回呼び出しが遅いので、先に呼び出しておく。
-        self.NN_avoid_overhead()
         if self.RND:
             self.NN_RND_avoid_overhead()
+            self.NN_RND_dqn_avoid_overhead()
+        elif self.condition:
+            self.NN_condition_avoid_overhead()
+            self.NN_condition_dqn_avoid_overhead()
+        else:
+            self.NN_avoid_overhead()
+
+        if self.pre_reward:
+            self.NN_preact_avoid_overhead()
 
         #学習の経過を記録
         self.episode = 0                #episode
@@ -480,8 +513,6 @@ class DQNAgent:
         data_dummy = np.array([[[0]*self.state_variables]*self.keep_frames]*self.batch_size)
         if self.LSTM:
             data_dummy = data_dummy.reshape(-1,self.keep_frames,self.state_variables)
-        if self.pre_reward:
-            act_data_dummy = np.array([0]*self.n_actions)
         buf1 = self.q_eval.predict_on_batch(data_dummy)
         buf2 = self.q_target.predict_on_batch(data_dummy)
         buf3 = np.copy(self.q_eval)
@@ -494,16 +525,46 @@ class DQNAgent:
             buf6 = self.v_eval.predict_on_batch(data_dummy)
             buf7 = self.adv_eval.predict_on_batch(data_dummy)
 
+    def NN_condition_dqn_avoid_overhead(self):
+        data_dummy = np.array([[[0]*self.state_variables]*self.keep_frames]*self.batch_size)
+        reward_data_dummy = np.array([[0]*1]*self.batch_size)
+        buf1 = self.q_eval.predict_on_batch((data_dummy,reward_data_dummy))
+        buf2 = self.q_target.predict_on_batch((data_dummy,reward_data_dummy))
+        buf3 = np.copy(self.q_eval)
+        self.q_eval.train_on_batch((data_dummy,reward_data_dummy), buf1)
+        self.q_eval.set_weights(self.q_eval.get_weights())
+        self.q_target.set_weights(self.q_target.get_weights())
+        buf4 = self.memory_per.total_p()
+        buf5 = np.empty((self.batch_size,1))   
+
+    def NN_RND_dqn_avoid_overhead(self):
+        data_dummy = np.array([[[0]*self.state_variables]*self.keep_frames]*self.batch_size)
+        reward_data_dummy = np.array([[0]*3]*self.batch_size)
+        buf1 = self.q_eval.predict_on_batch((data_dummy,reward_data_dummy))
+        buf2 = self.q_target.predict_on_batch((data_dummy,reward_data_dummy))
+        buf3 = np.copy(self.q_eval)
+        self.q_eval.train_on_batch((data_dummy,reward_data_dummy), buf1)
+        self.q_eval.set_weights(self.q_eval.get_weights())
+        self.q_target.set_weights(self.q_target.get_weights())
+        buf4 = self.memory_per.total_p()
+        buf5 = np.empty((self.batch_size,1))    
+
     def NN_RND_avoid_overhead(self):
         data_dummy = np.array([[[0]*STATE_VARIABLES]*self.keep_frames]*self.batch_size)
         buf1 = self.target_nn.predict_on_batch(data_dummy)
         buf2 = self.predictor_nn.predict_on_batch(data_dummy)
         self.predictor_nn.train_on_batch(data_dummy, buf2)
     
-    def NN_state_avoid_overhead(self):
+    def NN_preact_avoid_overhead(self):
         data_dummy = np.array([[[0]*STATE_VARIABLES]*self.keep_frames]*self.batch_size)
-        buf1 = self.q_state.predict_on_batch(data_dummy)
-        self.q_state.train_on_batch(data_dummy, buf1)
+        act_data_dummy = np.array([[0]*self.n_actions]*self.batch_size)
+        buf1 = self.q_state.predict_on_batch((data_dummy, act_data_dummy))
+        self.q_state.train_on_batch((data_dummy, act_data_dummy), buf1)
+    
+    def NN_condition_avoid_overhead(self):
+        data_dummy = np.array([[[0]*STATE_VARIABLES]*self.keep_frames]*self.batch_size)
+        buf1 = self.con_net.predict_on_batch(data_dummy)
+        self.con_net.train_on_batch(data_dummy, buf1)
 
     def _per_loss(self, y_target, y_pred):
         #return tf.reduce_mean(self.is_weight * tf.math.squared_difference(y_target, y_pred))
@@ -532,14 +593,14 @@ class DQNAgent:
 
         states = np.array([keep_states])         #観測された状態をリスト化
         if self.RND:
-            extend = np.zeros((1,self.keep_frames,2))
-            states = np.append(states,extend,axis=2)
-
+            extend = np.array([[0]*3])
         if self.LSTM:
             states = states.reshape(-1,self.keep_frames,self.state_variables)
 
         if self.parallel:
             Q_values = self.q_choose.predict_on_batch(states)
+        elif self.RND:
+            Q_values = self.q_eval.predict_on_batch((states,extend))
         else:
             Q_values = self.q_eval.predict_on_batch(states)
 
@@ -548,7 +609,6 @@ class DQNAgent:
             for i in range(self.keep_frames-1):
                 buf = np.delete(buf,0,1)
             Q_values = buf
-
 
         #行動選択
         if np.random.random() < self.epsilon:
@@ -636,11 +696,11 @@ class DQNAgent:
         self.log_act.append([act])
         return act
 
-    def store_transition(self, state, action, reward, new_state, done):
+    def store_transition(self, state, action, reward, new_state, done, dyaw):
         """
         経験の保存
         """
-        self.memory.store_transition(state, action, reward, new_state, done)
+        self.memory.store_transition(state, action, reward, new_state, done, dyaw)
         self.num_in_buffer = min(self.num_in_buffer + 1, self.mem_size) #保存されている経験の数を記録
     
     def store_transition_with_priority(self, state, action, reward, state_, done):
@@ -769,35 +829,38 @@ class DQNAgent:
             #self.global_step += 1
             return
         #各種ミニバッチ作成
-        states, actions, rewards, states_, dones, batch_idxes = self.memory.sample_buffer(self.batch_size)
-        
+        states, actions, rewards, states_, dones, batch_idxes, dyaw= self.memory.sample_buffer(self.batch_size)
         #states, actions, rewards, states_, dones, batch_idxes, self.is_weight, ps = self.sample_buffer_per(self.batch_size)
-        #TODO
-        if self.RND:
-            states__list = np.zeros((self.batch_size,self.keep_frames,2),dtype=np.float32)
-            #beta_list = np.array([[[beta]]*self.keep_frames]*self.batch_size)
-            beta_list = np.array([[[beta]]*self.keep_frames]*self.batch_size)
+        
+        #0~batch_size-1までの連番リストを取得
+        batch_index = np.arange(self.batch_size, dtype = np.int32)
+        #dyawの学習----------------------------------------------------------------------------------------------------
+        if self.condition:
+            self.con_net.train_on_batch(state,dyaw)
+            #TODO
+            #ミニバッチのコンディションを推定
+        #報酬予測の学習----------------------------------------------------------------------------------------------------------
+        if self.pre_reward:
+            act_index = np.ravel(actions-1)
+            act = np.array([[0]*self.n_actions]*self.batch_size)
+            act[batch_index,act_index] = 1
+            self.q_state.train_on_batch((states,act),rewards)
 
+        #RNDの学習---------------------------------------------------------------------------------------------------------------
+        if self.RND:
+            beta_list = np.array([beta]*self.batch_size)
             target_val = self.target_nn.predict_on_batch(states)
             predict_val = self.predictor_nn.predict_on_batch(states)
             error = np.square(target_val-predict_val)*0.01
             rewards_in = np.ravel(np.clip(error,0,50)*beta)
-            rewards_in_ = np.array([[[rewards_in[0]]]*self.keep_frames])
-            for i in range(self.batch_size-1):
-                rewards_in__ = np.array([[[rewards_in[i+1]]]*self.keep_frames])
-                rewards_in_ = np.append(rewards_in_,rewards_in__,axis=0)
-            
             self.predictor_nn.train_on_batch(states,target_val)
-
-            states = np.append(states,rewards_in_,axis=2)
 
             #print(states)
             #print(beta_list)
-            states = np.append(states,beta_list,axis=2)
-            states_ = np.append(states_,states__list,axis=2)
             rewards_in = np.ravel(rewards_in)
-            self.rnd_reward.append(rewards_in)
-            rewards = rewards + rewards_in
+            self.rnd_reward.append(rewards_in) #for Debug
+            state_reward = np.concatenate([rewards.reshape(-1,1), rewards_in.reshape(-1,1), beta_list.reshape(-1,1)],axis=1)
+            rnd_rewards = rewards + rewards_in
 
         if self.LSTM:
             states = states.reshape(-1,self.keep_frames,self.state_variables)
@@ -806,23 +869,24 @@ class DQNAgent:
         self.log_minibatch_index.append(batch_idxes)
         #self.log_p.append(ps)
         #Fixed-Targetを実装
-        q_eval = self.q_target.predict(states)
-        q_next = self.q_target.predict(states_)
+        if self.RND:
+            extend = np.array([[0]*3])
+            q_eval = self.q_target.predict((states,extend))
+            q_next = self.q_target.predict((states_,extend))
+        else:
+            q_eval = self.q_target.predict(states)
+            q_next = self.q_target.predict(states_)
 
         q_target = np.copy(q_eval)      #q_targetの値を書き換えて、教師データとしていく
         batch_index_ = batch_idxes
-        #0~batch_size-1までの連番リストを取得
-        batch_index = np.arange(self.batch_size, dtype = np.int32)
 
         frames = np.zeros(self.batch_size, dtype=np.int32)
+        #DQNの学習-----------------------------------------------------------------------------------------------------------------
         if self.LSTM:
             for i in range(self.keep_frames-1):
                 actions_ = self.memory.action_memory[batch_index_]
                 rewards_ = self.memory.reward_memory[batch_index_]
                 states_ = self.memory.new_state_memory[batch_index_]
-                if self.RND:
-                    extend_dummy = np.array([[[0]*2]*self.keep_frames]*self.batch_size)
-                    states_ = np.append(states_,extend_dummy,axis=2)
                 states_ = states_.reshape(-1,self.keep_frames,self.state_variables)
                 q_next = self.q_target.predict(states_)
 
@@ -830,32 +894,36 @@ class DQNAgent:
                 for i in range(self.keep_frames-1):
                     buf = np.delete(buf,0,1)
                 q_next = buf.reshape(self.batch_size,self.n_actions)
-                #print(q_target)
-                #print(batch_index)
-                #print(frames)
-                #print(actions_)
-                #print(q_next)
                 q_target[batch_index, frames, actions_] = rewards + self.gamma * np.max(q_next, axis=1)* dones
                 batch_index_ -= 1
                 frames -= 1
+        elif self.RND:
+            q_target[batch_index, actions] = rnd_rewards + self.gamma * np.max(q_next, axis=1)* dones
         elif self.neighbor:
             q_target[batch_index, actions] = rewards + self.gamma * np.max(q_next, axis=1)* dones
             actions_ = actions-1
             n_ = np.where(actions_<0,0,1)
             n__ = np.where(actions_>self.n_actions,0,1)
             dones_ = n_*n__
-            print(actions_)
-            print(dones_)
             actions_ = actions_*dones
             q_target[batch_index, actions_] = dones_*(0.5*rewards + self.gamma * np.max(q_next, axis=1)* dones)+(1-dones_)*q_target[batch_index, actions]
             actions_ = actions+1
             n_ = np.where(actions_<0,0,1)
             n__ = np.where(actions_>self.n_actions-1,0,1)
             dones_ = n_*n__
-            print(actions_)
-            print(dones_)
             actions_ = actions_*dones
             q_target[batch_index, actions] = dones_*(0.5*rewards + self.gamma * np.max(q_next, axis=1)* dones)+(1-dones_)*q_target[batch_index, actions]
+        elif self.pre_reward:
+            index_act_ = np.array(np.identity(self.n_actions))
+            index_act = np.tile(index_act_,(self.batch_size,1))
+            states_ = np.repeat(states,self.n_actions, axis=0)
+            pre_rewards = self.q_state.predict_on_batch((states_, index_act))
+            pre_rewards = np.clip(pre_rewards,-1,1)
+            pre_rewards = pre_rewards.reshape([self.batch_size,self.n_actions])
+            q_ = np.max(q_next, axis=1)* dones
+            q_ = q_.reshape([self.batch_size,1])
+            q_ = np.tile(q_,(1,self.n_actions))
+            q_target = pre_rewards + q_
         else:
             #Double or Fixed Target Network
             if self.double:
@@ -876,12 +944,19 @@ class DQNAgent:
             states = states.reshape(-1,self.keep_frames,self.state_variables)
         #NNのパラメータ更新
         if self.global_step % self.learning_period == 0 or self.num_in_buffer == self.batch_size:
-            loss = self.q_eval.train_on_batch(states, q_target)
+            if self.RND:
+                loss = self.q_eval.train_on_batch((states,state_reward), q_target) 
+                self.past_state_reward = np.copy(state_reward)
+            else:
+                loss = self.q_eval.train_on_batch(states, q_target)
             self.log_loss_buffer.append(loss)
             self.past_states = np.copy(states)
             self.past_q_target = np.copy(q_target)
         else:
-            loss = self.q_eval.train_on_batch(self.past_states, self.past_q_target)
+            if self.RND:
+                loss = self.q_eval.train_on_batch((self.past_states,self.past_state_reward), q_target) 
+            else:
+                loss = self.q_eval.train_on_batch(self.past_states, self.past_q_target)
             self.log_loss_buffer.append(loss)
         
         #self.log_loss.append(self.q_eval.train_on_batch(states, q_target))
@@ -1017,6 +1092,12 @@ class DQNAgent:
             self.adv_eval = load_model(save_dir + self.adv_eval_model_file, custom_objects = {"_per_loss":self._per_loss})
             self.adv_target = load_model(save_dir + self.adv_target_model_file, custom_objects = {"_per_loss":self._per_loss})
 
+    def load_state_NN(self, save_dir):
+        self.q_state = load_model(save_dir + self.q_state_model_file, custom_objects = {"_per_loss": self._per_loss})
+
+    def load_condition_NN(self, save_dir):
+        self.con_net = load_model(save_dir + self.condition_model_file, custom_objects = {"_per_loss": self._per_loss})
+
     def load_rnd_NN(self, save_dir):
         self.target_nn = load_model(save_dir + self.rnd_target_model_file, custom_objects = {"_per_loss": self._per_loss})
         self.predictor_nn = load_model(save_dir + self.rnd_predictor_model_file, custom_objects = {"_per_loss":self._per_loss})
@@ -1030,6 +1111,11 @@ class DQNAgent:
             self.adv_eval.save(filepath + "/" + self.adv_eval_model_file)
             self.adv_target.save(filepath + "/" + self.adv_target_model_file)
 
+    def save_state_model(self, filepath):
+        self.q_state.save(filepath + "/" + self.q_state_model_file)
+    
+    def save_condition_NN(self, filepath):
+        self.con_net.save(filepath + "/" + self.condition_model_file)
 
     def save_rnd_model(self, filepath):
         self.target_nn.save(filepath + "/" + self.rnd_target_model_file)

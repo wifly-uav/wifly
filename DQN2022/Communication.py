@@ -3,7 +3,7 @@ import time
 import serial.tools.list_ports
 import threading
 
-RECEIVE_BYTE = 8    #receive_from_espの引数
+RECEIVE_BYTE = 9    #receive_from_espの引数
 
 #[受信データ , 送信データ , time]
 class Communicator():
@@ -108,9 +108,9 @@ class Communicator():
                         self.dataset_from_esp = persed_data                     #受信データとして記録
                         
                         self.__fail_counter = 0                                 #受信失敗回数をリセット
-                        persed_data[3] = persed_data[3].strip('\r\n')
+                        persed_data[4] = persed_data[4].strip('\r\n')
                         #受信データ、受信間隔（機体計測）、受信間隔(PC)を返す。
-                        self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time,persed_data[3]])
+                        self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time,persed_data[3],persed_data[4]])
                         end = time.time()
                         while(end-start<0.04):
                             end=time.time()

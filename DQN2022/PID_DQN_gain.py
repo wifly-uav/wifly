@@ -16,7 +16,7 @@ import threading
 from odrive_node import ODriveNode
 
 N_EPOCHS = 1            #学習epoch数
-N_FRAMES = 800          #1epochあたりのステップ数
+N_FRAMES = 10000          #1epochあたりのステップ数
 P_GAIN = 3
 I_GAIN = 0.0002         #0.00001
 D_GAIN = 0              
@@ -24,13 +24,13 @@ PWM_DEF = 209           #kitai側では+1されて195になる。
 ER = 0
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
 
-PID_ONLY = True
+PID_ONLY = False
 PID = True #STATE_VARIABLES=4
 ADD_I = True #STATE_VARIABLES=5
 FFPID = False #N_ACTIONS=9
 INC = False #N_ACTIONS=5
 MIX = False #N_ACTIONS=17,STATE_VARIABLES=3
-RND = False
+RND = True
 LSTM = False
 LOAD = True
 LOAD_BATCH = True
@@ -40,8 +40,9 @@ RC_filter = 7
 PARALLEL = False
 EPISODE_TIME = 30.0
 NEIGHBOR = False
-PRE_REWARD = True
+PRE_REWARD = False
 DISTURB = False
+CONDITION = True
 
 if __name__ == "__main__":
     if DISTURB:
@@ -83,7 +84,7 @@ if __name__ == "__main__":
             sys.exit()
     
     #DQNAgentクラスのインスタンス作成（NNの初期化やReplayMemoryの用意がされる）
-    agent = DQNAgent(folder = save_dir, RND=RND, LSTM=LSTM, parallel=PARALLEL, neighbor=NEIGHBOR, pre_reward=PRE_REWARD)                      
+    agent = DQNAgent(folder = save_dir, RND=RND, LSTM=LSTM, parallel=PARALLEL, neighbor=NEIGHBOR, pre_reward=PRE_REWARD, condition=CONDITION)                      
     
     print('Use saved progress? y/n')               #既存のモデル（学習済みNN）を使うか?
     ans_yn = input()
@@ -93,11 +94,20 @@ if __name__ == "__main__":
         saved_dir = save_dir + "/../" + fldr_name + "/"
         print("Loading NN model")
         agent.load_saved_NN(saved_dir)
+        if CONDITION:
+            agent.load_condition_NN(saved_dir)
+            agent.NN_condition_avoid_overhead()
+            agent.NN_condition_dqn_avoid_overhead()
+        if PRE_REWARD:
+            agent.load_state_NN(saved_dir)
+            agent.NN_preact_avoid_overhead()
         if RND:
             if LOAD_RND:
                 agent.load_rnd_NN(saved_dir)
                 agent.NN_RND_avoid_overhead()
-        agent.NN_avoid_overhead()
+            agent.NN_RND_dqn_avoid_overhead()
+        else:
+            agent.NN_avoid_overhead()
         if LOAD:
             print("Loading log_loss")
             agent.load_log_loss(saved_dir)
@@ -224,15 +234,15 @@ if __name__ == "__main__":
 
             try:
                 if MIX:
-                    state_next, ti, ti_ = env.observe_update_state_pid(yaw_index=yaw_index)
+                    state_next, ti, ti_, dyaw = env.observe_update_state_pid(yaw_index=yaw_index)
                 elif PID:
                     if ADD_I:
                         inte = pid.get_i()
-                        state_next, ti, ti_ = env.observe_update_state_pid(p_gain=p_gain,i_=inte,yaw_index=yaw_index)
+                        state_next, ti, ti_, dyaw = env.observe_update_state_pid(p_gain=p_gain,i_=inte,yaw_index=yaw_index)
                     else:
-                        state_next, ti, ti_ = env.observe_update_state_pid(p_gain=p_gain,yaw_index=yaw_index)
+                        state_next, ti, ti_, dyaw = env.observe_update_state_pid(p_gain=p_gain,yaw_index=yaw_index)
                 else:
-                    state_next, ti, ti_ = env.observe_update_state_pid(yaw_index=yaw_index)
+                    state_next, ti, ti_, dyaw = env.observe_update_state_pid(yaw_index=yaw_index)
             except:
                 print("Communication Failure")
                 com_fail = True
@@ -248,7 +258,7 @@ if __name__ == "__main__":
                 if rnd_flag==0:
                     action = env.state2action(actions)
             #経験保存
-            agent.store_transition(state_current,action,reward, state_next,terminal)
+            agent.store_transition(state_current,action,reward, state_next,terminal,dyaw)
             #agent.store_transition_with_priority(state_current, action, reward, state_next, terminal)
 
             #進捗表示
@@ -328,6 +338,10 @@ if __name__ == "__main__":
         agent.save_NN_model(filepath = save_dir)
         if RND:
             agent.save_rnd_model(filepath = save_dir)
+        if PRE_REWARD:
+            agent.save_state_model(filepath = save_dir)
+        if CONDITION:
+            agent.save_condition_model(filepath = save_dir)
 
         #エピソード終了時の変数の値を保持しておく。
         #テキスト等への書き出しは、学習終了後に行う。
