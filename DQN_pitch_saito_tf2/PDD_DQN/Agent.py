@@ -29,6 +29,9 @@ MODEL_NAME = "WiflyDual_DQN"# + str(datetime.today())[0:10]
 MODEL_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 CHECKPOINT_NAME = "WiflyDual_DQN"
 
+#
+DET_ACT = False
+
 #適用手法選択
 PER = False
 DUELING = False
@@ -43,11 +46,21 @@ LEARNING_RATE = 0.02
 DISCOUNT_FACTOR = 0.95
 MINIBATCH_SIZE = 16
 REPLAY_MEMORY_SIZE = 10000
+"""
 EPSILON = 0.3          #モデルの変化を考慮して、スケジューリングをしない。
-EPSILON_DEC = 0    #1000stepで1から0.1までεを減少させる。
-#EPSILON = 1.0          #モデルの変化を考慮して、スケジューリングをしない。
-#EPSILON_DEC = 0.0009    #1000stepで1から0.1までεを減少させる。
-EPSILON_END = 0.3       #εの最終的な値
+EPSILON_DEC = 0        #1000stepで1から0.1までεを減少させる。
+"""
+
+"""
+EPSILON = 1.0           #モデルの変化を考慮して、スケジューリングをしない。
+EPSILON_DEC = 0.0009    #1000stepで1から0.1までεを減少させる。
+EPSILON_END = 0.1       #εの最終的な値
+"""
+
+EPSILON = 0.1
+EPSILON_DEC = 0
+EPSILON_END = 0.1
+
 KEEP_FRAMES = 4
 STATE_VARIABLES = 4     #状態変数の数(PWM,PWM,Yaw,Pgain)
 COPY_PERIOD = 50
@@ -291,6 +304,8 @@ class DQNAgent:
         self.model_name = MODEL_NAME
         self.checkpoint_name = CHECKPOINT_NAME
 
+        self.det_act = DET_ACT
+
         #適用手法のフラグ
         self.per = PER
         self.dueling = DUELING
@@ -471,6 +486,23 @@ class DQNAgent:
 
         return action
 
+    def determined_action(self,keep_states):
+        """
+        ・学習の前半で1つの行動のみを試させ続ける。
+        ・trained_episodeと同じものを選択する。
+        ・Nepoch目はN番の行動が選ばれる。（0<=N<=5）
+        """
+        states = np.array([keep_states])                #観測された状態をリスト化
+        Q_values = self.q_eval.predict_on_batch(states)
+        self.log_q.append(*Q_values)
+
+        if self.episode_in_advance > N_ACTIONS - 1:
+            print("Please cancel DET_ACT.")
+            exit()
+        else:
+            return self.episode_in_advance
+
+
     def update_epsilon(self):
         self.epsilon = self.epsilon - self.eps_dec if self.epsilon - self.eps_dec > self.eps_min else self.eps_min
 
@@ -602,7 +634,10 @@ class DQNAgent:
             #idxes_batch = np.random.choice(self.num_in_buffer, batch_size, replace = False)
             
             #randomサンプリング
-            idxes_batch = random.sample(range(self.num_in_buffer), batch_size)
+            if DET_ACT:
+                idxes_batch = random.sample(range(self.episode_in_advance*200,self.num_in_buffer),batch_size)
+            else:
+                idxes_batch = random.sample(range(self.num_in_buffer), batch_size)
             
             """
             #betaサンプリング

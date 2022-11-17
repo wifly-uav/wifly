@@ -20,6 +20,8 @@ PWM_DEF = 209           #kitai側では+1されて195になる。
 ER = 0
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
+DET_ACT = True
+
 
 if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
@@ -145,7 +147,10 @@ if __name__ == "__main__":
             #terminal = env.observe_terminal()              #未使用
             state_current = state_next                      #次状態を現在の状態とする
             agent.get_angle(state_current)                  #現在の状態から、Yaw角を取得して記録する(log用)
-            action = agent.choose_action(state_current)     #ε-greedy方策によってactionを決定
+            if agent.det_act:
+                action = agent.determined_action(state_current)
+            else:
+                action = agent.choose_action(state_current) #ε-greedy方策によってactionを決定
             p_gain = env.execute_action_gain(action)        #actionに対応するPgainを取得
             param = [p_gain,I_GAIN,D_GAIN,0]                #paramを更新（Pgainを更新）
             pid.update_params(param)                        #calc_PIDクラスにparamの変更を反映
@@ -229,9 +234,18 @@ if __name__ == "__main__":
 
             #if (j != 0 and training_flag == True):
             if training_flag == True:
+                if agent.det_act == True:
+                    #det_actを使う場合は、そのepochで収集した経験のみをミニバッチに使う。
+                    #そのため、そのepochで収集した経験がミニバッチの個数以上になるまでは学習しない。
+                    if j >= agent.batch_size - 1:
+                        agent.learn()
+                    else:
+                        pass
                 #agent.experience_replay()           #経験再生(NNパラメータのミニバッチ学習を行う)
-                agent.learn()
-            
+                else:
+                    agent.learn()
+            else:
+                pass
             #t_4 = time.time() - t_start
             #print("t_4:", end = "")
             #print(t_4)
@@ -241,7 +255,7 @@ if __name__ == "__main__":
             if training_flag:                       #学習を行う場合…
                 #agent.epsilon -= 0.1/3000          #ランダム行動確率を下げていく。
                 agent.update_epsilon()
-                pass                                #モデルの変化を考慮して、探索させる確率を下げない。
+                #pass                                #モデルの変化を考慮して、探索させる確率を下げない。
             else:                                   #学習を行わない場合…
                 agent.epsilon = 0                   #ランダム行動はさせない。
 
