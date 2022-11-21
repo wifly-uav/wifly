@@ -20,7 +20,7 @@ PWM_DEF = 209           #kitai側では+1されて195になる。
 ER = 0
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
-DET_ACT = True
+#DET_ACT = True         #DET_ACTはAgent側で管理している。
 
 
 if __name__ == "__main__":
