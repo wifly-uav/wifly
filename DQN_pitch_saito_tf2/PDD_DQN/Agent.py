@@ -30,7 +30,7 @@ MODEL_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mode
 CHECKPOINT_NAME = "WiflyDual_DQN"
 
 #
-DET_ACT = False
+DET_ACT = True
 
 #適用手法選択
 PER = False
