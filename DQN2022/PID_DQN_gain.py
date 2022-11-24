@@ -37,12 +37,12 @@ LOAD_BATCH = True
 LOAD_RND = True
 Filter = False
 RC_filter = 7
-PARALLEL = False
+PARALLEL = True
 EPISODE_TIME = 30.0
 NEIGHBOR = False
 PRE_REWARD = False
 DISTURB = False
-CONDITION = True
+CONDITION = False
 
 if __name__ == "__main__":
     if DISTURB:

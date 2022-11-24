@@ -1031,8 +1031,9 @@ class DQNAgent:
         l3 = self.q_eval.layers[2]
         l4 = self.q_eval.layers[3]
         with open(self.folder + '/debug.csv', 'a') as f:
-            np.savetxt(f, l2.get_weights()[0])
-            np.savetxt(f, l2.get_weights()[1])
+            if self.RND == False:
+                np.savetxt(f, l2.get_weights()[0])
+                np.savetxt(f, l2.get_weights()[1])
             np.savetxt(f, l3.get_weights()[0])
             np.savetxt(f, l3.get_weights()[1])
             np.savetxt(f, l4.get_weights()[0])
