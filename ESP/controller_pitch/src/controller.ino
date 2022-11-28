@@ -270,7 +270,7 @@ void loop() {
       data[2] = left_UD;
       
       //重心移動機構の角度は右トグルスイッチで決める。
-      data[3] = btn_R*120;
+      data[3] = btn_R*160;
 
       //その他はPCから受信
       for(int i=4;i<5;++i){
@@ -295,7 +295,7 @@ void loop() {
           data[0] = sli_L;
           data[1] = sli_R;
           data[2] = left_UD;
-          data[3] = btn_R*120;
+          data[3] = btn_R*160;
           data[4] = btn_R;
           break;
         
