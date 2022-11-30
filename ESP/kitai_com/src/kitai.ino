@@ -10,7 +10,7 @@
 #include <SPI.h>
 
 //#define DEBUG
-#define sensor
+//#define sensor
 
 #define PWM_FREQ 1000
 #define PWM_RANGE 255
