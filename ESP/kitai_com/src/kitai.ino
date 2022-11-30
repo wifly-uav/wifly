@@ -1,7 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <espnow.h>
 #include <Servo.h>
-
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
@@ -98,8 +97,8 @@ void setup() {
   analogWrite(pwm1, PWM_RANGE);
   analogWrite(pwm2, PWM_RANGE);
   
-  cog.attach(cog_pin,900,1900);
-  ladder.attach(ladder_pin,900,1900);
+  cog.attach(cog_pin,1000,2000);
+  ladder.attach(ladder_pin,1000,2000);
   
   cog.write(0);
   ladder.write(0);

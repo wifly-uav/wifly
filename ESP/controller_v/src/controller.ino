@@ -2,11 +2,14 @@
 #include <WiFi.h>
 
 #include <SPI.h>
-//#include <PID_v1.h>
 
 #include "CalPID.h"
 
 //#define DEBUG
+
+
+int flag = 0;
+int flag_yaw = 0;
 
 typedef struct param_{
   double kp = 0;
@@ -22,7 +25,7 @@ typedef struct param_{
 }param;
 
 param servo;
-param motor;
+param motor; //nomi
 
 unsigned long lastTime = 0;  
 unsigned long timerDelay = 60;  // send readings timer
@@ -48,7 +51,7 @@ uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA2, 0x22}; //3
 esp_now_peer_info_t peerInfo;
 
 const int controller_num = 2; //1:A 2:B
-const float servo_sensitivity = 0.2; //0.0(min)~1.0(max)
+const float servo_sensitivity = 1.0; //0.0(min)~1.0(max)
 
 void qu2eu(int eular[3], double quotanion[4]);
 void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len);
@@ -56,19 +59,107 @@ void OnDataSent(const uint8_t* mac_addr, esp_now_send_status_t status);
 void recieve_pc();
 
 CalPID pitch_pid(0,0,0,40,0);
+CalPID yaw_pid(0,0,0,40,0); //nomi
+
+void forward(){
+  pitch_pid.resetIntegral();
+  servo.kp = 2.2;
+  servo.ki = 0.000;
+  servo.kd = 0.0002;
+  servo.Target = 30; 
+  pitch_pid.setParameter(servo.kp,servo.ki,servo.kd);
+}
+
+void normal(){
+  pitch_pid.resetIntegral();
+  servo.kp = 0.8;
+  servo.ki = 0.0001;
+  servo.kd = 0.0000;
+  servo.Target = 0;
+  pitch_pid.setParameter(servo.kp,servo.ki,servo.kd);
+}
+
+void back(){
+  pitch_pid.resetIntegral();
+  servo.kp = 1.5;
+  servo.ki = 0.000;
+  servo.kd = 0.0007;
+  servo.Target = -20;
+  pitch_pid.setParameter(servo.kp,servo.ki,servo.kd);
+}
+
+//↓ここから左右のYAW制御
+void left(){
+  yaw_pid.resetIntegral();
+  motor.kp = 3.0;
+  motor.ki = 0.0005;
+  motor.kd = 0.000;
+  motor.Target = 20; 
+  yaw_pid.setParameter(motor.kp,motor.ki,motor.kd);
+}
+
+void normal_yaw(){
+  yaw_pid.resetIntegral();
+  motor.kp = 1.7;
+  motor.ki = 0.001;
+  motor.kd = 0.000;
+  motor.Target = 0; 
+  yaw_pid.setParameter(motor.kp,motor.ki,motor.kd);
+}
+
+void right(){
+  yaw_pid.resetIntegral();
+  motor.kp = 3.0;
+  motor.ki = 0.0005;
+  motor.kd = 0.0000;
+  motor.Target = -20; 
+  yaw_pid.setParameter(motor.kp,motor.ki,motor.kd);
+}
+
+//↑ここまでが左右のYqw制御
 
 void setup() {
-  servo.kp = 1;
-  servo.ki = 0;
-  servo.kd = 0;
-  servo.max = 45;
-  servo.min = -45;
+ //垂直飛行のみ
+  /*servo.kp = 0.8;
+  servo.ki = 0.0002;
+  servo.kd = 0.000;*/
+  servo.max = 90;
   servo.dt = 40;
   servo.Target = 0;
+  
+ /*↓書き足した
+  servo_hover.kp = 1;
+  servo_hover.ki = 0.000;
+  servo_hover.kd = 0.0;
+  servo_forward.kp = 1;
+  servo_forward.ki = 0.000;
+  servo_forward.kd = 0.0;
+  servo_back.kp = 1;
+  servo_back.ki = 0.000;
+  servo_back.kd = 0.0;
+  servo.max = 90;
+  servo.dt = 40;
+  servo.Target = 0;
+  ここまで*/
 
+
+//nomi
+  /*motor.kp = 0.5;
+  motor.ki = 0.0001;
+  motor.kd = 0.000;*/
+  motor.max = 255;
+  motor.dt = 40;
+  motor.Target = 0;
+//nomi
   pitch_pid.setParameter(servo.kp,servo.ki,servo.kd);
   pitch_pid.setDELTA_T(servo.dt);
   pitch_pid.setMaxValue(servo.max);
+
+//nomi
+  yaw_pid.setParameter(motor.kp,motor.ki,motor.kd);
+  yaw_pid.setDELTA_T(motor.dt);
+  yaw_pid.setMaxValue(motor.max);
+//nomi
 
   //各コントローラごとのピン番号
   switch(controller_num){
@@ -134,6 +225,8 @@ int left_UD;
 int sli_L;
 int sli_R;
 int vol;
+int mode_flag = 0;
+int mode_flag_yaw = 0;
 
 void loop() {
   //トグルスイッチの入力値読み取り
@@ -144,32 +237,98 @@ void loop() {
     uint8_t data[5];
 
 
-    servo.State = eular[0];
-    servo.Error = servo.Target-servo.State;
-    servo.Output = pitch_pid.calPID(servo.Error);
-    //PCモード
+          /*motor.Target = 0;
+          motor.State = re_data[6];
+          motor.Error = motor.Target-motor.State;
+          motor.Output = yaw_pid.calPID(motor.Error);
+          */
+//nomi
+
+    //PIDモード
     if(btn_L == 1){
+          flag = 1;
+          flag_yaw = 1;
           left_LR = map(analogRead(stick_lr),0,4096,0,255); //揚力差
           left_UD = map(analogRead(stick_ud),0,4096,0,255); //割り当てなし
-          sli_L = map(analogRead(slider_l),0,4096,90.0*(1.0-servo_sensitivity),90.0+90.0*servo_sensitivity);   //尾翼サーボ
+          //sli_L = map(analogRead(slider_l),0,4096,90.0*(1.0-servo_sensitivity),90.0+90.0*servo_sensitivity);   //尾翼サーボ
+          sli_L = map(analogRead(slider_l),0,4096,-10,10);
           sli_R = map(analogRead(slider_r),0,4096,0,255);   //羽ばたき出力
+//↓垂直飛行のみ
+          /*
+          if(abs(sli_L)<3){sli_L = 0;}
+          servo.Target = sli_L;
+          servo.Target = 0;
+          servo.State = re_data[5];
+          servo.Error = servo.Target-servo.State;
+          servo.Output = pitch_pid.calPID(servo.Error);
+          */
+//↑垂直飛行のみ
+//nomi
             //スライドボリューム右（羽ばたき出力）最小
           if(sli_R>240){sli_R = 255;}
           //ジョイスティック左右中央
           if(left_LR<152 && left_LR>102){left_LR = 127;}
           //ジョイスティック上下中央
           if(left_UD<152 && left_UD>102){left_UD = 127;}
-          int left_pwm = max(0,sli_R - max(0, (left_LR - 127)/4 ));  //左（要確認）
-          int right_pwm = max(0,sli_R - max(0, (127 - left_LR)/4)); //右（要確認）
+          
+
+          if(left_UD<127 && mode_flag!=1){
+            forward();
+            mode_flag = 1;
+          }else if(left_UD==127 && mode_flag!=2){
+            normal();
+            mode_flag = 2;
+          }else if(left_UD>127 && mode_flag!=3){
+            back();
+            mode_flag = 3;
+          }
+        
+
+          servo.State = re_data[5];
+          servo.Error = servo.Target-servo.State;
+          servo.Output = pitch_pid.calPID(servo.Error);
+
+         //↓左右のYaw制御
+         if(left_LR<127 && mode_flag_yaw!=1){
+           left();
+           mode_flag_yaw = 1;
+         }else if(left_LR==127 && mode_flag_yaw!=2){
+           normal_yaw();
+           mode_flag_yaw = 2;
+         }else if(left_LR>127 && mode_flag_yaw!=3){
+           right();
+           mode_flag_yaw = 3;
+         }
+
+         
+         motor.State = re_data[6];
+         motor.Error = motor.Target-motor.State;
+         motor.Output = yaw_pid.calPID(motor.Error);
+
+         //↑左右のYaw制御
+
+          int yaw_pid = abs((int)motor.Output);
+          int left_pwm,rigit_pwm = 255;
+          if(motor.Error > 0 ){
+            left_pwm = max(0,sli_R);  //左（要確認）
+            right_pwm = max(0,sli_R - yaw_pid); //右（要確認）
+          }else{
+            left_pwm = max(0,sli_R - yaw_pid);  //左（要確認）
+            right_pwm = max(0,sli_R); //右（要確認）
+          }
+          
+        
+
           
           data[0] = left_pwm;          
           data[1] = right_pwm;
-          data[2] = servo.Output;
-          data[3] = servo.Output;
+          data[2] = -1*servo.Output+90;
+          data[3] = servo.Output+90;
+          
     
     //コントローラモード
     }else{  
-    
+      flag = 0;
       switch(controller_num){
         case 1:
           left_LR = map(analogRead(stick_lr),0,4096,0,255);
@@ -273,10 +432,6 @@ void loop() {
     #endif
 
     //delay(10);
-
-    Serial.print(servo.State);
-    Serial.print(",");
-    Serial.println(servo.Output);
     // Send message via ESP-NOW
     esp_now_send(castAddress, (uint8_t *) &data, sizeof(data));
     //esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
@@ -336,9 +491,9 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
       //Serial.print(",");
     }
     if(data[5] != 0){
-      re_data[5] = data[5];
+      re_data[5] = -1*data[5];
     }else{
-      re_data[5] = -1*data[6];
+      re_data[5] = data[6];
     }
     if(data[7] != 0){
       re_data[6] = data[7];
@@ -354,9 +509,11 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
       }
     }
     */
-   sprintf(send_pc, "%d,%d,%d,%d,%d,%d,%d,%d",re_data[0],re_data[1],re_data[2],re_data[3],re_data[4],re_data[5],re_data[6],re_data[7]);
-   Serial.println(send_pc);
-   Serial.flush();
+   if(flag == 1){
+    sprintf(send_pc, "%d,%d,%d,%d,%d,%d,%d,%d,%f,%f,%f,",re_data[0],re_data[1],re_data[2],re_data[3],re_data[4],-1*re_data[5],re_data[6],re_data[7],servo.Output,motor.Output,motor.Target);
+    Serial.println(send_pc);
+    Serial.flush();
+   }
 }
 
 //送信時コールバック関数
