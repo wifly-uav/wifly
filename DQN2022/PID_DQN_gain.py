@@ -30,17 +30,17 @@ ADD_I = True #STATE_VARIABLES=5
 FFPID = False #N_ACTIONS=9
 INC = False #N_ACTIONS=5
 MIX = False #N_ACTIONS=17,STATE_VARIABLES=3
-RND = True
+RND = False
 LSTM = False
 LOAD = True
 LOAD_BATCH = True
 LOAD_RND = True
 Filter = False
 RC_filter = 7
-PARALLEL = True
+PARALLEL = False
 EPISODE_TIME = 30.0
 NEIGHBOR = False
-PRE_REWARD = False
+PRE_REWARD = True
 DISTURB = False
 CONDITION = False
 

@@ -303,7 +303,7 @@ def build_act_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
     marged = keras.layers.Add()([f_state_branch, act_fc])
     fc1 = keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = 'he_normal')(marged)
     fc2 = keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = 'he_normal')(fc1)
-    Q = keras.layers.Dense(1, activation = None)(fc2)
+    Q = keras.layers.Dense(2, activation = None)(fc2)
 
     model = keras.Model(inputs=[state_branch,action_branch], outputs=[Q])
     model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
@@ -446,8 +446,6 @@ class DQNAgent:
         #self.epsilon_act = 0
         #self.action_old = 0
 
-
-        #TODO
         self.rnd_reward = []
         self.target_nn,_,_= build_dqn(RND_LEARNING_RATE, 1, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
         self.predictor_nn,_,_= build_dqn(RND_LEARNING_RATE, 1, STATE_VARIABLES, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
@@ -809,12 +807,6 @@ class DQNAgent:
         #print("tree_total" + str(self.memory_per.tree[0]))
         #exit()
 
-    def learn_state(self):
-        if self.num_in_buffer < self.batch_size:
-            return
-        states, actions, rewards, states_, dones, batch_idxes = self.memory.sample_buffer(self.batch_size)
-        self.q_state.train_on_batch(states, rewards)
-
     def learn(self, beta=1):
         #time_start = time.time()
         """
@@ -844,7 +836,14 @@ class DQNAgent:
             act_index = np.ravel(actions-1)
             act = np.array([[0]*self.n_actions]*self.batch_size)
             act[batch_index,act_index] = 1
-            self.q_state.train_on_batch((states,act),rewards)
+            Qs = self.q_target.predict(states_)
+            Q = np.max(Qs, axis=1)
+            rewards_ = np.array([rewards])
+            Q_ = np.array([Q])
+            rewards_ = rewards_.T
+            Q_ = Q_.T
+            back = np.concatenate([rewards_, Q_],1)
+            self.q_state.train_on_batch((states,act),back)
 
         #RNDの学習---------------------------------------------------------------------------------------------------------------
         if self.RND:
@@ -882,6 +881,7 @@ class DQNAgent:
 
         frames = np.zeros(self.batch_size, dtype=np.int32)
         #DQNの学習-----------------------------------------------------------------------------------------------------------------
+        #LSTM ver-----------------------------------------------------------------------------------------------------------------
         if self.LSTM:
             for i in range(self.keep_frames-1):
                 actions_ = self.memory.action_memory[batch_index_]
@@ -897,8 +897,10 @@ class DQNAgent:
                 q_target[batch_index, frames, actions_] = rewards + self.gamma * np.max(q_next, axis=1)* dones
                 batch_index_ -= 1
                 frames -= 1
+        #RND ver-----------------------------------------------------------------------------------------------------------------
         elif self.RND:
             q_target[batch_index, actions] = rnd_rewards + self.gamma * np.max(q_next, axis=1)* dones
+        #周辺近似 ver-----------------------------------------------------------------------------------------------------------------
         elif self.neighbor:
             q_target[batch_index, actions] = rewards + self.gamma * np.max(q_next, axis=1)* dones
             actions_ = actions-1
@@ -913,17 +915,21 @@ class DQNAgent:
             dones_ = n_*n__
             actions_ = actions_*dones
             q_target[batch_index, actions] = dones_*(0.5*rewards + self.gamma * np.max(q_next, axis=1)* dones)+(1-dones_)*q_target[batch_index, actions]
+        #報酬予測　ver-----------------------------------------------------------------------------------------------------------------
         elif self.pre_reward:
             index_act_ = np.array(np.identity(self.n_actions))
             index_act = np.tile(index_act_,(self.batch_size,1))
             states_ = np.repeat(states,self.n_actions, axis=0)
             pre_rewards = self.q_state.predict_on_batch((states_, index_act))
+            pre_rewards , pre_q = np.split(pre_rewards,2,1)
             pre_rewards = np.clip(pre_rewards,-1,1)
             pre_rewards = pre_rewards.reshape([self.batch_size,self.n_actions])
-            q_ = np.max(q_next, axis=1)* dones
-            q_ = q_.reshape([self.batch_size,1])
-            q_ = np.tile(q_,(1,self.n_actions))
-            q_target = pre_rewards + q_
+            dones_ = np.tile(dones,(1,self.n_actions))
+            dones_ = dones_.T
+            pre_q = pre_q * dones_
+            pre_q = pre_q.reshape([self.batch_size,self.n_actions])
+            q_target = pre_rewards + pre_q
+        #通常 ver-----------------------------------------------------------------------------------------------------------------
         else:
             #Double or Fixed Target Network
             if self.double:
