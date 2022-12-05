@@ -15,7 +15,7 @@ class visual_act:
         self.draw = ImageDraw.Draw(self.im)
 
         self.max_size = 5000
-        self.minimum_size = 100
+        self.minimum_size = 1000
         self.min_x = 40
         self.min_y = 100
         self.center_x = self.max_size/2+self.min_x
@@ -29,8 +29,8 @@ class visual_act:
 
         self.point_size = 30
    
-        self.size = (self.max_size-self.minimum_size)/(2*self.action_num)
-        self.size2 = (self.max_size-self.minimum_size)/(2*3)
+        self.size = (self.max_size-self.minimum_size)/(2*(self.action_num-1))
+        self.size2 = (self.max_size-self.minimum_size)/(2*2)
 
     def draw_base(self):
         for i in range(self.action_num):
@@ -49,9 +49,19 @@ class visual_act:
         #self.im.show()
     
     def angleact2pos(self, angle, act):
-        pos_x = self.center_x + self.size*(act+1)*math.cos(math.radians(angle-90))
-        pos_y = self.center_y + self.size*(act+1)*math.sin(math.radians(angle-90))
+        pos_x = self.center_x + (self.size*act+self.minimum_size/2)*math.cos(math.radians(angle-90))
+        pos_y = self.center_y + (self.size*act+self.minimum_size/2)*math.sin(math.radians(angle-90))
         return 2*self.center_x-pos_x, pos_y
+    
+    def angleact2pos2(self, angle, diff):
+        diff_ = diff/210
+        if angle>0:
+            pos_x = self.center_x2 + (self.size2*(diff_+1)+self.minimum_size/2)*math.cos(math.radians(angle-90))
+            pos_y = self.center_y2 + (self.size2*(diff_+1)+self.minimum_size/2)*math.sin(math.radians(angle-90))
+        else:
+            pos_x = self.center_x2 + (self.size2*(-diff_+1)+self.minimum_size/2)*math.cos(math.radians(angle-90))
+            pos_y = self.center_y2 + (self.size2*(-diff_+1)+self.minimum_size/2)*math.sin(math.radians(angle-90))
+        return 2*self.center_x2-pos_x, pos_y
 
     def load(self):
         self.q = np.loadtxt(self.folder + '/debug_q.csv', delimiter=',')
@@ -70,8 +80,12 @@ class visual_act:
         self.angle = self.state[:, 0]
         self.time_delta = self.state[:, 2]
         self.action = self.act[:, 0]
+        b = np.ones(1)/1
+        self.action_conv = np.convolve(self.action, b, mode='same')
         self.pow_left = self.pow[:, 0]
         self.pow_rigiht = self.pow[:, 1]
+        self.pow_diff = self.pow_left-self.pow_rigiht
+
         sum = 0
         for i in self.time_delta:
             sum += i
@@ -80,7 +94,11 @@ class visual_act:
     def visualize(self):
         num = len(self.angle)
         for i in range(num):
-            x,y = self.angleact2pos(self.angle[i],self.action[i])
+            x,y = self.angleact2pos(self.angle[i],self.action_conv[i])
+            #print(str(x)+","+str(y))
+            self.draw.ellipse((x-self.point_size, y-self.point_size, x+self.point_size, y+self.point_size), fill=(255-int(255/num*i), 0, int(255/num*i)), outline=(0, 0, 0))
+        for i in range(num):
+            x,y = self.angleact2pos2(self.angle[i],self.pow_diff[i])
             #print(str(x)+","+str(y))
             self.draw.ellipse((x-self.point_size, y-self.point_size, x+self.point_size, y+self.point_size), fill=(255-int(255/num*i), 0, int(255/num*i)), outline=(0, 0, 0))
         self.im.show()
@@ -92,7 +110,7 @@ class visual_act:
 if __name__ == "__main__":
     path = os.path.dirname(__file__)
 
-    ac = visual_act(flag=1,folder=path + '/result/1117_pre_5')
+    ac = visual_act(flag=1,folder=path + '/result/1117_pre_1')
     ac.load()
     ac.recog()
     ac.draw_base()
