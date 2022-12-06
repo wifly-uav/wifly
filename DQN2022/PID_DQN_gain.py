@@ -24,14 +24,12 @@ D_GAIN = 0
 PWM_DEF = 209           #kitai側では+1されて195になる。
 ER = 0
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
+EPISODE_TIME = 30.0
+
 amplitude = 20
 hz = 0.1
 target = 0
-
 CHANGE_TARGET = True
-
-LIMIT = True
-BETA = False
 
 PID_ONLY = False
 PID = True #STATE_VARIABLES=4
@@ -39,19 +37,27 @@ ADD_I = True #STATE_VARIABLES=5
 FFPID = False #N_ACTIONS=9
 INC = False #N_ACTIONS=5
 MIX = False #N_ACTIONS=17,STATE_VARIABLES=3
+LIMIT = True
+
 RND = False
+NEIGHBOR = False
+PRE_REWARD = False
+
+PARALLEL = False
+
 LSTM = False
+Filter = False
+RC_filter = 7
+DIFF_INPUT = False      #keep_frame=1
+
 LOAD = True
 LOAD_BATCH = True
 LOAD_RND = True
-Filter = False
-RC_filter = 7
-PARALLEL = False
-EPISODE_TIME = 30.0
-NEIGHBOR = False
-PRE_REWARD = False
-DISTURB = False
+
 CONDITION = False
+BETA = False
+
+DISTURB = False
 
 if __name__ == "__main__":
     if DISTURB:
@@ -145,7 +151,7 @@ if __name__ == "__main__":
     
     #各種log保存先指定
     log = logger(folder = save_dir)
-    env = Environment(agent.keep_frames)                         #Environmentクラスのインスタンス作成
+    env = Environment(agent.keep_frames, mode=DIFF_INPUT)                         #Environmentクラスのインスタンス作成
     vi = visual_nn(folder = save_dir)        
     mi = visual_minibach(folder = save_dir)
     ac = visual_act(folder = save_dir)
@@ -172,7 +178,7 @@ if __name__ == "__main__":
         rnd_f = []
         disturb_flag = 0
         if Filter:
-            yaw_index = -1
+            yaw_index = 5
         else:
             yaw_index = 2
 

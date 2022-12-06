@@ -22,8 +22,9 @@ class Environment():
     強化学習をする際の環境を設定するクラス
     状態取得、報酬決定、行動内容の決定をしている
     """
-    def __init__(self, keep_frames):
+    def __init__(self, keep_frames, mode=0):
         self.communicator = Communicator()
+        self.communicator.set_mode(mode)
         self.thread1 = threading.Thread(target=self.communicator.receive_from_esp)
         self.thread1.start()
         #self.reset()
@@ -31,6 +32,7 @@ class Environment():
         self.state = deque()
         self.keep_frames = keep_frames
         self.target_angle = 0
+        self.mode = mode
 
     def set_cut_off(self, cut_off):
         self.params_to_send[5] = cut_off
@@ -58,7 +60,10 @@ class Environment():
             _,_,_,_ = self.observe_update_state_pid(p_gain=p_gain, i_=i_, yaw_index=yaw_index)
 
     def observe_update_state_pid(self, p_gain=None, i_=None, yaw_index=2):
-        data = [int(self.communicator.state[-1][0]),int(self.communicator.state[-1][1]),int(self.communicator.state[-1][yaw_index])-self.target_angle]
+        if self.mode == 1:
+            data = [int(self.communicator.state[-1][0]),int(self.communicator.state[-1][1]),int(self.communicator.state[-1][yaw_index])-self.target_angle,self.communicator.state[-1][7],self.communicator.state[-1][8]]
+        else:
+            data = [int(self.communicator.state[-1][0]),int(self.communicator.state[-1][1]),int(self.communicator.state[-1][yaw_index])-self.target_angle]
         ti = self.communicator.state[-1][3]
         ti_ = self.communicator.state[-1][4]
         dyaw = self.communicator.state[-1][6]

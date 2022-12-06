@@ -104,7 +104,7 @@ class logger():
             time.append(sum)
         
         plt.plot(time,angle)
-        plt.plot(time,target_, color="blue")
+        plt.plot(time,angle+target_, color="blue")
         #plt.ylim(-90,90)
         plt.plot([0, time[-1]],[10, 10], "red", linestyle='dashed')
         plt.plot([0, time[-1]],[-10, -10], "red", linestyle='dashed')

@@ -374,7 +374,6 @@ class DQNAgent:
         self.neighbor = neighbor
         self.pre_reward = pre_reward
         self.condition = condition
-        self.con = 0
 
         if self.parallel:
             self.learn_counter = 0
@@ -609,6 +608,10 @@ class DQNAgent:
             Q_values = self.q_choose.predict_on_batch(states)
         elif self.RND:
             Q_values = self.q_eval.predict_on_batch((states,extend))
+        elif self.condition:
+            #TODO
+            con = np.array([0])
+            Q_values = self.q_eval.predict_on_batch((states,con))
         else:
             Q_values = self.q_eval.predict_on_batch(states)
 
@@ -853,11 +856,6 @@ class DQNAgent:
         
         #0~batch_size-1までの連番リストを取得
         batch_index = np.arange(self.batch_size, dtype = np.int32)
-        #dyawの学習----------------------------------------------------------------------------------------------------
-        if self.condition:
-            self.con_net.train_on_batch(state,dyaw)
-            #TODO
-            #ミニバッチのコンディションを推定
         #報酬予測の学習----------------------------------------------------------------------------------------------------------
         if self.pre_reward:
             act_index = np.ravel(actions-1)
@@ -935,13 +933,13 @@ class DQNAgent:
             n__ = np.where(actions_>self.n_actions,0,1)
             dones_ = n_*n__
             actions_ = actions_*dones
-            q_target[batch_index, actions_] = dones_*(0.5*rewards + self.gamma * np.max(q_next, axis=1)* dones)+(1-dones_)*q_target[batch_index, actions]
+            q_target[batch_index, actions_] = dones_*(0.5*(0.5*rewards + self.gamma * np.max(q_next, axis=1)* dones+q_target[batch_index, actions_]))+(1-dones_)*q_target[batch_index, actions]
             actions_ = actions+1
             n_ = np.where(actions_<0,0,1)
             n__ = np.where(actions_>self.n_actions-1,0,1)
             dones_ = n_*n__
             actions_ = actions_*dones
-            q_target[batch_index, actions] = dones_*(0.5*rewards + self.gamma * np.max(q_next, axis=1)* dones)+(1-dones_)*q_target[batch_index, actions]
+            q_target[batch_index, actions] = dones_*(0.5*(0.5*rewards + self.gamma * np.max(q_next, axis=1)* dones+[batch_index, actions_]))+(1-dones_)*q_target[batch_index, actions]
         #報酬予測　ver-----------------------------------------------------------------------------------------------------------------
         elif self.pre_reward:
             index_act_ = np.array(np.identity(self.n_actions))
@@ -977,21 +975,34 @@ class DQNAgent:
             states = states.reshape(-1,self.keep_frames,self.state_variables)
         #NNのパラメータ更新
         if self.global_step % self.learning_period == 0 or self.num_in_buffer == self.batch_size:
+            #RND ver-----------------------------------------------------------------------------------------------------------------
             if self.RND:
                 loss = self.q_eval.train_on_batch((states,state_reward), q_target) 
                 self.past_state_reward = np.copy(state_reward)
+            #コンディション ver-----------------------------------------------------------------------------------------------------------------
+            elif self.condition:
+                con = self.con_net.predict_on_batch(states)-dyaw
+                loss = self.q_eval.train_on_batch((states,con), q_target)
+                self.past_con = np.copy(con)
             else:
                 loss = self.q_eval.train_on_batch(states, q_target)
             self.log_loss_buffer.append(loss)
             self.past_states = np.copy(states)
             self.past_q_target = np.copy(q_target)
         else:
+            #RND ver-----------------------------------------------------------------------------------------------------------------
             if self.RND:
                 loss = self.q_eval.train_on_batch((self.past_states,self.past_state_reward), q_target) 
+            #コンディション ver-----------------------------------------------------------------------------------------------------------------
+            elif self.condition:
+                loss = self.q_eval.train_on_batch((self.past_states,self.past_con), q_target)
             else:
                 loss = self.q_eval.train_on_batch(self.past_states, self.past_q_target)
             self.log_loss_buffer.append(loss)
-        
+
+        #dyawの学習----------------------------------------------------------------------------------------------------
+        if self.condition:
+            self.con_net.train_on_batch(states,dyaw)        
         #self.log_loss.append(self.q_eval.train_on_batch(states, q_target))
         #loss = self.q_eval.train_on_batch(states, q_target)
         #self.log_loss.append(loss)
