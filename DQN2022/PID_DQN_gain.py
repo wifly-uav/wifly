@@ -14,15 +14,24 @@ import time
 import csv
 import threading
 from odrive_node import ODriveNode
+import math
 
 N_EPOCHS = 1            #学習epoch数
 N_FRAMES = 10000          #1epochあたりのステップ数
-P_GAIN = 3
+P_GAIN = 4
 I_GAIN = 0.0002         #0.00001
 D_GAIN = 0              
 PWM_DEF = 209           #kitai側では+1されて195になる。
 ER = 0
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
+amplitude = 20
+hz = 0.1
+target = 0
+
+CHANGE_TARGET = True
+
+LIMIT = True
+BETA = False
 
 PID_ONLY = False
 PID = True #STATE_VARIABLES=4
@@ -40,7 +49,7 @@ RC_filter = 7
 PARALLEL = False
 EPISODE_TIME = 30.0
 NEIGHBOR = False
-PRE_REWARD = True
+PRE_REWARD = False
 DISTURB = False
 CONDITION = False
 
@@ -84,7 +93,7 @@ if __name__ == "__main__":
             sys.exit()
     
     #DQNAgentクラスのインスタンス作成（NNの初期化やReplayMemoryの用意がされる）
-    agent = DQNAgent(folder = save_dir, RND=RND, LSTM=LSTM, parallel=PARALLEL, neighbor=NEIGHBOR, pre_reward=PRE_REWARD, condition=CONDITION)                      
+    agent = DQNAgent(folder = save_dir, RND=RND, LSTM=LSTM, parallel=PARALLEL, neighbor=NEIGHBOR, pre_reward=PRE_REWARD, condition=CONDITION, beta=BETA)                      
     
     print('Use saved progress? y/n')               #既存のモデル（学習済みNN）を使うか?
     ans_yn = input()
@@ -192,9 +201,9 @@ if __name__ == "__main__":
                 rnd_flag = agent.rnd_thr(state_current,10)
                 rnd_f.append(rnd_flag)
                 if rnd_flag:
-                    action = agent.choose_action(state_current)
+                    action = agent.choose_action(state_current, limit=LIMIT)
             else:
-                action = agent.choose_action(state_current)
+                action = agent.choose_action(state_current, limit=LIMIT)
 
             if PID:
                 if MIX:
@@ -293,13 +302,16 @@ if __name__ == "__main__":
             # for loging
             # 次状態、行動、最新の送信データ（の一部）、受信間隔（機体計測）、受信間隔（PC計測）を格納(log)
             # 次状態、報酬、受信間隔（機体計測）(log2)
-            log.add_log_state_and_action(state_next, action, env.params_to_send, ti, ti_)
+            log.add_log_state_and_action(state_next, action, env.params_to_send, ti, ti_, target)
             log.add_log_state(state_next, reward, ti)
 
             #ステップ数のカウント
             agent.global_step += 1
 
             Time_end = time.time()
+            if CHANGE_TARGET:
+                target = int(amplitude*math.sin(hz*(Time_end-start)*2*math.pi))
+                env.update_target(target)
             while (Time_end-Time_start<0.04):
                 Time_end = time.time()
             if Time_end-start > EPISODE_TIME:

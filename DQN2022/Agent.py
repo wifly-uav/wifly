@@ -42,7 +42,7 @@ N_ACTIONS = 6
 ENABLE_ACTIONS = [i for i in range(N_ACTIONS)]
 
 #hyperparameter for DQN
-MINIBATCH_SIZE = 4
+MINIBATCH_SIZE = 8
 KEEP_FRAMES = 4
 STATE_VARIABLES = 5     #状態変数の数(PWM,PWM,Yaw,Pgain,Igain)
 
@@ -70,9 +70,10 @@ YAW_INDEX = 2
 #----------------------------------------------------------------------------------------------
 
 class ReplayBuffer():
-    def __init__(self, max_size, input_dims):
+    def __init__(self, max_size, input_dims, beta):
         self.mem_size = max_size
         self.mem_cntr = 0           #保存した経験の数をカウントする
+        self.beta = beta
 
         #各リプレイメモリーの初期化
         #state_memoryとnew_state_memoryは3次元arrayであることに注意
@@ -88,8 +89,16 @@ class ReplayBuffer():
     def sample_buffer(self, batch_size):
         max_mem = min(self.mem_cntr, self.mem_size)
 
-        #0~max_mem-1までの整数乱数batch_size個取得（重複無し）
-        batch = np.random.choice(max_mem, batch_size, replace=True)
+        if self.beta:
+            #betaサンプリング
+            batch = []
+            while len(batch) != batch_size:
+                beta_int = int(max_mem * np.random.beta(2,1))
+                batch.append(beta_int)
+                batch = list(set(batch))
+        else:
+            #0~max_mem-1までの整数乱数batch_size個取得（重複無し）
+            batch = np.random.choice(max_mem, batch_size, replace=True)
 
         #state_memory[batch]とすると、state_memoryのうち、batchの要素と一致する添え字だけが抜き出されたリストが得られる。
         #つまり、各メモリーから乱数で選ばれた番号の要素を抜き出している（ミニバッチの作成）
@@ -356,7 +365,7 @@ def build_condition(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
     return model,0,0    #Dueling_Networkと返り値の数を合わせている。
 
 class DQNAgent:
-    def __init__(self, folder ='log', RND=False, LSTM=False, parallel=False, neighbor=False, pre_reward=False, condition=False):
+    def __init__(self, folder ='log', RND=False, LSTM=False, parallel=False, neighbor=False, pre_reward=False, condition=False, beta=False):
 
         self.RND = RND
         self.LSTM = LSTM
@@ -387,7 +396,7 @@ class DQNAgent:
         self.n_actions = N_ACTIONS
 
         #vanilla-DQN
-        self.memory = ReplayBuffer(REPLAY_MEMORY_SIZE,STATE_VARIABLES)   #ReplayBufferクラスのインスタンス作成
+        self.memory = ReplayBuffer(REPLAY_MEMORY_SIZE,STATE_VARIABLES, beta=beta)   #ReplayBufferクラスのインスタンス作成
         self.learning_rate = LEARNING_RATE
         self.gamma = DISCOUNT_FACTOR
         self.epsilon = EPSILON
@@ -580,7 +589,7 @@ class DQNAgent:
             flag = 1
         return flag
 
-    def choose_action(self, keep_states):
+    def choose_action(self, keep_states, limit):
         """
         ε-greedy方策による行動選択
         """
@@ -590,6 +599,7 @@ class DQNAgent:
         random_action_flag = 0      #random行動が選択された場合は1,argmaxQ行動が選択された場合は0
 
         states = np.array([keep_states])         #観測された状態をリスト化
+        angle = states[0][0][2]
         if self.RND:
             extend = np.array([[0]*3])
         if self.LSTM:
@@ -621,6 +631,23 @@ class DQNAgent:
         else:            
             action = np.argmax(Q_values)             #行動価値が最大である行動を選択     
 
+        if limit:
+            p_gain = 9
+            while 1:
+                if action == 4:
+                    p_gain = 6
+                elif action == 3:
+                    p_gain = 4.5
+                elif action == 2:
+                    p_gain = 4
+                elif action == 1:
+                    p_gain = 3.5
+                elif action == 0:
+                    p_gain = 2
+                if p_gain*abs(angle)<210:
+                    break
+                else:
+                    action -= 1
         #NNから出力されるQ値のlogを格納
         #predict_on_batchの返り値は[[a,b,c,d]]のように2重リストになっているので、アンパックしておく。
         self.log_q.append(*Q_values)

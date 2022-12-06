@@ -30,6 +30,7 @@ class Environment():
         self.params_to_send = default_params
         self.state = deque()
         self.keep_frames = keep_frames
+        self.target_angle = 0
 
     def set_cut_off(self, cut_off):
         self.params_to_send[5] = cut_off
@@ -57,7 +58,7 @@ class Environment():
             _,_,_,_ = self.observe_update_state_pid(p_gain=p_gain, i_=i_, yaw_index=yaw_index)
 
     def observe_update_state_pid(self, p_gain=None, i_=None, yaw_index=2):
-        data = [self.communicator.state[-1][0],self.communicator.state[-1][1],self.communicator.state[-1][yaw_index]]
+        data = [int(self.communicator.state[-1][0]),int(self.communicator.state[-1][1]),int(self.communicator.state[-1][yaw_index])-self.target_angle]
         ti = self.communicator.state[-1][3]
         ti_ = self.communicator.state[-1][4]
         dyaw = self.communicator.state[-1][6]
@@ -74,6 +75,9 @@ class Environment():
         状態を確認する
         """
         return self.state
+    
+    def update_target(self, angle):
+        self.target_angle = angle
 
     def observe_reward(self, data, yaw_index=2):
         """
@@ -83,7 +87,7 @@ class Environment():
         Returns:
             [int]: 報酬
         """
-        err = abs(float(data[0][yaw_index])-0.0)
+        err = abs(float(data[0][yaw_index])-self.target_angle)
         return 1.0-err/90.0
 
     def excute_action(self, action):

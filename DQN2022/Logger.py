@@ -18,12 +18,12 @@ class logger():
         self.folder = folder
         ##self.log = [["pitch,yaw,slope,roll"]]
 
-    def add_log_state_and_action(self, state, action, sent_param, time, time2):
+    def add_log_state_and_action(self, state, action, sent_param, time, time2, target):
         state_list = list(state)
         
         #要修正(env.default_paramsを修正→sent_paramの添え字を修正の流れ！！！)
         #row:[4フレームを1セットとした状態,行動番号,羽ばたき出力1,羽ばたき出力2,受信間隔(機体計測), 受信間隔(PC計測)]
-        row = [state_list, action, sent_param[1], sent_param[2], time, time2]
+        row = [state_list, action, sent_param[1], sent_param[2], time, time2, target]
         """
         row = copy.copy(state)
         row.extend(sent_param)
@@ -90,9 +90,12 @@ class logger():
     def angle_graph(self):
         angle = []
         time_ = []
+        target_ = []
         for i in self.log2:
             angle.append(int(i[0]))
             time_.append(int(i[-1]))
+        for i in self.log:
+            target_.append(int(i[-1]))
 
         sum = 0
         time = []
@@ -101,11 +104,12 @@ class logger():
             time.append(sum)
         
         plt.plot(time,angle)
+        plt.plot(time,target_, color="blue")
         #plt.ylim(-90,90)
         plt.plot([0, time[-1]],[10, 10], "red", linestyle='dashed')
         plt.plot([0, time[-1]],[-10, -10], "red", linestyle='dashed')
         plt.plot([0, time[-1]],[0, 0], "black")
-        plt.title("ANGLE",fontsize = 25)
+        #plt.title("ANGLE",fontsize = 25)
         plt.savefig(self.folder + '/angle.png')
         plt.show()
 
