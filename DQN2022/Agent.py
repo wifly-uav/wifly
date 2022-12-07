@@ -455,6 +455,9 @@ class DQNAgent:
         self.rnd_rewards_log = []
         self.pre_rewards_log = []
         self.pre_q_log = []
+        self.predict_loss = []
+        self.rnd_loss = []
+        self.condition_loss = []
         #self.epsilon_act = 0
         #self.action_old = 0
 
@@ -873,7 +876,7 @@ class DQNAgent:
             rewards_ = rewards_.T
             Q_ = Q_.T
             back = np.concatenate([rewards_, Q_],1)
-            self.q_state.train_on_batch((states,act),back)
+            self.predict_loss.append(self.q_state.train_on_batch((states,act),back))
 
         #RNDの学習---------------------------------------------------------------------------------------------------------------
         if self.RND:
@@ -882,7 +885,7 @@ class DQNAgent:
             predict_val = self.predictor_nn.predict_on_batch(states)
             error = np.square(target_val-predict_val)*0.01
             rewards_in = np.ravel(np.clip(error,0,50)*beta)
-            self.predictor_nn.train_on_batch(states,target_val)
+            self.rnd_loss.append(self.predictor_nn.train_on_batch(states,target_val))
 
             #print(states)
             #print(beta_list)
@@ -1017,7 +1020,7 @@ class DQNAgent:
 
         #dyawの学習----------------------------------------------------------------------------------------------------
         if self.condition:
-            self.con_net.train_on_batch(states,dyaw)        
+            self.condition_loss.append(self.con_net.train_on_batch(states,dyaw))        
         #self.log_loss.append(self.q_eval.train_on_batch(states, q_target))
         #loss = self.q_eval.train_on_batch(states, q_target)
         #self.log_loss.append(loss)
@@ -1172,17 +1175,22 @@ class DQNAgent:
     def save_con(self):        
         with open(self.folder + '/condition.csv', 'a') as f:
             np.savetxt(f, self.con_log, delimiter=',')
-
+        with open(self.folder + '/condition_loss.csv', 'a') as f:
+            np.savetxt(f, self.condition_loss, delimiter=',')
 
     def save_pre_reward(self):        
         with open(self.folder + '/pre_rewards.csv', 'a') as f:
             np.savetxt(f, self.pre_rewards_log, delimiter=',')        
         with open(self.folder + '/pre_q.csv', 'a') as f:
-            np.savetxt(f, self.pre_q_log, delimiter=',')
+            np.savetxt(f, self.pre_q_log, delimiter=',')     
+        with open(self.folder + '/pre_loss.csv', 'a') as f:
+            np.savetxt(f, self.predict_loss, delimiter=',')
     
     def save_rnd_rewards(self):        
         with open(self.folder + '/rnd_rewards.csv', 'a') as f:
             np.savetxt(f, self.rnd_rewards_log, delimiter=',')
+        with open(self.folder + '/rnd_loss.csv', 'a') as f:
+            np.savetxt(f, self.rnd_loss, delimiter=',')
 
     def save_NN_model(self, filepath):
         self.q_eval.save(filepath + "/" + self.q_eval_model_file)
