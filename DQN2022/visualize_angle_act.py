@@ -67,7 +67,7 @@ class visual_act:
         self.q = np.loadtxt(self.folder + '/debug_q.csv', delimiter=',')
         self.act = np.loadtxt(self.folder + '/debug_act.csv', delimiter=',')
         self.state = np.loadtxt(self.folder + '/log2.csv', delimiter=',')
-        self.pow = np.loadtxt(self.folder + '/log.csv', delimiter=',' ,usecols=[-4,-3])
+        self.pow = np.loadtxt(self.folder + '/log.csv', delimiter=',' ,usecols=[-5,-4])
 
     def recog(self):
         self.q_max = []
@@ -110,7 +110,7 @@ class visual_act:
 if __name__ == "__main__":
     path = os.path.dirname(__file__)
 
-    ac = visual_act(flag=1,folder=path + '/result/1206_il_5')
+    ac = visual_act(flag=1,folder=path + '/result/1207_con_0_1_change')
     ac.load()
     ac.recog()
     ac.draw_base()

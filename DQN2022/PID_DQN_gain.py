@@ -29,7 +29,7 @@ EPISODE_TIME = 30.0
 amplitude = 20
 hz = 0.1
 target = 0
-CHANGE_TARGET = True
+CHANGE_TARGET = False
 
 PID_ONLY = False
 PID = True #STATE_VARIABLES=4
@@ -40,7 +40,7 @@ MIX = False #N_ACTIONS=17,STATE_VARIABLES=3
 LIMIT = True
 
 RND = False
-NEIGHBOR = False
+NEIGHBOR = True
 PRE_REWARD = False
 
 PARALLEL = False
@@ -48,7 +48,7 @@ PARALLEL = False
 LSTM = False
 Filter = False
 RC_filter = 7
-DIFF_INPUT = False      #keep_frame=1
+DIFF_INPUT = False      #keep_frame=1,STATE_VARIABLES=5
 
 LOAD = True
 LOAD_BATCH = True
@@ -113,10 +113,10 @@ if __name__ == "__main__":
             agent.load_condition_NN(saved_dir)
             agent.NN_condition_avoid_overhead()
             agent.NN_condition_dqn_avoid_overhead()
-        if PRE_REWARD:
+        elif PRE_REWARD:
             agent.load_state_NN(saved_dir)
             agent.NN_preact_avoid_overhead()
-        if RND:
+        elif RND:
             if LOAD_RND:
                 agent.load_rnd_NN(saved_dir)
                 agent.NN_RND_avoid_overhead()
@@ -177,6 +177,8 @@ if __name__ == "__main__":
         score = 0                               #累積報酬
         rnd_f = []
         disturb_flag = 0
+        dyaw = 0
+
         if Filter:
             yaw_index = 5
         else:
@@ -208,6 +210,8 @@ if __name__ == "__main__":
                 rnd_f.append(rnd_flag)
                 if rnd_flag:
                     action = agent.choose_action(state_current, limit=LIMIT)
+            elif CONDITION:
+                action = agent.choose_action(state_current, limit=LIMIT, dyaw=dyaw)
             else:
                 action = agent.choose_action(state_current, limit=LIMIT)
 
@@ -381,6 +385,9 @@ if __name__ == "__main__":
         agent.debug_rnd_target_nn()
         agent.debug_rnd_predictor_nn()
         agent.debug_rnd()
+        agent.save_rnd_rewards()
+    if CONDITION:
+        agent.save_con()
     agent.debug_memory()        #リプレイバッファに保存されている遷移のうち、状態のみをcsv出力
     agent.debug_minibatch()     #minibatch_indexのlogをCSV出力(未実装)
     agent.debug_minibatch_2()   #自作ver!

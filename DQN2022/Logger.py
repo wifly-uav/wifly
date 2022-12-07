@@ -91,20 +91,22 @@ class logger():
         angle = []
         time_ = []
         target_ = []
+        angle_ = []
         for i in self.log2:
             angle.append(int(i[0]))
             time_.append(int(i[-1]))
         for i in self.log:
             target_.append(int(i[-1]))
-
+        for i in range(min(len(angle),len(target_))):
+            angle_.append(angle[i]+target_[i])
         sum = 0
         time = []
         for i in time_:
             sum += i*0.001
             time.append(sum)
         
-        plt.plot(time,angle)
-        plt.plot(time,angle+target_, color="blue")
+        plt.plot(time,angle_)
+        plt.plot(time,target_, color="blue")
         #plt.ylim(-90,90)
         plt.plot([0, time[-1]],[10, 10], "red", linestyle='dashed')
         plt.plot([0, time[-1]],[-10, -10], "red", linestyle='dashed')

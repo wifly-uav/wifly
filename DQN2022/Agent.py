@@ -451,6 +451,8 @@ class DQNAgent:
         self.log_v = []                         #NNの状態価値関数Vのlog
         self.log_adv = []                       #NNのアドバンテージ関数Aのlog
         self.log_p = []
+        self.con_log = []
+        self.rnd_rewards_log = []
         #self.epsilon_act = 0
         #self.action_old = 0
 
@@ -588,7 +590,7 @@ class DQNAgent:
             flag = 1
         return flag
 
-    def choose_action(self, keep_states, limit):
+    def choose_action(self, keep_states, limit, dyaw=0):
         """
         ε-greedy方策による行動選択
         """
@@ -609,8 +611,8 @@ class DQNAgent:
         elif self.RND:
             Q_values = self.q_eval.predict_on_batch((states,extend))
         elif self.condition:
-            #TODO
-            con = np.array([0])
+            con = abs(self.con_net.predict_on_batch(states))-abs(float(dyaw))
+            self.con_log.append(con[0])
             Q_values = self.q_eval.predict_on_batch((states,con))
         else:
             Q_values = self.q_eval.predict_on_batch(states)
@@ -647,6 +649,7 @@ class DQNAgent:
                     p_gain = 3.5
                 elif action == 0:
                     p_gain = 2
+                    break
                 if p_gain*abs(angle)<210:
                     break
                 else:
@@ -885,6 +888,7 @@ class DQNAgent:
             self.rnd_reward.append(rewards_in) #for Debug
             state_reward = np.concatenate([rewards.reshape(-1,1), rewards_in.reshape(-1,1), beta_list.reshape(-1,1)],axis=1)
             rnd_rewards = rewards + rewards_in
+            self.rnd_rewards_log.append([np.mean(rewards), np.mean(rewards_in)])
 
         if self.LSTM:
             states = states.reshape(-1,self.keep_frames,self.state_variables)
@@ -893,10 +897,18 @@ class DQNAgent:
         self.log_minibatch_index.append(batch_idxes)
         #self.log_p.append(ps)
         #Fixed-Targetを実装
+        #RND ver-----------------------------------------------------------------------------------------------------------------
         if self.RND:
             extend = np.array([[0]*3])
             q_eval = self.q_target.predict((states,extend))
             q_next = self.q_target.predict((states_,extend))
+        #コンディション ver-----------------------------------------------------------------------------------------------------------------
+        elif self.condition:
+            dyaw_ = dyaw.reshape(self.batch_size,-1)
+            con = abs(self.con_net.predict_on_batch(states))-abs(dyaw_)
+            q_eval = self.q_target.predict((states,con))
+            q_next = self.q_target.predict((states_,con))
+        #通常 ver-----------------------------------------------------------------------------------------------------------------
         else:
             q_eval = self.q_target.predict(states)
             q_next = self.q_target.predict(states_)
@@ -932,14 +944,14 @@ class DQNAgent:
             n_ = np.where(actions_<0,0,1)
             n__ = np.where(actions_>self.n_actions,0,1)
             dones_ = n_*n__
-            actions_ = actions_*dones
+            actions_ = actions_*dones_
             q_target[batch_index, actions_] = dones_*(0.5*(0.5*rewards + self.gamma * np.max(q_next, axis=1)* dones+q_target[batch_index, actions_]))+(1-dones_)*q_target[batch_index, actions]
             actions_ = actions+1
             n_ = np.where(actions_<0,0,1)
             n__ = np.where(actions_>self.n_actions-1,0,1)
             dones_ = n_*n__
-            actions_ = actions_*dones
-            q_target[batch_index, actions] = dones_*(0.5*(0.5*rewards + self.gamma * np.max(q_next, axis=1)* dones+[batch_index, actions_]))+(1-dones_)*q_target[batch_index, actions]
+            actions_ = actions_*dones_
+            q_target[batch_index, actions] = dones_*(0.5*(0.5*rewards + self.gamma * np.max(q_next, axis=1)* dones+q_target[batch_index, actions_]))+(1-dones_)*q_target[batch_index, actions]
         #報酬予測　ver-----------------------------------------------------------------------------------------------------------------
         elif self.pre_reward:
             index_act_ = np.array(np.identity(self.n_actions))
@@ -981,7 +993,6 @@ class DQNAgent:
                 self.past_state_reward = np.copy(state_reward)
             #コンディション ver-----------------------------------------------------------------------------------------------------------------
             elif self.condition:
-                con = self.con_net.predict_on_batch(states)-dyaw
                 loss = self.q_eval.train_on_batch((states,con), q_target)
                 self.past_con = np.copy(con)
             else:
@@ -1070,19 +1081,26 @@ class DQNAgent:
         self.q_eval.save(self.folder + '/' + self.model_name)
 
     def debug_nn(self):
-        l1 = self.q_eval.layers[0]
-        l2 = self.q_eval.layers[1]
-        l3 = self.q_eval.layers[2]
-        l4 = self.q_eval.layers[3]
+        i=0
+        if self.condition == True or self.RND == True:
+            i=4
+        l1 = self.q_eval.layers[i]
+        l2 = self.q_eval.layers[i+1]
+        l3 = self.q_eval.layers[i+2]
+        l4 = self.q_eval.layers[i+3]
         with open(self.folder + '/debug.csv', 'a') as f:
-            if self.RND == False:
-                np.savetxt(f, l2.get_weights()[0])
-                np.savetxt(f, l2.get_weights()[1])
+            np.savetxt(f, l2.get_weights()[0])
+            np.savetxt(f, l2.get_weights()[1])
             np.savetxt(f, l3.get_weights()[0])
             np.savetxt(f, l3.get_weights()[1])
             np.savetxt(f, l4.get_weights()[0])
             np.savetxt(f, l4.get_weights()[1])
-
+        if self.condition == True:
+            l = self.q_eval.layers[3]
+            np.savetxt(self.folder + '/debug_W_fc_con.csv', l.get_weights()[0], delimiter=',')
+        if self.RND == True:
+            l = self.q_eval.layers[3]
+            np.savetxt(self.folder + '/debug_W_fc_add.csv', l.get_weights()[0], delimiter=',')
         np.savetxt(self.folder + '/debug_W_fc1.csv', l2.get_weights()[0], delimiter=',')
         np.savetxt(self.folder + '/debug_b_fc1.csv', l2.get_weights()[1], delimiter=',')
         np.savetxt(self.folder + '/debug_W_fc2.csv', l3.get_weights()[0], delimiter=',')
@@ -1091,10 +1109,10 @@ class DQNAgent:
         np.savetxt(self.folder + '/debug_b_out.csv', l4.get_weights()[1], delimiter=',')
 
     def debug_rnd_target_nn(self):
-        l1 = self.q_eval.layers[0]
-        l2 = self.q_eval.layers[1]
-        l3 = self.q_eval.layers[2]
-        l4 = self.q_eval.layers[3]
+        l1 = self.target_nn.layers[0]
+        l2 = self.target_nn.layers[1]
+        l3 = self.target_nn.layers[2]
+        l4 = self.target_nn.layers[3]
         with open(self.folder + '/rnd_t_debug.csv', 'a') as f:
             np.savetxt(f, l2.get_weights()[0])
             np.savetxt(f, l2.get_weights()[1])
@@ -1110,10 +1128,10 @@ class DQNAgent:
         np.savetxt(self.folder + '/rnd_t_debug_b_out.csv', l4.get_weights()[1], delimiter=',')
 
     def debug_rnd_predictor_nn(self):
-        l1 = self.q_eval.layers[0]
-        l2 = self.q_eval.layers[1]
-        l3 = self.q_eval.layers[2]
-        l4 = self.q_eval.layers[3]
+        l1 = self.predictor_nn.layers[0]
+        l2 = self.predictor_nn.layers[1]
+        l3 = self.predictor_nn.layers[2]
+        l4 = self.predictor_nn.layers[3]
         with open(self.folder + '/rnd_p_debug.csv', 'a') as f:
             np.savetxt(f, l2.get_weights()[0])
             np.savetxt(f, l2.get_weights()[1])
@@ -1147,6 +1165,14 @@ class DQNAgent:
         self.target_nn = load_model(save_dir + self.rnd_target_model_file, custom_objects = {"_per_loss": self._per_loss})
         self.predictor_nn = load_model(save_dir + self.rnd_predictor_model_file, custom_objects = {"_per_loss":self._per_loss})
 
+    def save_con(self):        
+        with open(self.folder + '/condition.csv', 'a') as f:
+            np.savetxt(f, self.con_log, delimiter=',')
+    
+    def save_rnd_rewards(self):        
+        with open(self.folder + '/rnd_rewards.csv', 'a') as f:
+            np.savetxt(f, self.rnd_rewards_log, delimiter=',')
+
     def save_NN_model(self, filepath):
         self.q_eval.save(filepath + "/" + self.q_eval_model_file)
         self.q_target.save(filepath + "/" + self.q_target_model_file)
@@ -1159,7 +1185,7 @@ class DQNAgent:
     def save_state_model(self, filepath):
         self.q_state.save(filepath + "/" + self.q_state_model_file)
     
-    def save_condition_NN(self, filepath):
+    def save_condition_model(self, filepath):
         self.con_net.save(filepath + "/" + self.condition_model_file)
 
     def save_rnd_model(self, filepath):
