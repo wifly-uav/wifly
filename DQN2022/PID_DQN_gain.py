@@ -29,7 +29,7 @@ EPISODE_TIME = 30.0
 amplitude = 20
 hz = 0.1
 target = 0
-CHANGE_TARGET = False
+CHANGE_TARGET = True
 
 PID_ONLY = False
 PID = True #STATE_VARIABLES=4
@@ -40,8 +40,8 @@ MIX = False #N_ACTIONS=17,STATE_VARIABLES=3
 LIMIT = True
 
 RND = False
-NEIGHBOR = True
-PRE_REWARD = False
+NEIGHBOR = False
+PRE_REWARD = True
 
 PARALLEL = False
 
@@ -388,6 +388,8 @@ if __name__ == "__main__":
         agent.save_rnd_rewards()
     if CONDITION:
         agent.save_con()
+    if PRE_REWARD:
+        agent.save_pre_reward()
     agent.debug_memory()        #リプレイバッファに保存されている遷移のうち、状態のみをcsv出力
     agent.debug_minibatch()     #minibatch_indexのlogをCSV出力(未実装)
     agent.debug_minibatch_2()   #自作ver!

@@ -110,7 +110,7 @@ class visual_act:
 if __name__ == "__main__":
     path = os.path.dirname(__file__)
 
-    ac = visual_act(flag=1,folder=path + '/result/1207_con_0_1_change')
+    ac = visual_act(flag=1,folder=path + '/result/1207_nei_0_test_0')
     ac.load()
     ac.recog()
     ac.draw_base()

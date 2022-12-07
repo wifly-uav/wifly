@@ -453,6 +453,8 @@ class DQNAgent:
         self.log_p = []
         self.con_log = []
         self.rnd_rewards_log = []
+        self.pre_rewards_log = []
+        self.pre_q_log = []
         #self.epsilon_act = 0
         #self.action_old = 0
 
@@ -965,7 +967,9 @@ class DQNAgent:
             dones_ = dones_.T
             pre_q = pre_q * dones_
             pre_q = pre_q.reshape([self.batch_size,self.n_actions])
-            q_target = pre_rewards + pre_q
+            q_target = pre_rewards + self.gamma * pre_q
+            self.pre_rewards_log.append(np.ravel(pre_rewards).tolist())
+            self.pre_q_log.append(np.ravel(pre_q).tolist())
         #通常 ver-----------------------------------------------------------------------------------------------------------------
         else:
             #Double or Fixed Target Network
@@ -1168,6 +1172,13 @@ class DQNAgent:
     def save_con(self):        
         with open(self.folder + '/condition.csv', 'a') as f:
             np.savetxt(f, self.con_log, delimiter=',')
+
+
+    def save_pre_reward(self):        
+        with open(self.folder + '/pre_rewards.csv', 'a') as f:
+            np.savetxt(f, self.pre_rewards_log, delimiter=',')        
+        with open(self.folder + '/pre_q.csv', 'a') as f:
+            np.savetxt(f, self.pre_q_log, delimiter=',')
     
     def save_rnd_rewards(self):        
         with open(self.folder + '/rnd_rewards.csv', 'a') as f:
