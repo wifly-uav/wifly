@@ -46,7 +46,7 @@ class Communicator():
         
         time.sleep(0.5)
 
-        self.state = [0,0,0,0,0]
+        self.state = [0.0,0.0,0.0,0.0,0.0]
         
         print('Connected to controller')
 
@@ -56,11 +56,11 @@ class Communicator():
         self.dataset_from_esp = []
         self.time_started = None
         self.time_last_receive = time.time()
-        self.mode = 0
+        self.diff = False
         self.old_data = [0,0,0,0]
     
-    def set_mode(self, mode):
-        self.mode = mode
+    def set_mode(self, diff):
+        self.diff = diff
 
     def start_esp(self, data_to_send):
         """
@@ -114,7 +114,7 @@ class Communicator():
                         self.__fail_counter = 0                                 #受信失敗回数をリセット
                         persed_data[4] = persed_data[4].strip('\r\n')
                         #受信データ、受信間隔（機体計測）、受信間隔(PC)を返す。
-                        if self.mode == 1:
+                        if self.diff == True:
                             self.old_data.pop(0)
                             self.old_data.append(int(persed_data[2]))
                             v1 = (self.old_data[3]-self.old_data[1])/delta_time
@@ -126,7 +126,7 @@ class Communicator():
                             #self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time,persed_data[3],persed_data[4]])
                             self.old_data.pop(0)
                             self.old_data.append(int(persed_data[2]))
-                            v = float((self.old_data[3]+self.old_data[2]-self.old_data[1]-self.old_data[0])/(2*delta_time))
+                            v = float((self.old_data[3]-self.old_data[1])/(delta_time))
                             self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time,persed_data[3],v])
                         end = time.time()
                         while(end-start<0.04):

@@ -22,13 +22,18 @@ P_GAIN = 4
 I_GAIN = 0.0002         #0.00001
 D_GAIN = 0              
 PWM_DEF = 209           #kitai側では+1されて195になる。
-ER = 0
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
 EPISODE_TIME = 30.0
 
 amplitude = 20
 hz = 0.1
 target = 0
+
+amplitude_pwm = 20
+hz_pwm = 0.1
+CHANGE_DEF = False
+
+REWARD_MODE = 0         #0:Normal 1:Hirai 2:罰則のみ 3:Noise 4:変化 5:u_I罰則
 
 CHANGE_TARGET = False
 
@@ -49,7 +54,7 @@ PARALLEL = False
 LSTM = False
 Filter = False
 RC_filter = 7
-DIFF_INPUT = False      #keep_frame=1,STATE_VARIABLES=5
+DIFF_INPUT = False      #keep_frame=1,STATE_VARIABLES=7
 
 LOAD = True
 LOAD_BATCH = True
@@ -152,7 +157,7 @@ if __name__ == "__main__":
     
     #各種log保存先指定
     log = logger(folder = save_dir)
-    env = Environment(agent.keep_frames, mode=DIFF_INPUT)                         #Environmentクラスのインスタンス作成
+    env = Environment(agent.keep_frames, diff=DIFF_INPUT, reward_mode=REWARD_MODE)                         #Environmentクラスのインスタンス作成
     vi = visual_nn(folder = save_dir)        
     mi = visual_minibach(folder = save_dir)
     ac = visual_act(folder = save_dir)
@@ -268,7 +273,8 @@ if __name__ == "__main__":
                 com_fail = True
                 break
 
-            reward = env.observe_reward(state_next, yaw_index=yaw_index)     #Yaw角の0.0度からのずれに基づいた報酬を観測
+            u_i = pid.get_i()
+            reward = env.observe_reward(state_next, yaw_index=yaw_index, u_i=u_i)     #Yaw角の0.0度からのずれに基づいた報酬を観測
             score += reward
 
             if j == N_FRAMES - 1:
@@ -282,7 +288,6 @@ if __name__ == "__main__":
             #agent.store_transition_with_priority(state_current, action, reward, state_next, terminal)
 
             #進捗表示
-            u_i = pid.get_i()
             epoch = i + agent.episode_in_advance
             
             print( "Epoch:%d" % epoch, 
@@ -323,6 +328,8 @@ if __name__ == "__main__":
             if CHANGE_TARGET:
                 target = int(amplitude*math.sin(hz*(Time_end-start)*2*math.pi))
                 env.update_target(target)
+            if CHANGE_DEF:
+                pwm_def = PWM_DEF+int(amplitude_pwm*math.sin(hz_pwm*(Time_end-start)*2*math.pi))
             while (Time_end-Time_start<0.04):
                 Time_end = time.time()
             if Time_end-start > EPISODE_TIME:

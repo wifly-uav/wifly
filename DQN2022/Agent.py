@@ -438,6 +438,7 @@ class DQNAgent:
         self.past_q_target = 0
 
         self.global_step = 0
+        self.cut_off = 15
 
         #log用
         self.log_states = []                    #状態のlog
@@ -616,8 +617,10 @@ class DQNAgent:
         elif self.RND:
             Q_values = self.q_eval.predict_on_batch((states,extend))
         elif self.condition:
-            con = abs(self.con_net.predict_on_batch(states))-abs(float(dyaw))
-            self.con_log.append(con[0])
+            a = float(1/(2.0*3.14*self.cut_off*0.04+1.0))
+            pre_yaw = abs(self.con_net.predict_on_batch(states))
+            self.con = a*self.con+(1-a)*pre_yaw[0]-abs(float(dyaw))
+            self.con_log.append(con,pre_yaw[0],dyaw)
             Q_values = self.q_eval.predict_on_batch((states,con))
         else:
             Q_values = self.q_eval.predict_on_batch(states)

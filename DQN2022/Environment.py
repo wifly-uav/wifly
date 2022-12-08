@@ -22,9 +22,9 @@ class Environment():
     強化学習をする際の環境を設定するクラス
     状態取得、報酬決定、行動内容の決定をしている
     """
-    def __init__(self, keep_frames, mode=0):
+    def __init__(self, keep_frames, diff=False, reward_mode=0):
         self.communicator = Communicator()
-        self.communicator.set_mode(mode)
+        self.communicator.set_mode(diff)
         self.thread1 = threading.Thread(target=self.communicator.receive_from_esp)
         self.thread1.start()
         #self.reset()
@@ -32,7 +32,8 @@ class Environment():
         self.state = deque()
         self.keep_frames = keep_frames
         self.target_angle = 0
-        self.mode = mode
+        self.diff = diff
+        self.reward_mode = reward_mode
 
     def set_cut_off(self, cut_off):
         self.params_to_send[5] = cut_off
@@ -60,13 +61,13 @@ class Environment():
             _,_,_,_ = self.observe_update_state_pid(p_gain=p_gain, i_=i_, yaw_index=yaw_index)
 
     def observe_update_state_pid(self, p_gain=None, i_=None, yaw_index=2):
-        if self.mode == 1:
+        if self.diff == True:
             data = [int(self.communicator.state[-1][0]),int(self.communicator.state[-1][1]),int(self.communicator.state[-1][yaw_index])-self.target_angle,self.communicator.state[-1][7],self.communicator.state[-1][8]]
         else:
             data = [int(self.communicator.state[-1][0]),int(self.communicator.state[-1][1]),int(self.communicator.state[-1][yaw_index])-self.target_angle]
         ti = self.communicator.state[-1][3]
         ti_ = self.communicator.state[-1][4]
-        dyaw = self.communicator.state[-1][6]
+        dyaw = float(self.communicator.state[-1][6])
 
         if p_gain != None:
             data.append(p_gain)
@@ -84,7 +85,7 @@ class Environment():
     def update_target(self, angle):
         self.target_angle = angle
 
-    def observe_reward(self, data, yaw_index=2):
+    def observe_reward(self, data, yaw_index=2, u_i=0):
         """
         報酬を定義する
         Args:
@@ -93,7 +94,26 @@ class Environment():
             [int]: 報酬
         """
         err = abs(float(data[0][yaw_index])-self.target_angle)
-        return 1.0-err/90.0
+        if self.reward_mode == 0:
+            reward = 1-err/90.0
+        elif self.reward_mode == 1:
+            if err < 5:
+                reward = 1
+            elif err < 10:
+                reward = 0
+            else:
+                reward = -1
+        elif self.reward_mode == 2:
+            reward = -err/180.0
+        elif self.reward_mode == 3:
+            reward = 1-err/90.0-0.1*np.random.rand(1)
+        elif self.reward_mode == 4:
+            err_ = abs(float(data[3][yaw_index])-self.target_angle)
+            reward = 1-err/90.0+0.5*(err_-err-1)
+        elif self.reward_mode == 5:
+            reward = 1-err/90.0-0.1*u_i
+
+        return reward
 
     def excute_action(self, action):
         """
