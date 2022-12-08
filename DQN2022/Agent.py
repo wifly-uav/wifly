@@ -84,7 +84,7 @@ class ReplayBuffer():
         self.action_memory = np.zeros(self.mem_size, dtype=np.int32)
         self.reward_memory = np.zeros(self.mem_size, dtype=np.float32)
         self.terminal_memory = np.zeros(self.mem_size, dtype=np.int32)
-        self.dyaw_memory = np.zeros(self.mem_size, dtype=np.int32)
+        self.dyaw_memory = np.zeros(self.mem_size, dtype=np.float32)
 
     def sample_buffer(self, batch_size):
         max_mem = min(self.mem_cntr, self.mem_size)

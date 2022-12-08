@@ -29,7 +29,8 @@ EPISODE_TIME = 30.0
 amplitude = 20
 hz = 0.1
 target = 0
-CHANGE_TARGET = True
+
+CHANGE_TARGET = False
 
 PID_ONLY = False
 PID = True #STATE_VARIABLES=4
@@ -41,7 +42,7 @@ LIMIT = True
 
 RND = False
 NEIGHBOR = False
-PRE_REWARD = True
+PRE_REWARD = False
 
 PARALLEL = False
 
@@ -54,7 +55,7 @@ LOAD = True
 LOAD_BATCH = True
 LOAD_RND = True
 
-CONDITION = False
+CONDITION = True
 BETA = False
 
 DISTURB = False

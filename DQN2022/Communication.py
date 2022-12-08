@@ -116,14 +116,18 @@ class Communicator():
                         #受信データ、受信間隔（機体計測）、受信間隔(PC)を返す。
                         if self.mode == 1:
                             self.old_data.pop(0)
-                            self.old_data.append(persed_data[2])
-                            v1 = (self.old_data[0]-self.old_data[2])/delta_time
-                            v2 = (self.old_data[1]-self.old_data[3])/delta_time
+                            self.old_data.append(int(persed_data[2]))
+                            v1 = (self.old_data[3]-self.old_data[1])/delta_time
+                            v2 = (self.old_data[2]-self.old_data[0])/delta_time
                             v_ave = (v1+v2)*0.5
                             a = (v1-v2)/delta_time
                             self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time,persed_data[3],persed_data[4],v_ave,a])
                         else:
-                            self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time,persed_data[3],persed_data[4]])
+                            #self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time,persed_data[3],persed_data[4]])
+                            self.old_data.pop(0)
+                            self.old_data.append(int(persed_data[2]))
+                            v = float((self.old_data[3]+self.old_data[2]-self.old_data[1]-self.old_data[0])/(2*delta_time))
+                            self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time,persed_data[3],v])
                         end = time.time()
                         while(end-start<0.04):
                             end=time.time()
