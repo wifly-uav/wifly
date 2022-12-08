@@ -31,11 +31,11 @@ target = 0
 
 amplitude_pwm = 20
 hz_pwm = 0.1
-CHANGE_DEF = True
+CHANGE_DEF = False
 
 REWARD_MODE = 0         #0:Normal 1:Hirai 2:罰則のみ 3:Noise 4:変化 5:u_I罰則
 
-CHANGE_TARGET = True
+CHANGE_TARGET = False
 
 PID_ONLY = False
 PID = True #STATE_VARIABLES=4
@@ -46,7 +46,7 @@ MIX = False #N_ACTIONS=17,STATE_VARIABLES=3
 LIMIT = True
 
 RND = False
-NEIGHBOR = True
+NEIGHBOR = False
 PRE_REWARD = False
 
 PARALLEL = False
@@ -60,7 +60,7 @@ LOAD = True
 LOAD_BATCH = True
 LOAD_RND = True
 
-CONDITION = False
+CONDITION = True
 BETA = False
 
 DISTURB = False
