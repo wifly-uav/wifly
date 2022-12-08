@@ -374,6 +374,7 @@ class DQNAgent:
         self.neighbor = neighbor
         self.pre_reward = pre_reward
         self.condition = condition
+        self.con = 0
 
         if self.parallel:
             self.learn_counter = 0
@@ -620,8 +621,8 @@ class DQNAgent:
             a = float(1/(2.0*3.14*self.cut_off*0.04+1.0))
             pre_yaw = abs(self.con_net.predict_on_batch(states))
             self.con = a*self.con+(1-a)*pre_yaw[0]-abs(float(dyaw))
-            self.con_log.append(con,pre_yaw[0],dyaw)
-            Q_values = self.q_eval.predict_on_batch((states,con))
+            self.con_log.append([self.con,pre_yaw[0],dyaw])
+            Q_values = self.q_eval.predict_on_batch((states,self.con))
         else:
             Q_values = self.q_eval.predict_on_batch(states)
 

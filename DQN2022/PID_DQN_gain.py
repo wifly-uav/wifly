@@ -31,11 +31,11 @@ target = 0
 
 amplitude_pwm = 20
 hz_pwm = 0.1
-CHANGE_DEF = False
+CHANGE_DEF = True
 
 REWARD_MODE = 0         #0:Normal 1:Hirai 2:罰則のみ 3:Noise 4:変化 5:u_I罰則
 
-CHANGE_TARGET = False
+CHANGE_TARGET = True
 
 PID_ONLY = False
 PID = True #STATE_VARIABLES=4
@@ -46,7 +46,7 @@ MIX = False #N_ACTIONS=17,STATE_VARIABLES=3
 LIMIT = True
 
 RND = False
-NEIGHBOR = False
+NEIGHBOR = True
 PRE_REWARD = False
 
 PARALLEL = False
@@ -60,7 +60,7 @@ LOAD = True
 LOAD_BATCH = True
 LOAD_RND = True
 
-CONDITION = True
+CONDITION = False
 BETA = False
 
 DISTURB = False
@@ -78,7 +78,7 @@ if __name__ == "__main__":
         odrv.idle()
     tf.compat.v1.disable_eager_execution()
     #PID_param
-    saturations = [0,PWM_DEF]           #PID操作量の制限
+    saturations = [0,PWM_DEF-amplitude_pwm]           #PID操作量の制限
     pwm_def = PWM_DEF               #モーター出力デフォルト値(Environmemtのdefault_paramsもチェック)
     pid = calc_PID(saturations)     #calc_PIDクラスのインスタンス作成（__init__が呼び出され、初期化が行われる）
     param = [3,I_GAIN,D_GAIN,0]   #[P-gain,I-gain,D-gain,Target Yaw angle]
