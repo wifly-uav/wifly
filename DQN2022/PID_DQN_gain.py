@@ -31,12 +31,11 @@ target = 0
 
 amplitude_pwm = 20
 hz_pwm = 0.1
-CHANGE_DEF = False
+CHANGE_DEF = True
 
 REWARD_MODE = 0         #0:Normal 1:Hirai 2:罰則のみ 3:Noise 4:変化 5:u_I罰則
 
-
-CHANGE_TARGET = False
+CHANGE_TARGET = True
 
 PID_ONLY = False
 PID = True #STATE_VARIABLES=4

@@ -43,7 +43,7 @@ ENABLE_ACTIONS = [i for i in range(N_ACTIONS)]
 
 #hyperparameter for DQN
 MINIBATCH_SIZE = 8
-KEEP_FRAMES = 1
+KEEP_FRAMES = 2
 STATE_VARIABLES = 7     #状態変数の数(PWM,PWM,Yaw,Pgain,Igain)
 
 LEARNING_RATE = 0.02
