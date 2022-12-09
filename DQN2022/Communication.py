@@ -121,7 +121,7 @@ class Communicator():
                             v2 = (self.old_data[2]-self.old_data[0])/delta_time
                             v_ave = (v1+v2)*0.5
                             a = (v1-v2)/delta_time
-                            self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time,persed_data[3],persed_data[4],v_ave,a])
+                            self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,time.time(),persed_data[3],persed_data[4],v_ave,a])
                         else:
                             #self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time,persed_data[3],persed_data[4]])
                             self.old_data.pop(0)
