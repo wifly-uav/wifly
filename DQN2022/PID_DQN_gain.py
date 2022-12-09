@@ -31,11 +31,11 @@ target = 0
 
 amplitude_pwm = 20
 hz_pwm = 0.1
-CHANGE_DEF = True
+CHANGE_DEF = False
 
 REWARD_MODE = 0         #0:Normal 1:Hirai 2:罰則のみ 3:Noise 4:変化 5:u_I罰則
 
-CHANGE_TARGET = True
+CHANGE_TARGET = False
 
 PID_ONLY = False
 PID = True #STATE_VARIABLES=4
@@ -52,9 +52,9 @@ PRE_REWARD = False
 PARALLEL = False
 
 LSTM = False
-Filter = False
+Filter = True
 RC_filter = 15
-DIFF_INPUT = True      #keep_frame=1,STATE_VARIABLES=7
+DIFF_INPUT = False      #keep_frame=1,STATE_VARIABLES=7
 
 LOAD = True
 LOAD_BATCH = True
@@ -228,7 +228,7 @@ if __name__ == "__main__":
                     p_gain = env.execute_action_gain((int)(action))
                 param = [p_gain,I_GAIN,D_GAIN,0]
                 pid.update_params(param)
-                diff = pid.calculate_output(current_value = int(state_current[0][yaw_index]), delta_time = (int)(ti), mode = True)
+                diff = pid.calculate_output(current_value = int(state_current[0][2]), delta_time = (int)(ti), mode = True)
                 if diff > 0:
                     actions[0] = pwm_def - diff
                     actions[1] = pwm_def
@@ -243,7 +243,7 @@ if __name__ == "__main__":
                 else:
                     env.execute_action_(actions)            #機体にモータ出力の変更内容を送信
             elif FFPID:
-                diff = pid.calculate_output(current_value = int(state_current[0][yaw_index]), delta_time = (int)(ti), mode = True)
+                diff = pid.calculate_output(current_value = int(state_current[0][2]), delta_time = (int)(ti), mode = True)
                 if diff > 0:                            #操作量が正なら…
                     actions[0] = pwm_def - diff         #右側のモータ出力を下げる
                     actions[1] = pwm_def           #ER=0なので気にしなくて良い
@@ -274,7 +274,7 @@ if __name__ == "__main__":
                 break
 
             u_i = pid.get_i()
-            reward = env.observe_reward(state_next, yaw_index=yaw_index, u_i=u_i)     #Yaw角の0.0度からのずれに基づいた報酬を観測
+            reward = env.observe_reward(state_next, yaw_index=2, u_i=u_i)     #Yaw角の0.0度からのずれに基づいた報酬を観測
             score += reward
 
             if j == N_FRAMES - 1:
