@@ -7,8 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 import math
 
 class visual_act:
-    def __init__(self, flag=False, folder='log', action=6):
-        self.flag = flag
+    def __init__(self, folder='log', action=6):
         self.folder = folder
         
         self.im = Image.new("RGB", (10240,5400), (128,128,128))
@@ -109,10 +108,13 @@ class visual_act:
 
 if __name__ == "__main__":
     path = os.path.dirname(__file__)
+    #print("Which data?")
+    #data_name  = input()
 
-    ac = visual_act(flag=1,folder=path + '/result/1207_nei_0_test_0')
+    ac = visual_act(folder=path + '/result/syuron/1208_n_0_test_0_3')
     ac.load()
     ac.recog()
     ac.draw_base()
     ac.draw_base2()
     ac.visualize()
+    ac.save()
