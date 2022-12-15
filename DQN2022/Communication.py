@@ -2,6 +2,7 @@ import serial
 import time
 import serial.tools.list_ports
 import threading
+import statistics
 
 RECEIVE_BYTE = 9    #receive_from_espの引数
 
@@ -116,18 +117,14 @@ class Communicator():
                         #受信データ、受信間隔（機体計測）、受信間隔(PC)を返す。
                         if self.diff == True:
                             self.old_data.pop(0)
-                            self.old_data.append(int(persed_data[2]))
-                            v1 = (self.old_data[3]-self.old_data[1])/delta_time
-                            v2 = (self.old_data[2]-self.old_data[0])/delta_time
-                            v_ave = (v1+v2)*0.5
-                            a = (v1-v2)/delta_time
+                            self.old_data.append(int(persed_data[4]))
+                            a1 = (self.old_data[3]-self.old_data[1])/delta_time
+                            a2 = (self.old_data[2]-self.old_data[0])/delta_time
+                            v_ave = statistics.mean(self.old_data)
+                            a = (a1-a2)/delta_time
                             self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,time.time(),persed_data[3],persed_data[4],v_ave,a])
                         else:
-                            #self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time,persed_data[3],persed_data[4]])
-                            self.old_data.pop(0)
-                            self.old_data.append(int(persed_data[2]))
-                            v = float((self.old_data[3]-self.old_data[1])/(delta_time))
-                            self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time,persed_data[3],v])
+                            self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time,persed_data[3],persed_data[4]])
                         end = time.time()
                         while(end-start<0.04):
                             end=time.time()

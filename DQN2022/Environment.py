@@ -111,7 +111,7 @@ class Environment():
             err_ = abs(float(data[3][yaw_index])-self.target_angle)
             reward = 1-err/90.0+0.5*(err_-err-1)
         elif self.reward_mode == 5:
-            reward = 1-err/90.0-0.1*u_i
+            reward = 1-err/90.0-0.1*abs(u_i)
 
         return reward
 

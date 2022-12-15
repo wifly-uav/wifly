@@ -10,7 +10,7 @@
 #include <SPI.h>
 
 //#define DEBUG
-//#define sensor
+#define sensor
 
 #define PWM_FREQ 1000
 #define PWM_RANGE 255
@@ -42,6 +42,9 @@ unsigned long timerDelay = 20;  // send readings timer
 unsigned long watchdogtime = 100;  // timer
 
 double w,x,y,z = 0;
+
+double old_y = 0;
+double d_y = 0;
 
 int i = 0;
 
@@ -208,6 +211,16 @@ void loop() {
           data[8] = abs(abs(euler.y())-180);
         }
       }
+      d_y = (euler.y()-old_y)*1000/loopTi;
+      if(d_y>0){
+        data[9] = int(d_y);
+        data[10] = 0;
+      }else{
+        data[9] = 0;
+        data[10] = int(-1*d_y);
+      }
+      old_y = euler.y();
+      /*
       if(euler.x()<180){
         data[9] = euler.x(); //roll
         data[10] = 0;
@@ -215,6 +228,7 @@ void loop() {
         data[9] = 180;
         data[10] = euler.x()-180;
       }
+      */
       /*
       data[5] = (quaternion.w()+1)*100;
       data[6] = (quaternion.x()+1)*100;
@@ -274,7 +288,7 @@ void loop() {
   ladder.write(min(max(0,command[2]),180));
   cog.write(min(max(0,command[3]),180));
   
-  //delay(50);
+  delay(5);
 }
 
 void led_onoff(int i){

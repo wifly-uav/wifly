@@ -33,7 +33,7 @@ amplitude_pwm = 20
 hz_pwm = 0.1
 CHANGE_DEF = False
 
-REWARD_MODE = 0         #0:Normal 1:Hirai 2:罰則のみ 3:Noise 4:変化 5:u_I罰則
+REWARD_MODE = 0        #0:Normal 1:Hirai 2:罰則のみ 3:Noise 4:変化 5:u_I罰則
 
 CHANGE_TARGET = False
 
@@ -52,9 +52,9 @@ PRE_REWARD = False
 PARALLEL = False
 
 LSTM = False
-Filter = True
+Filter = False
 RC_filter = 15
-DIFF_INPUT = False      #keep_frame=1,STATE_VARIABLES=7
+DIFF_INPUT = True      #keep_frame=1,STATE_VARIABLES=7
 
 LOAD = True
 LOAD_BATCH = True

@@ -1,4 +1,3 @@
-
 #include <esp_now.h>
 #include <WiFi.h>
 
@@ -23,15 +22,16 @@ float old_yaw = 0;
 
 float a = 0;
 
+
 uint8_t address[][9] = {{0x8C, 0xCE, 0x4E, 0xEA, 0xB1, 0xC9},// 0
                         {0xB4, 0xE6, 0x2D, 0x2F, 0x81, 0x0A},// 1
                         {0xB4, 0xE6, 0x2D, 0x2F, 0xA2, 0x71},// 2
                         {0xB4, 0xE6, 0x2D, 0x2F, 0xA2, 0x22},// 3
                         {0xB4, 0xE6, 0x2D, 0x2F, 0x80, 0xC5},// 4
                         {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0x98},// 5
-                        {0xB4, 0xE6, 0x2D, 0x2F, 0x80, 0xA6},// 6
+                        {0xB4, 0xE6, 0x2D, 0x2F, 0x8B, 0x15},// 6
                         {0xB4, 0xE6, 0x2D, 0x2F, 0xA3, 0x2D},// 7
-                        {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0x2A}// 8
+                        {0xB4, 0xE6, 0x2D, 0x2F, 0x84, 0xEA}// 8
                         };
 // REPLACE WITH RECEIVER MAC Address
 uint8_t castAddress[6] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60};
@@ -271,7 +271,12 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     }else{
       re_data[6] = -1*data[8];
     }
-    re_data[7] = data[9]+data[10];
+    //re_data[7] = data[9]+data[10];
+    if(data[9] != 0){
+      re_data[8] = data[9];
+    }else{
+      re_data[8] = -1*data[10];
+    }
     RC_filter(re_data[5],re_data[6],re_data[7]);
     re_data[7] = RC_angle_yaw;
 
@@ -284,10 +289,9 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     }
     */
    
-   sprintf(send_pc, "%d,%d,%d,%d,%d,%d,%d,%d,%d",re_data[0],re_data[1],re_data[2],re_data[3],re_data[4],re_data[5],re_data[6],re_data[7],re_data[5]-old_yaw);
+   sprintf(send_pc, "%d,%d,%d,%d,%d,%d,%d,%d,%d",re_data[0],re_data[1],re_data[2],re_data[3],re_data[4],re_data[5],re_data[6],re_data[7],re_data[8]);
    Serial.println(send_pc);
    Serial.flush();
-   old_yaw = re_data[5];
 }
 
 void OnDataSent(const uint8_t* mac_addr, esp_now_send_status_t status) {
