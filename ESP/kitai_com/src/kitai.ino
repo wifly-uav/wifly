@@ -222,7 +222,7 @@ void loop() {
         data[10] = int(-1*d_y);
       }
       old_y = euler.y();
-      dd_y = (d_y-old_d_y)/(loopTi*0.01)
+      dd_y = (d_y-old_d_y)/(loopTi*0.01);
       if(dd_y>0){
         data[2] = int(dd_y);
         data[3] = 0;

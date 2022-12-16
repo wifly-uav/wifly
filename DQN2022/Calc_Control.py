@@ -25,6 +25,13 @@ class calc_PID():
         self.__old_out = 0
         self.__last_update = time.time()
 
+        self.__dyaw_lim = 0
+        self.__dyaw_ = 0
+
+    def updata_trajectory(self, param):
+        self.__dyaw_lim = param[0]
+        self.__dyaw_ = param[1]
+
     def update_params(self, param):
         """
         PIDパラメータを更新する関数
@@ -40,7 +47,64 @@ class calc_PID():
     def get_i(self):
         return int(self.__param_I * self.__error_I)
 
-    def calculate_output(self, current_value, delta_time, mode):
+    def trajectory(self, yaw, dyaw, dt):
+        #TODO 
+        if yaw<0:
+            self.__dyaw_ = abs(self.__dyaw_)
+            self.__dyaw_lim = abs(self.__dyaw_lim)
+        else:
+            self.__dyaw_ = -1*abs(self.__dyaw_)
+            self.__dyaw_lim = -1*abs(self.__dyaw_lim)
+        t3 = self.__dyaw_/self.__dyaw_lim
+        dt_ = dt*0.001
+        yaw_ = yaw
+        t = (yaw_-((self.__dyaw_**2-dyaw**2)/(2*self.__dyaw_lim)+self.__dyaw_**2/(2*self.__dyaw_lim)))/self.__dyaw_
+        if t>0:
+            mode = 0
+        else:
+            if dyaw>self.__dyaw_:
+                #t2 = ((yaw_-(2*dyaw+self.__dyaw_lim)/2)*(2*self.__dyaw_lim)/self.__dyaw_-dyaw)/self.__dyaw_lim
+                t2=(yaw-self.__dyaw_/(2*self.__dyaw_lim))/(1/2*self.__dyaw_lim+dyaw+1/2*self.__dyaw_)
+            else:
+                #t2 = -1*((yaw_-(2*dyaw-self.__dyaw_lim)/2)*(2*self.__dyaw_lim)/self.__dyaw_-dyaw)/self.__dyaw_lim
+                t2= (yaw-self.__dyaw_/(2*self.__dyaw_lim))/(1/2*self.__dyaw_lim+dyaw-1/2*self.__dyaw_)
+            if t2>0:
+                mode = 1
+            else:
+                mode = 2
+        #print("yaw:"+str(yaw_)+ " f:"+ str((self.__dyaw_**2-dyaw**2)/(2*self.__dyaw_lim))+ " t:"+str(self.__dyaw_**2/(2*self.__dyaw_lim))+ " t3-t2:"+str(self.__dyaw_/(self.__dyaw_lim)))
+        if mode == 0:
+            if dyaw>self.__dyaw_:
+                if dyaw-self.__dyaw_lim*dt_<0:
+                    omega = min(self.__dyaw_,dyaw-self.__dyaw_lim*dt_)
+                else:
+                    omega = max(-1*self.__dyaw_,dyaw-self.__dyaw_lim*dt_)
+            else:
+                if dyaw+self.__dyaw_lim*dt<0:
+                    omega = min(self.__dyaw_,dyaw+self.__dyaw_lim*dt_)
+                else:
+                    omega = max(-1*self.__dyaw_,dyaw+self.__dyaw_lim*dt_)
+        elif mode == 1:
+            if dt_<t2:
+                if dyaw>self.__dyaw_:
+                    omega = dyaw-self.__dyaw_lim*dt_
+                else:
+                    omega = dyaw+self.__dyaw_lim*dt_
+            else:
+                if dt_>t3:
+                    omega = 0
+                else:
+                    omega = dyaw+self.__dyaw_lim*t2-self.__dyaw_lim*(dt_-t2)
+        elif mode == 2:
+            if dt_>t3:
+                omega = 0
+            else:
+                omega = dyaw-self.__dyaw_lim*dt_
+        print(str(self.__dyaw_)+","+str(yaw)+","+str(dyaw)+","+str(dyaw+self.__dyaw_lim*dt_)+","+str(mode)+","+str(omega))
+        return omega
+
+
+    def calculate_output(self, current_value, delta_time, mode ,d=0):
         """
         PIDの計算をする関数
         位置型PID
@@ -56,11 +120,12 @@ class calc_PID():
         if delta_time < 0 or delta_time > 100:
             delta_time = 50
         error = self.__target - current_value                   #偏差
+        self.__error_D = d
         #self.__error_D = (self.__error_P - error)/ delta_time  #D制御はしない（振動が大きすぎて上手く効かないため）
         self.__error_P = error                                  #偏差（__は関数の内部でのみ呼び出されることを意味する。）
         self.__error_I = self.__error_I + error*delta_time      #偏差の蓄積（偏差の積分を長方形の面積を使って近似）
         self.I = self.__error_I                                 #進捗表示の際に、Igainによる操作量を計算するために使う変数
-        out = (int)(self.__param_P * self.__error_P + self.__param_I * self.__error_I)# + self.__param_D * self.__error_D)
+        out = (int)(self.__param_P * self.__error_P + self.__param_I * self.__error_I + self.__param_D * self.__error_D)
         if mode == True:
             out = self.saturation_block(out)
         #print(out)

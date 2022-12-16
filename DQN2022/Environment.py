@@ -24,7 +24,6 @@ class Environment():
     """
     def __init__(self, keep_frames, diff=False, reward_mode=0,dyaw_average=False,ddyaw_average=False):
         self.communicator = Communicator()
-        self.communicator.set_mode(diff)
         self.thread1 = threading.Thread(target=self.communicator.receive_from_esp)
         self.thread1.start()
         #self.reset()
@@ -60,7 +59,7 @@ class Environment():
         self.state = deque(maxlen = self.keep_frames)
 
         for i in range(self.keep_frames):
-            _,_,_,_ = self.observe_update_state_pid(p_gain=p_gain, i_=i_, yaw_index=yaw_index)
+            _,_,_,_,_ = self.observe_update_state_pid(p_gain=p_gain, i_=i_, yaw_index=yaw_index)
 
     def observe_update_state_pid(self, p_gain=None, i_=None, yaw_index=2):
         if self.diff == True:
@@ -82,13 +81,17 @@ class Environment():
             dyaw = float(self.communicator.state[-1][7])
         else:
             dyaw = float(self.communicator.state[-1][6])
+        if self.ddyaw_average:
+            ddyaw = float(self.communicator.state[-1][8])
+        else:
+            ddyaw = float(self.communicator.state[-1][9])
 
         if p_gain != None:
             data.append(p_gain)
         if i_ != None:
             data.append(i_)
         self.update(data)
-        return self.state, ti, ti_, dyaw          #更新されたstateデック、受信した時間、前回受信との間隔を返す
+        return self.state, ti, ti_, dyaw, ddyaw          #更新されたstateデック、受信した時間、前回受信との間隔を返す
 
     def observe_state(self):
         """

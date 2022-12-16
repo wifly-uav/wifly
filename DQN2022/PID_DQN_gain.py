@@ -20,10 +20,10 @@ N_EPOCHS = 1            #学習epoch数
 N_FRAMES = 10000          #1epochあたりのステップ数
 P_GAIN = 4
 I_GAIN = 0.0002         #0.00001
-D_GAIN = 0              
+D_GAIN = -0.1              
 PWM_DEF = 209           #kitai側では+1されて195になる。
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
-EPISODE_TIME = 30.0
+EPISODE_TIME = 10.0
 
 CHANGE_DEF = False
 amplitude_pwm = 20
@@ -44,10 +44,17 @@ P_GAIN_MINOR = 4
 I_GAIN_MINOR = 0.0002
 D_GAIN_MINOR = 0
 
-DYAW_AVERAGE = False
+DYAW_AVERAGE = True
 DDYAW_AVERAGE = False
 
-PID_ONLY = False
+TRAJECTORY = True
+dyaw_ = 180
+dyaw_lim = 30/0.04
+P_GAIN_TRAJ = 0.5
+I_GAIN_TRAJ = 0.0002
+D_GAIN_TRAJ = 0
+
+PID_ONLY = True
 PID = True #STATE_VARIABLES=4
 ADD_I = True #STATE_VARIABLES=5
 FFPID = False #N_ACTIONS=9
@@ -64,7 +71,7 @@ PARALLEL = False
 LSTM = False
 Filter = False
 RC_filter = 15
-DIFF_INPUT = True      #keep_frame=1,STATE_VARIABLES=7
+DIFF_INPUT = False      #keep_frame=1,STATE_VARIABLES=7
 
 LOAD = True
 LOAD_BATCH = True
@@ -102,6 +109,8 @@ if __name__ == "__main__":
     ti = 40                         #PIDの微積分計算で用いる最小の時間幅
     actions = [pwm_def, pwm_def]    #行動ベクトル（両翼のモータ出力）
     pid.update_params(param)        #paramの値をcalc_PIDクラスに反映
+    if TRAJECTORY:
+        pid.updata_trajectory([dyaw_lim, dyaw_])
 
 
     path = os.path.dirname(__file__)                        #このスクリプトのディレクトリ名を取得
@@ -202,6 +211,7 @@ if __name__ == "__main__":
         rnd_f = []
         disturb_flag = 0
         dyaw = 0
+        ddyaw = 0
 
         if Filter:
             yaw_index = 5
@@ -245,12 +255,21 @@ if __name__ == "__main__":
                 elif PID_ONLY == False:
                     p_gain = env.execute_action_gain((int)(action))
                 if CASCADE:
-                    target_omega = pid_minor.calculate_output(current_value=int(state_current[0][2]), delta_time=(int)(ti), mode=True)
-                    diff = pid.calculate_output(current_value =dyaw, delta_time=(int)(ti), mode=True)
+                    target_omega = pid.calculate_output(current_value=int(state_current[0][2]), delta_time=(int)(ti), mode=True)
+                    param_minor = [p_gain,I_GAIN,D_GAIN,target_omega]
+                    pid_minor.update_params(param_minor)
+                    diff = pid_minor.calculate_output(current_value =dyaw, delta_time=(int)(ti), mode=True)
                 else:
-                    param = [p_gain,I_GAIN,D_GAIN,0]
-                    pid.update_params(param)
-                    diff = pid.calculate_output(current_value = int(state_current[0][2]), delta_time = (int)(ti), mode = True)
+                    if TRAJECTORY:
+                        target_omega = pid.trajectory(state_current[0][2], dyaw, (int)(ti))
+                        param = [P_GAIN_TRAJ,I_GAIN_TRAJ,D_GAIN_TRAJ,-1*target_omega]
+                        pid.update_params(param)
+                        diff = pid.calculate_output(current_value = dyaw, delta_time = (int)(ti), mode = True, d=ddyaw)
+                        #print("yaw:"+str(state_current[0][2])+" dy:"+str(dyaw)+" target:"+str(target_omega)+" dif:"+str(diff))
+                    else:
+                        param = [p_gain,I_GAIN,D_GAIN,0]
+                        pid.update_params(param)
+                        diff = pid.calculate_output(current_value = int(state_current[0][2]), delta_time = (int)(ti), mode = True, d=dyaw)
                 if diff > 0:
                     actions[0] = pwm_def - diff
                     actions[1] = pwm_def
@@ -281,15 +300,15 @@ if __name__ == "__main__":
 
             try:
                 if MIX:
-                    state_next, ti, ti_, dyaw = env.observe_update_state_pid(yaw_index=yaw_index)
+                    state_next, ti, ti_, dyaw, ddyaw = env.observe_update_state_pid(yaw_index=yaw_index)
                 elif PID:
                     if ADD_I:
                         inte = pid.get_i()
-                        state_next, ti, ti_, dyaw = env.observe_update_state_pid(p_gain=p_gain,i_=inte,yaw_index=yaw_index)
+                        state_next, ti, ti_, dyaw, ddyaw = env.observe_update_state_pid(p_gain=p_gain,i_=inte,yaw_index=yaw_index)
                     else:
-                        state_next, ti, ti_, dyaw = env.observe_update_state_pid(p_gain=p_gain,yaw_index=yaw_index)
+                        state_next, ti, ti_, dyaw, ddyaw = env.observe_update_state_pid(p_gain=p_gain,yaw_index=yaw_index)
                 else:
-                    state_next, ti, ti_, dyaw = env.observe_update_state_pid(yaw_index=yaw_index)
+                    state_next, ti, ti_, dyaw, ddyaw = env.observe_update_state_pid(yaw_index=yaw_index)
             except:
                 print("Communication Failure")
                 com_fail = True
@@ -312,6 +331,7 @@ if __name__ == "__main__":
             #進捗表示
             epoch = i + agent.episode_in_advance
             
+            '''
             print( "Epoch:%d" % epoch, 
                     "STEP:%d" % j,
                     "Grobal_STEP:%d" % agent.global_step, 
@@ -323,6 +343,7 @@ if __name__ == "__main__":
                     "actions:" + str(254-actions[0])+","+ str(254-actions[1]),
                     "act:" + str(action),
                     "dt:%d" %ti)
+            '''
 
             if training_flag == True:
                 if PARALLEL == False:

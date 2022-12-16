@@ -43,8 +43,8 @@ ENABLE_ACTIONS = [i for i in range(N_ACTIONS)]
 
 #hyperparameter for DQN
 MINIBATCH_SIZE = 8
-KEEP_FRAMES = 1
-STATE_VARIABLES = 7     #状態変数の数(PWM,PWM,Yaw,Pgain,Igain)
+KEEP_FRAMES = 4
+STATE_VARIABLES = 5     #状態変数の数(PWM,PWM,Yaw,Pgain,Igain)
 
 LEARNING_RATE = 0.02
 RND_LEARNING_RATE = 0.01
@@ -1036,7 +1036,7 @@ class DQNAgent:
         #print(self.log_loss)
 
         if (self.global_step % self.copy_period == 0):
-            print("Copy Weight")
+            #print("Copy Weight")
             '''
             self.q_eval.layers[0].set_weights(self.q_target.layers[0].get_weights())
             self.q_eval.layers[1].set_weights(self.q_target.layers[1].get_weights())

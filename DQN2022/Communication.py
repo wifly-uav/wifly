@@ -105,7 +105,7 @@ class Communicator():
                         #状態の整形
                         ddyaw = persed_data.pop(2)
                         self.old_dyaw_data.pop(0)
-                        self.old_dyaw_data.append(ddyaw)
+                        self.old_dyaw_data.append(int(ddyaw))
                         a = statistics.mean(self.old_dyaw_data)
                         for i in range(2):
                             persed_data.pop(2)
