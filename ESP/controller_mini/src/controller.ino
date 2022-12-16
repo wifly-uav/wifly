@@ -258,7 +258,12 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     for (int i = 0; i < 2; i++) {
       re_data[i] = 254-data[i];
     }
-    re_data[2] = data[2];
+    if(data[2] != 0){
+      re_data[2] = data[2];
+    }else{
+      re_data[2] = -1*data[3];
+    }
+    //re_data[2] = data[2];
     re_data[3] = data[3];
     re_data[4] = data[4];
     if(data[5] != 0){

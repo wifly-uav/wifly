@@ -45,6 +45,8 @@ double w,x,y,z = 0;
 
 double old_y = 0;
 double d_y = 0;
+double old_d_y = 0;
+double dd_y = 0;
 
 int i = 0;
 
@@ -184,8 +186,8 @@ void loop() {
     // Set values to send
     data[0] = command[0];
     data[1] = command[1];
-    data[2] = command[2];
-    data[3] = command[3];
+    //data[2] = command[2];
+    //data[3] = command[3];
     #ifdef sensor
       if(euler.z()>=0){
         data[5] = euler.z(); //pitch
@@ -220,6 +222,15 @@ void loop() {
         data[10] = int(-1*d_y);
       }
       old_y = euler.y();
+      dd_y = (d_y-old_d_y)/(loopTi*0.01)
+      if(dd_y>0){
+        data[2] = int(dd_y);
+        data[3] = 0;
+      }else{
+        data[2] = 0;
+        data[3] = int(-1*dd_y);
+      }
+      old_d_y = d_y;
       /*
       if(euler.x()<180){
         data[9] = euler.x(); //roll

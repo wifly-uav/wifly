@@ -22,7 +22,7 @@ class Environment():
     強化学習をする際の環境を設定するクラス
     状態取得、報酬決定、行動内容の決定をしている
     """
-    def __init__(self, keep_frames, diff=False, reward_mode=0):
+    def __init__(self, keep_frames, diff=False, reward_mode=0,dyaw_average=False,ddyaw_average=False):
         self.communicator = Communicator()
         self.communicator.set_mode(diff)
         self.thread1 = threading.Thread(target=self.communicator.receive_from_esp)
@@ -34,6 +34,8 @@ class Environment():
         self.target_angle = 0
         self.diff = diff
         self.reward_mode = reward_mode
+        self.dyaw_average = dyaw_average
+        self.ddyaw_average = ddyaw_average
 
     def set_cut_off(self, cut_off):
         self.params_to_send[5] = cut_off
@@ -62,12 +64,24 @@ class Environment():
 
     def observe_update_state_pid(self, p_gain=None, i_=None, yaw_index=2):
         if self.diff == True:
-            data = [int(self.communicator.state[-1][0]),int(self.communicator.state[-1][1]),int(self.communicator.state[-1][yaw_index])-self.target_angle,self.communicator.state[-1][7],self.communicator.state[-1][8]]
+            if self.ddyaw_average:
+                if self.dyaw_average:
+                    data = [int(self.communicator.state[-1][0]),int(self.communicator.state[-1][1]),int(self.communicator.state[-1][yaw_index])-self.target_angle,self.communicator.state[-1][7],self.communicator.state[-1][8]]
+                else:
+                    data = [int(self.communicator.state[-1][0]),int(self.communicator.state[-1][1]),int(self.communicator.state[-1][yaw_index])-self.target_angle,self.communicator.state[-1][6],self.communicator.state[-1][8]]
+            else:
+                if self.dyaw_average:
+                    data = [int(self.communicator.state[-1][0]),int(self.communicator.state[-1][1]),int(self.communicator.state[-1][yaw_index])-self.target_angle,self.communicator.state[-1][7],self.communicator.state[-1][9]]
+                else:
+                    data = [int(self.communicator.state[-1][0]),int(self.communicator.state[-1][1]),int(self.communicator.state[-1][yaw_index])-self.target_angle,self.communicator.state[-1][6],self.communicator.state[-1][9]]
         else:
             data = [int(self.communicator.state[-1][0]),int(self.communicator.state[-1][1]),int(self.communicator.state[-1][yaw_index])-self.target_angle]
         ti = self.communicator.state[-1][3]
         ti_ = self.communicator.state[-1][4]
-        dyaw = float(self.communicator.state[-1][6])
+        if self.dyaw_average:
+            dyaw = float(self.communicator.state[-1][7])
+        else:
+            dyaw = float(self.communicator.state[-1][6])
 
         if p_gain != None:
             data.append(p_gain)

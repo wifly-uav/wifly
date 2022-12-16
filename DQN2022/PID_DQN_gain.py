@@ -25,17 +25,27 @@ PWM_DEF = 209           #kitai側では+1されて195になる。
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
 EPISODE_TIME = 30.0
 
-amplitude = 20
-hz = 0.1
-target = 0
-
+CHANGE_DEF = False
 amplitude_pwm = 20
 hz_pwm = 0.1
-CHANGE_DEF = False
 
 REWARD_MODE = 0        #0:Normal 1:Hirai 2:罰則のみ 3:Noise 4:変化 5:u_I罰則
 
 CHANGE_TARGET = False
+amplitude = 20
+hz = 0.1
+target = 0
+
+CASCADE = False
+P_GAIN_MAJOR = 4
+I_GAIN_MAJOR = 0.0002
+D_GAIN_MAJOR = 0
+P_GAIN_MINOR = 4
+I_GAIN_MINOR = 0.0002
+D_GAIN_MINOR = 0
+
+DYAW_AVERAGE = False
+DDYAW_AVERAGE = False
 
 PID_ONLY = False
 PID = True #STATE_VARIABLES=4
@@ -79,12 +89,20 @@ if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
     #PID_param
     saturations = [0,PWM_DEF-amplitude_pwm]           #PID操作量の制限
+    if CASCADE:
+        pid_minor = calc_PID(saturations)
+        saturations = [0,165]
+        param = [P_GAIN_MAJOR,I_GAIN_MAJOR,D_GAIN_MAJOR,0]
+        param_minor = [P_GAIN_MINOR,I_GAIN_MAJOR,D_GAIN_MINOR,0]
+        pid_minor.update_params(param_minor)
+    else:
+        param = [3,I_GAIN,D_GAIN,0]
     pwm_def = PWM_DEF               #モーター出力デフォルト値(Environmemtのdefault_paramsもチェック)
     pid = calc_PID(saturations)     #calc_PIDクラスのインスタンス作成（__init__が呼び出され、初期化が行われる）
-    param = [3,I_GAIN,D_GAIN,0]   #[P-gain,I-gain,D-gain,Target Yaw angle]
     ti = 40                         #PIDの微積分計算で用いる最小の時間幅
     actions = [pwm_def, pwm_def]    #行動ベクトル（両翼のモータ出力）
     pid.update_params(param)        #paramの値をcalc_PIDクラスに反映
+
 
     path = os.path.dirname(__file__)                        #このスクリプトのディレクトリ名を取得
     print('save folder name:')                              #学習内容を保存するためのフォルダ名の入力を指示
@@ -157,7 +175,7 @@ if __name__ == "__main__":
     
     #各種log保存先指定
     log = logger(folder = save_dir)
-    env = Environment(agent.keep_frames, diff=DIFF_INPUT, reward_mode=REWARD_MODE)                         #Environmentクラスのインスタンス作成
+    env = Environment(agent.keep_frames, diff=DIFF_INPUT, reward_mode=REWARD_MODE, dyaw_average=DYAW_AVERAGE, ddyaw_average=DDYAW_AVERAGE)                         #Environmentクラスのインスタンス作成
     vi = visual_nn(folder = save_dir)        
     mi = visual_minibach(folder = save_dir)
     ac = visual_act(folder = save_dir)
@@ -226,9 +244,13 @@ if __name__ == "__main__":
                     p_gain = P_GAIN
                 elif PID_ONLY == False:
                     p_gain = env.execute_action_gain((int)(action))
-                param = [p_gain,I_GAIN,D_GAIN,0]
-                pid.update_params(param)
-                diff = pid.calculate_output(current_value = int(state_current[0][2]), delta_time = (int)(ti), mode = True)
+                if CASCADE:
+                    target_omega = pid_minor.calculate_output(current_value=int(state_current[0][2]), delta_time=(int)(ti), mode=True)
+                    diff = pid.calculate_output(current_value =dyaw, delta_time=(int)(ti), mode=True)
+                else:
+                    param = [p_gain,I_GAIN,D_GAIN,0]
+                    pid.update_params(param)
+                    diff = pid.calculate_output(current_value = int(state_current[0][2]), delta_time = (int)(ti), mode = True)
                 if diff > 0:
                     actions[0] = pwm_def - diff
                     actions[1] = pwm_def

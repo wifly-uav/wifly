@@ -57,11 +57,8 @@ class Communicator():
         self.dataset_from_esp = []
         self.time_started = None
         self.time_last_receive = time.time()
-        self.diff = False
         self.old_data = [0,0,0,0]
-    
-    def set_mode(self, diff):
-        self.diff = diff
+        self.old_dyaw_data = [0,0,0,0]
 
     def start_esp(self, data_to_send):
         """
@@ -103,28 +100,27 @@ class Communicator():
                         self.time_last_receive = time.time()                    #最後の受信時刻を更新  
                         receive_time_ = int(persed_data.pop(4))                 #機体側のマイコンで計測された受信間隔の読み取り（popなので削除もされる）
                         #persed_data.pop(-1)
-                        #persed_data:[モータ出力1,モータ出力2,尾翼サーボ,重心移動機構サーボ,Pitch,Yaw,RC_Yaw]
+                        #persed_data:[モータ出力1,モータ出力2,ddYaw,ddYaw,Pitch,Yaw,RC_Yaw,dyaw]
                         
                         #状態の整形
-                        for i in range(3):
+                        ddyaw = persed_data.pop(2)
+                        self.old_dyaw_data.pop(0)
+                        self.old_dyaw_data.append(ddyaw)
+                        a = statistics.mean(self.old_dyaw_data)
+                        for i in range(2):
                             persed_data.pop(2)
 
-                        #persed_data:[モータ出力1,モータ出力2,Yaw]
+                        #persed_data:[モータ出力1, モータ出力2, Yaw, RC_Yaw, dyaw]
                         self.dataset_from_esp = persed_data                     #受信データとして記録
                         
                         self.__fail_counter = 0                                 #受信失敗回数をリセット
                         persed_data[4] = persed_data[4].strip('\r\n')
                         #受信データ、受信間隔（機体計測）、受信間隔(PC)を返す。
-                        if self.diff == True:
-                            self.old_data.pop(0)
-                            self.old_data.append(int(persed_data[4]))
-                            a1 = (self.old_data[3]-self.old_data[1])/delta_time
-                            a2 = (self.old_data[2]-self.old_data[0])/delta_time
-                            v_ave = statistics.mean(self.old_data)
-                            a = (a1-a2)/delta_time
-                            self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,time.time(),persed_data[3],persed_data[4],v_ave,a])
-                        else:
-                            self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time,persed_data[3],persed_data[4]])
+                        self.old_data.pop(0)
+                        self.old_data.append(int(persed_data[4]))
+                        v_ave = statistics.mean(self.old_data)
+                        self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time,persed_data[3],persed_data[4],v_ave,a,ddyaw])
+                        #self.state.append([persed_data[0],persed_data[1],persed_data[2],receive_time_,delta_time,persed_data[3],persed_data[4]])
                         end = time.time()
                         while(end-start<0.04):
                             end=time.time()
