@@ -94,7 +94,7 @@ class visual_act:
         num = len(self.angle)
         for i in range(num):
             x,y = self.angleact2pos(self.angle[i],self.action_conv[i])
-            #print(str(x)+","+str(y))
+            print(str(255-int(255/num*i))+","+str(int(255/num*i)))
             self.draw.ellipse((x-self.point_size, y-self.point_size, x+self.point_size, y+self.point_size), fill=(255-int(255/num*i), 0, int(255/num*i)), outline=(0, 0, 0))
         for i in range(num):
             x,y = self.angleact2pos2(self.angle[i],self.pow_diff[i])
