@@ -50,7 +50,7 @@ DDYAW_AVERAGE = False
 TRAJECTORY = True
 dyaw_ = 180
 dyaw_lim = 30/0.04
-P_GAIN_TRAJ = 0.5
+P_GAIN_TRAJ = 2
 I_GAIN_TRAJ = 0.0002
 D_GAIN_TRAJ = 0
 
@@ -262,7 +262,7 @@ if __name__ == "__main__":
                 else:
                     if TRAJECTORY:
                         target_omega = pid.trajectory(state_current[0][2], dyaw, (int)(ti))
-                        param = [P_GAIN_TRAJ,I_GAIN_TRAJ,D_GAIN_TRAJ,-1*target_omega]
+                        param = [P_GAIN_TRAJ,I_GAIN_TRAJ,D_GAIN_TRAJ,target_omega]
                         pid.update_params(param)
                         diff = pid.calculate_output(current_value = dyaw, delta_time = (int)(ti), mode = True, d=ddyaw)
                         #print("yaw:"+str(state_current[0][2])+" dy:"+str(dyaw)+" target:"+str(target_omega)+" dif:"+str(diff))
@@ -331,7 +331,7 @@ if __name__ == "__main__":
             #進捗表示
             epoch = i + agent.episode_in_advance
             
-            '''
+            #'''
             print( "Epoch:%d" % epoch, 
                     "STEP:%d" % j,
                     "Grobal_STEP:%d" % agent.global_step, 
@@ -343,7 +343,7 @@ if __name__ == "__main__":
                     "actions:" + str(254-actions[0])+","+ str(254-actions[1]),
                     "act:" + str(action),
                     "dt:%d" %ti)
-            '''
+            #'''
 
             if training_flag == True:
                 if PARALLEL == False:
