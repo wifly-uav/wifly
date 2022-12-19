@@ -1,5 +1,6 @@
 import time
 import random as rd
+import math
 
 class calc_PID():
     """
@@ -49,58 +50,84 @@ class calc_PID():
 
     def trajectory(self, yaw, dyaw, dt):
         #TODO 
-        if yaw<0:
-            self.__dyaw_ = abs(self.__dyaw_)
-            self.__dyaw_lim = abs(self.__dyaw_lim)
-        else:
-            self.__dyaw_ = -1*abs(self.__dyaw_)
-            self.__dyaw_lim = -1*abs(self.__dyaw_lim)
-        t3 = self.__dyaw_/self.__dyaw_lim
+        over = -1*yaw*dyaw
         dt_ = dt*0.001
-        yaw_ = yaw
-        t = (yaw_-((self.__dyaw_**2-dyaw**2)/(2*self.__dyaw_lim)+self.__dyaw_**2/(2*self.__dyaw_lim)))/self.__dyaw_
+        yaw_ = abs(yaw)
+        dyaw_ = abs(dyaw)
+        if over<0:
+            t_ = dyaw_/self.__dyaw_lim
+            t__ = self.__dyaw_/self.__dyaw_lim
+            t = (yaw_+dyaw_*t_/2-self.__dyaw_*(t__)/2-self.__dyaw_**2/(2*self.__dyaw_lim))/self.__dyaw_
+        else:
+            t = (yaw_-(self.__dyaw_**2-dyaw_**2)/(2*self.__dyaw_lim)-self.__dyaw_**2/(2*self.__dyaw_lim))/self.__dyaw_
         if t>0:
             mode = 0
+            t2 = 0
         else:
-            if dyaw>self.__dyaw_:
-                #t2 = ((yaw_-(2*dyaw+self.__dyaw_lim)/2)*(2*self.__dyaw_lim)/self.__dyaw_-dyaw)/self.__dyaw_lim
-                t2=(yaw-self.__dyaw_/(2*self.__dyaw_lim))/(1/2*self.__dyaw_lim+dyaw+1/2*self.__dyaw_)
-            else:
-                #t2 = -1*((yaw_-(2*dyaw-self.__dyaw_lim)/2)*(2*self.__dyaw_lim)/self.__dyaw_-dyaw)/self.__dyaw_lim
-                t2= (yaw-self.__dyaw_/(2*self.__dyaw_lim))/(1/2*self.__dyaw_lim+dyaw-1/2*self.__dyaw_)
-            if t2>0:
+            t3 = dyaw_/self.__dyaw_lim
+            if over<0:
                 mode = 1
             else:
-                mode = 2
-        #print("yaw:"+str(yaw_)+ " f:"+ str((self.__dyaw_**2-dyaw**2)/(2*self.__dyaw_lim))+ " t:"+str(self.__dyaw_**2/(2*self.__dyaw_lim))+ " t3-t2:"+str(self.__dyaw_/(self.__dyaw_lim)))
+                if yaw_-dyaw_**2/(2*self.__dyaw_lim)<0:
+                    mode = 2
+                else:
+                    t2=math.sqrt((yaw_-dyaw_**2/(2*self.__dyaw_lim))/self.__dyaw_lim)
+                    mode = 1
+        #print(str(yaw_)+","+str(dyaw_)+","+ str((self.__dyaw_**2-dyaw_**2)/(2*self.__dyaw_lim))+ ","+ str(self.__dyaw_*t)+ ","+str(self.__dyaw_**2/(2*self.__dyaw_lim))+","+str((self.__dyaw_-dyaw_)/self.__dyaw_lim)+","+str(t)+","+str(t2)+","+str(self.__dyaw_/self.__dyaw_lim)+","+str(mode))
         if mode == 0:
-            if dyaw>self.__dyaw_:
-                if dyaw-self.__dyaw_lim*dt_<0:
-                    omega = min(self.__dyaw_,dyaw-self.__dyaw_lim*dt_)
-                else:
-                    omega = max(-1*self.__dyaw_,dyaw-self.__dyaw_lim*dt_)
+            if dyaw_>self.__dyaw_:
+                omega = min(self.__dyaw_,dyaw_-self.__dyaw_lim*dt_)
+                mode_ = 0
             else:
-                if dyaw+self.__dyaw_lim*dt<0:
-                    omega = min(self.__dyaw_,dyaw+self.__dyaw_lim*dt_)
-                else:
-                    omega = max(-1*self.__dyaw_,dyaw+self.__dyaw_lim*dt_)
+                omega = min(self.__dyaw_,dyaw_+self.__dyaw_lim*dt_)
+                mode_ = 1
         elif mode == 1:
-            if dt_<t2:
-                if dyaw>self.__dyaw_:
-                    omega = dyaw-self.__dyaw_lim*dt_
+            if over<0:
+                t2=math.sqrt((yaw_+dyaw_*t_/2)/self.__dyaw_lim)
+                if dt_<t2:
+                    omega = -dyaw_+self.__dyaw_lim*dt_
+                    mode_ = 2
+                elif dt_<t_+2*t2:
+                    omega = -dyaw_+self.__dyaw_lim*(t_+t2)-self.__dyaw_lim*(dt_-t_-t2)
+                    mode_ = 3
                 else:
-                    omega = dyaw+self.__dyaw_lim*dt_
-            else:
-                if dt_>t3:
                     omega = 0
+                    mode_ = 4
+            else:
+                if dt_<t2-dyaw_/self.__dyaw_lim:
+                    omega = dyaw_+self.__dyaw_lim*dt_
+                    mode_ = 5
+                elif dt_<2*t2-dyaw_/self.__dyaw_lim:
+                    omega = dyaw_+self.__dyaw_lim*(t2-dyaw_/self.__dyaw_lim)-self.__dyaw_lim*(dt_-t2+dyaw_/self.__dyaw_lim)
+                    mode_ = 6
                 else:
-                    omega = dyaw+self.__dyaw_lim*t2-self.__dyaw_lim*(dt_-t2)
+                    omega = 0
+                    mode_ = 7
         elif mode == 2:
             if dt_>t3:
                 omega = 0
+                mode_ = 8
             else:
-                omega = dyaw-self.__dyaw_lim*dt_
-        print(str(self.__dyaw_)+","+str(yaw)+","+str(dyaw)+","+str(dyaw+self.__dyaw_lim*dt_)+","+str(mode)+","+str(omega))
+                omega = dyaw_-self.__dyaw_lim*dt_
+                mode_ = 9
+        if over>=0:
+            if dyaw>0:
+                omega = omega
+            else:
+                omega = -1*omega
+        else:
+            if self.__dyaw_lim*dt_-dyaw<0:
+                if dyaw>0:
+                    omega = -1*omega
+                else:
+                    omega = omega
+            else:
+                if dyaw>0:
+                    omega = omega
+                else:
+                    omega = -1*omega
+
+        #print(str(self.__dyaw_)+","+str(yaw)+","+str(dyaw_)+","+str(dyaw+self.__dyaw_lim*dt_)+","+str(dyaw-self.__dyaw_lim*dt_)+","+str(mode)+","+str(mode_)+","+str(omega))
         return omega
 
 
