@@ -2,42 +2,40 @@
 #include <WiFi.h>
 
 #include <SPI.h>
-#define DEBUG
+// #define DEBUG
+
+int flag = 0;
+int flag_yaw = 0;
 
 unsigned long lastTime = 0;  
 unsigned long timerDelay = 60;  // send readings timer
 size_t data_pc_;
 uint8_t data_pc[5] = {0};
-int re_data[5] = {0};
-double re_data_angle[4] = {0};
+int re_data[11] = {0};
+double re_data_angle[3] = {0};
+int eular[3] = {0};
+char send_pc[40];
+int left_pwm, right_pwm, servo_angle, cog_angle;
+uint8_t data[5];
+int stick_lr, stick_ud, slider_l, slider_r, switch_1, switch_2, volume;
 
 // REPLACE WITH RECEIVER MAC Address
 //機体側のマイコンの番号にあったアドレスのみコメントアウトを外す。
-uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60}; //1
+//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60}; //1
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x3D}; //2
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0xE4}; //3
-//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0xAC}; //4
+uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x80, 0xC5}; //4
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0x98}; //5
-//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA2, 0xBF};   //6
+//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x80, 0xA6}; //6
 
 esp_now_peer_info_t peerInfo;
 
-const int controller_num = 1; //1:A 2:B
+const int controller_num = 2; //1:A 2:B
 const float servo_sensitivity = 1.0; //0.0(min)~1.0(max)
-
-//pin
-//各ボタンのピン番号
-int stick_lr;
-int stick_ud;
-int slider_l;
-int slider_r;
-int switch_1;
-int switch_2;
-int volume;
 
 double ysqr = 0;
 double t0,t1,t2,t3,t4 = 0;
-int eular[3] = {0};
+
 
 //quotanion（四元数）をEuler角に変換する関数
 void qu2eu(int eular[3], double quotanion[4]){
@@ -89,41 +87,35 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     //Serial.printf("Last Packet Recv Data(%d): ", data_len);
     //Serial.println();
     
-    for (int i = 0; i < data_len; i++) {
-        if(i > 4){
-          //受信データの5番目以降（quotanion）は、処理してre_data_angleに格納していく。
-          re_data_angle[i-5] = data[i]*0.01-1;
-        }else if(i < 2){
-          //受信データの先頭2つ（羽ばたき出力）は、0~255を反転してre_dataに格納
-          re_data[i] = 255 - data[i];
-        }
-        else{
-          //残りはそのままre_dataに格納
-          re_data[i] = data[i];
-        }
+    //羽ばたきPWM
+    for (int i = 0; i < 2; i++) {
+      re_data[i] = 254 - data[i];
+      //Serial.print(re_data[i]);
+      //Serial.print(",");
     }
-
-    //カンマ区切りでre_dataの中身を表示
-    for (int i = 0; i < 5; i++) {
-      Serial.print(re_data[i]);
-      if(i != 4){
-        Serial.print(",");
-      }
+    //サーボ
+    re_data[2] = data[2];
+    re_data[3] = data[3];
+    //更新時間間隔
+    re_data[4] = data[4];
+    //re_data5 pitch角
+    if(data[5] != 0){
+      re_data[5] = data[5];
+    }else{
+      re_data[5] = -1*data[6];
     }
-
-    //受信したquotanionをEuler角に変換
-    qu2eu(eular,re_data_angle);
-
-    Serial.print(",");
-
-    //Euler角を表示（角度の順番を要確認!）
-    for (int i = 0; i < 3; i++) {
-      Serial.print(eular[i]);
-      if(i != 2){
-        Serial.print(",");
-      }
+    //re_data6 yaw角
+    if(data[7] != 0){
+      re_data[6] = data[7];
+    }else{
+      re_data[6] = -1*data[8];
     }
-    Serial.println();
+    //re_data7 roll角 
+    re_data[7] = data[9]+data[10];
+    
+   sprintf(send_pc, "%d,%d,%d,%d,%d,%d,%d,%d,",re_data[0],re_data[1],re_data[2],re_data[3],re_data[4],re_data[5],re_data[6],re_data[7]);
+   Serial.println(send_pc);
+   Serial.flush();
 }
 
 //送信時コールバック関数
@@ -150,6 +142,7 @@ void recieve_pc(){
 }
 
 void setup() {
+
 
   //各コントローラごとのピン番号
   switch(controller_num){
@@ -225,7 +218,9 @@ void loop() {
     uint8_t data[5];
 
     //PCモード
-    if(btn_L == 1){
+    if(btn_L == 1){  
+      flag = 1;
+
       recieve_pc();                         //PCからデータ受信
       for(int i=0;i<2;++i){
         data[i] = 254 - data_pc[i];         //受信データの先頭2つ（羽ばたき出力）は反転
@@ -253,7 +248,12 @@ void loop() {
           data[1] = sli_R;    //右羽ばたき出力
           data[2] = left_UD;  //サーボ1角（元は尾翼）
           data[3] = 180 - left_UD;  //サーボ2角（元はcog）
-          data[4] = btn_R;
+
+          //data[4] = btn_R;
+          if(btn_R == 1){
+            data[2] = 0;
+            data[3] = 0;
+          }
           break;
         
         case 2:
@@ -287,6 +287,11 @@ void loop() {
           data[1] = right_pwm;
           data[2] = servo_angle;
           data[3] = cog_angle;
+
+          if(btn_R == 1){
+            data[2] = 0;
+            data[3] = 0;
+          }
 
           break;
       }
