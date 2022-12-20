@@ -25,13 +25,13 @@ PWM_DEF = 209           #kitai側では+1されて195になる。
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
 EPISODE_TIME = 30.0
 
-CHANGE_DEF = True
+CHANGE_DEF = False
 amplitude_pwm = 20
 hz_pwm = 0.1
 
 REWARD_MODE = 0        #0:Normal 1:Hirai 2:罰則のみ 3:Noise 4:変化 5:u_I罰則
 
-CHANGE_TARGET = True
+CHANGE_TARGET = False
 amplitude = 20
 hz = 0.1
 target = 0
