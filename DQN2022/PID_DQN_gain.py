@@ -23,38 +23,38 @@ I_GAIN = 0.0002         #0.00001
 D_GAIN = -0.1              
 PWM_DEF = 209           #kitai側では+1されて195になる。
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
-EPISODE_TIME = 10.0
+EPISODE_TIME = 30.0
 
-CHANGE_DEF = False
+CHANGE_DEF = True
 amplitude_pwm = 20
 hz_pwm = 0.1
 
 REWARD_MODE = 0        #0:Normal 1:Hirai 2:罰則のみ 3:Noise 4:変化 5:u_I罰則
 
-CHANGE_TARGET = False
+CHANGE_TARGET = True
 amplitude = 20
 hz = 0.1
 target = 0
 
 CASCADE = False
-P_GAIN_MAJOR = 4
+P_GAIN_MAJOR = 3
 I_GAIN_MAJOR = 0.0002
 D_GAIN_MAJOR = 0
-P_GAIN_MINOR = 4
-I_GAIN_MINOR = 0.0002
+P_GAIN_MINOR = 1
+I_GAIN_MINOR = 0
 D_GAIN_MINOR = 0
 
 DYAW_AVERAGE = True
-DDYAW_AVERAGE = False
+DDYAW_AVERAGE = True
 
-TRAJECTORY = True
+TRAJECTORY = False
 dyaw_ = 180
 dyaw_lim = 30/0.04
-P_GAIN_TRAJ = 2
+P_GAIN_TRAJ = 3
 I_GAIN_TRAJ = 0.0002
 D_GAIN_TRAJ = 0
 
-PID_ONLY = True
+PID_ONLY = False
 PID = True #STATE_VARIABLES=4
 ADD_I = True #STATE_VARIABLES=5
 FFPID = False #N_ACTIONS=9
@@ -64,7 +64,7 @@ LIMIT = True
 
 RND = False
 NEIGHBOR = False
-PRE_REWARD = False
+PRE_REWARD = True
 
 PARALLEL = False
 
@@ -77,7 +77,7 @@ LOAD = True
 LOAD_BATCH = True
 LOAD_RND = True
 
-CONDITION = False
+CONDITION = True
 BETA = False
 
 DISTURB = False
@@ -100,7 +100,7 @@ if __name__ == "__main__":
         pid_minor = calc_PID(saturations)
         saturations = [0,165]
         param = [P_GAIN_MAJOR,I_GAIN_MAJOR,D_GAIN_MAJOR,0]
-        param_minor = [P_GAIN_MINOR,I_GAIN_MAJOR,D_GAIN_MINOR,0]
+        param_minor = [P_GAIN_MINOR,I_GAIN_MINOR,D_GAIN_MINOR,0]
         pid_minor.update_params(param_minor)
     else:
         param = [3,I_GAIN,D_GAIN,0]
@@ -256,9 +256,10 @@ if __name__ == "__main__":
                     p_gain = env.execute_action_gain((int)(action))
                 if CASCADE:
                     target_omega = pid.calculate_output(current_value=int(state_current[0][2]), delta_time=(int)(ti), mode=True)
-                    param_minor = [p_gain,I_GAIN,D_GAIN,target_omega]
+                    param_minor = [P_GAIN_MINOR,I_GAIN_MINOR,D_GAIN_MINOR,target_omega]
                     pid_minor.update_params(param_minor)
                     diff = pid_minor.calculate_output(current_value =dyaw, delta_time=(int)(ti), mode=True)
+                    print(str(state_current[0][2])+","+str(target_omega)+","+str(dyaw)+","+str(diff))
                 else:
                     if TRAJECTORY:
                         target_omega = pid.trajectory(state_current[0][2], dyaw, (int)(ti))

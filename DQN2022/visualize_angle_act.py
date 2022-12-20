@@ -111,7 +111,8 @@ if __name__ == "__main__":
     #print("Which data?")
     #data_name  = input()
 
-    ac = visual_act(folder=path + '/result/syuron/1208_n_0_test_0_3')
+    ac = visual_act(folder=path + '/result/1220_rndnei_5')
+    #ac = visual_act(folder=path + '/result/syuron/1215_dif_1')
     ac.load()
     ac.recog()
     ac.draw_base()

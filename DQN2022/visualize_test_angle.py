@@ -83,20 +83,20 @@ class visual_angle_act:
     def max_min(self):
         self.train_data_max = copy.copy(self.train_data_comp[0][1])
         self.train_data_min = copy.copy(self.train_data_comp[0][1])
-        #self.test_data_max = copy.copy(self.test_data_comp[0][1])
-        #self.test_data_min = copy.copy(self.test_data_comp[0][1])
+        self.test_data_max = copy.copy(self.test_data_comp[0][1])
+        self.test_data_min = copy.copy(self.test_data_comp[0][1])
         self.test_0_data_max = copy.copy(self.test_0_data_comp[0][1])
         self.test_0_data_min = copy.copy(self.test_0_data_comp[0][1])
         for i in range(750):
             for j in range(len(self.train_data_comp)):
                 self.train_data_max[i] = max(self.train_data_max[i],self.train_data_comp[j][1][i])
                 self.train_data_min[i] = min(self.train_data_min[i],self.train_data_comp[j][1][i])
-        '''
+        #'''
         for i in range(750):
             for j in range(len(self.test_data_comp)):
                 self.test_data_max[i] = max(self.test_data_max[i],self.test_data_comp[j][1][i])
                 self.test_data_min[i] = min(self.test_data_min[i],self.test_data_comp[j][1][i])
-        '''
+        #'''
         for i in range(750):
             for j in range(len(self.test_0_data_comp)):
                 self.test_0_data_max[i] = max(self.test_0_data_max[i],self.test_0_data_comp[j][1][i])
@@ -104,20 +104,20 @@ class visual_angle_act:
 
     def visualize(self):
         target = []
-        #for i in self.test_data_comp[0][0]:
-        #    target.append(int(20*math.sin(0.1*i*2*math.pi)))
+        for i in self.test_data_comp[0][0]:
+            target.append(int(20*math.sin(0.1*i*2*math.pi)))
         fig = plt.figure()
         ax = fig.add_subplot(221)
         ax.fill_between(self.train_data_comp[0][0],self.train_data_max,self.train_data_min, alpha=0.3)
         ax.plot(self.train_data[-1][0],self.train_data[-1][1])
-        #ax.plot(self.train_data_comp[0][0],target)
-        """
+        ax.plot(self.train_data_comp[0][0],target)
+        #"""
         bx = fig.add_subplot(223)
         bx.set_ylim([-100,100])
         bx.fill_between(self.test_data_comp[0][0],self.test_data_max,self.test_data_min, alpha=0.3)
         bx.plot(self.test_data[-1][0],self.test_data[-1][1])
         bx.plot(self.test_data_comp[0][0],target)
-        """
+        #"""
         cx = fig.add_subplot(224)
         cx.set_ylim([-100,60])
         cx.fill_between(self.test_0_data_comp[0][0],self.test_0_data_max,self.test_0_data_min, alpha=0.3)

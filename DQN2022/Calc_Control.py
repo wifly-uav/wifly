@@ -156,6 +156,7 @@ class calc_PID():
         if mode == True:
             out = self.saturation_block(out)
         #print(out)
+        #print(str(self.__param_P)+","+str(self.__error)+","+str(self.__param_I)+","+str(self.__error_I)+","+str(self.__target))
         return out
 
     def calculate_output2(self, current_value, delta_time, mode):

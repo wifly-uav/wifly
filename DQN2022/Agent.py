@@ -618,9 +618,10 @@ class DQNAgent:
         elif self.RND:
             Q_values = self.q_eval.predict_on_batch((states,extend))
         elif self.condition:
-            a = float(1/(2.0*3.14*self.cut_off*0.04+1.0))
+            #a = float(1/(2.0*3.14*self.cut_off*0.04+1.0))
+            a = 0
             pre_yaw = abs(self.con_net.predict_on_batch(states))
-            self.con = a*self.con+(1-a)*pre_yaw[0]-abs(float(dyaw))
+            self.con = a*self.con+(1-a)*(pre_yaw[0]-abs(float(dyaw)))
             self.con_log.append([self.con,pre_yaw[0],dyaw])
             Q_values = self.q_eval.predict_on_batch((states,self.con))
         else:
@@ -873,7 +874,12 @@ class DQNAgent:
             act_index = np.ravel(actions-1)
             act = np.array([[0]*self.n_actions]*self.batch_size)
             act[batch_index,act_index] = 1
-            Qs = self.q_target.predict(states_)
+            if self.condition:
+                dyaw_ = dyaw.reshape(self.batch_size,-1)
+                con = abs(self.con_net.predict_on_batch(states))-abs(dyaw_)
+                Qs = self.q_target.predict((states,con))
+            else:
+                Qs = self.q_target.predict(states_)
             Q = np.max(Qs, axis=1)
             rewards_ = np.array([rewards])
             Q_ = np.array([Q])
@@ -887,7 +893,7 @@ class DQNAgent:
             beta_list = np.array([beta]*self.batch_size)
             target_val = self.target_nn.predict_on_batch(states)
             predict_val = self.predictor_nn.predict_on_batch(states)
-            error = np.square(target_val-predict_val)*0.01
+            error = np.square(target_val-predict_val)*0.1
             rewards_in = np.ravel(np.clip(error,0,50)*beta)
             self.rnd_loss.append(self.predictor_nn.train_on_batch(states,target_val))
 
@@ -945,7 +951,23 @@ class DQNAgent:
                 frames -= 1
         #RND ver-----------------------------------------------------------------------------------------------------------------
         elif self.RND:
-            q_target[batch_index, actions] = rnd_rewards + self.gamma * np.max(q_next, axis=1)* dones
+            #周辺近似 ver-----------------------------------------------------------------------------------------------------------------
+            if self.neighbor:
+                q_target[batch_index, actions] = rnd_rewards + self.gamma * np.max(q_next, axis=1)* dones
+                actions_ = actions-1
+                n_ = np.where(actions_<0,0,1)
+                n__ = np.where(actions_>self.n_actions,0,1)
+                dones_ = n_*n__
+                actions_ = actions_*dones_
+                q_target[batch_index, actions_] = dones_*(0.5*(0.5*rnd_rewards + self.gamma * np.max(q_next, axis=1)* dones+q_target[batch_index, actions_]))+(1-dones_)*q_target[batch_index, actions]
+                actions_ = actions+1
+                n_ = np.where(actions_<0,0,1)
+                n__ = np.where(actions_>self.n_actions-1,0,1)
+                dones_ = n_*n__
+                actions_ = actions_*dones_
+                q_target[batch_index, actions] = dones_*(0.5*(0.5*rnd_rewards + self.gamma * np.max(q_next, axis=1)* dones+q_target[batch_index, actions_]))+(1-dones_)*q_target[batch_index, actions]
+            else:
+                q_target[batch_index, actions] = rnd_rewards + self.gamma * np.max(q_next, axis=1)* dones
         #周辺近似 ver-----------------------------------------------------------------------------------------------------------------
         elif self.neighbor:
             q_target[batch_index, actions] = rewards + self.gamma * np.max(q_next, axis=1)* dones
