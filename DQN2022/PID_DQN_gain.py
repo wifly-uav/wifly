@@ -20,7 +20,7 @@ N_EPOCHS = 1            #学習epoch数
 N_FRAMES = 10000          #1epochあたりのステップ数
 P_GAIN = 4
 I_GAIN = 0.0002         #0.00001
-D_GAIN = -0.1              
+D_GAIN = 0              #-0.1              
 PWM_DEF = 209           #kitai側では+1されて195になる。
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
 EPISODE_TIME = 30.0
@@ -29,7 +29,7 @@ CHANGE_DEF = False
 amplitude_pwm = 20
 hz_pwm = 0.1
 
-REWARD_MODE = 0        #0:Normal 1:Hirai 2:罰則のみ 3:Noise 4:変化 5:u_I罰則
+REWARD_MODE = 5        #0:Normal 1:Hirai 2:罰則のみ 3:Noise 4:変化 5:u_I罰則
 
 CHANGE_TARGET = False
 amplitude = 20
@@ -62,9 +62,9 @@ INC = False #N_ACTIONS=5
 MIX = False #N_ACTIONS=17,STATE_VARIABLES=3
 LIMIT = True
 
-RND = False
+RND = True
 NEIGHBOR = False
-PRE_REWARD = True
+PRE_REWARD = False
 
 PARALLEL = False
 
@@ -78,7 +78,7 @@ LOAD_BATCH = True
 LOAD_RND = True
 
 CONDITION = True
-BETA = False
+BETA = True
 
 DISTURB = False
 
@@ -142,18 +142,21 @@ if __name__ == "__main__":
         saved_dir = save_dir + "/../" + fldr_name + "/"
         print("Loading NN model")
         agent.load_saved_NN(saved_dir)
-        if CONDITION:
+        if RND:
+            if LOAD_RND:
+                agent.load_rnd_NN(saved_dir)
+                agent.NN_RND_avoid_overhead()
+            if CONDITION:
+                agent.NN_RNDcondition_dqn_avoid_overhead()
+            else:
+                agent.NN_RND_dqn_avoid_overhead()
+        elif CONDITION:
             agent.load_condition_NN(saved_dir)
             agent.NN_condition_avoid_overhead()
             agent.NN_condition_dqn_avoid_overhead()
         elif PRE_REWARD:
             agent.load_state_NN(saved_dir)
             agent.NN_preact_avoid_overhead()
-        elif RND:
-            if LOAD_RND:
-                agent.load_rnd_NN(saved_dir)
-                agent.NN_RND_avoid_overhead()
-            agent.NN_RND_dqn_avoid_overhead()
         else:
             agent.NN_avoid_overhead()
         if LOAD:

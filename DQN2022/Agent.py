@@ -47,7 +47,7 @@ KEEP_FRAMES = 4
 STATE_VARIABLES = 5     #状態変数の数(PWM,PWM,Yaw,Pgain,Igain)
 
 LEARNING_RATE = 0.02
-RND_LEARNING_RATE = 0.01
+RND_LEARNING_RATE = 0.02
 DISCOUNT_FACTOR = 0.95
 REPLAY_MEMORY_SIZE = 30000
 #EPSILON = 0.1          #モデルの変化を考慮して、スケジューリングをしない。
@@ -249,9 +249,13 @@ def build_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
         #入力のユニット数の指定には、"input_dim="と"input_shape="があるらしい。
         keras.layers.Input(shape = (keep_frames,input_dims,)),  #入力の数はinput_dims*4フレーム（shapeでの指定時は順序が逆なので注意）
         keras.layers.Flatten(),                                 #平滑化‼
-        keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層1
-        keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層2
-        keras.layers.Dense(n_actions, activation = None, kernel_initializer = "he_normal")])       #出力層
+        #keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層1
+        #keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = "he_normal"),        #中間層2
+        #keras.layers.Dense(n_actions, activation = None, kernel_initializer = "he_normal")])       #出力層
+        keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = keras.initializers.RandomUniform(minval=-0.05, maxval=0.05, seed=None)),        #中間層1
+        keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = keras.initializers.RandomUniform(minval=-0.05, maxval=0.05, seed=None)),        #中間層2
+        keras.layers.Dense(n_actions, activation = None, kernel_initializer = keras.initializers.RandomUniform(minval=-0.05, maxval=0.05, seed=None))])       #出力層
+        
     #最適化アルゴリズム、誤差関数を指定する
     model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
 
@@ -347,6 +351,24 @@ def build_condition_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_di
     Q = keras.layers.Dense(n_actions, activation = None)(fc2)
 
     model = keras.Model(inputs=[state_branch,condition_branch], outputs=[Q])
+    model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
+    model.summary()
+    plot_model(model,show_shapes=True, to_file='nn_model.png')
+    return model,0,0 
+
+def build_rndcondition_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
+    state_branch = keras.layers.Input(shape=(keep_frames,input_dims,))
+    f_state_branch = keras.layers.Flatten()(state_branch)
+    reward_branch = keras.layers.Input(shape=(3,))
+    reward_fc = keras.layers.Dense(keep_frames*input_dims, activation ='relu', kernel_initializer = keras.initializers.RandomUniform(minval=-0.05, maxval=0.05, seed=None))(reward_branch)
+    condition_branch = keras.layers.Input(shape=(1,))
+    condition_fc = keras.layers.Dense(keep_frames*input_dims, activation ='relu', kernel_initializer = keras.initializers.RandomUniform(minval=-0.05, maxval=0.05, seed=None))(condition_branch)
+    marged = keras.layers.Add()([f_state_branch, condition_fc, reward_fc])
+    fc1 = keras.layers.Dense(fc1_dims, activation ='relu', kernel_initializer = keras.initializers.RandomUniform(minval=-0.05, maxval=0.05, seed=None))(marged)
+    fc2 = keras.layers.Dense(fc2_dims, activation ='relu', kernel_initializer = keras.initializers.RandomUniform(minval=-0.05, maxval=0.05, seed=None))(fc1)
+    Q = keras.layers.Dense(n_actions, activation = None, kernel_initializer = keras.initializers.RandomUniform(minval=-0.05, maxval=0.05, seed=None))(fc2)
+
+    model = keras.Model(inputs=[state_branch,reward_branch,condition_branch], outputs=[Q])
     model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
     model.summary()
     plot_model(model,show_shapes=True, to_file='nn_model.png')
@@ -478,8 +500,12 @@ class DQNAgent:
             self.q_eval, self.v_eval,self.adv_eval = build_lstm_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
             self.q_target, self.target, self.adv_target = build_lstm_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
         elif self.RND:
-            self.q_eval, self.v_eval,self.adv_eval = build_rnd_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
-            self.q_target, self.target, self.adv_target = build_rnd_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+            if self.condition:
+                self.q_eval, self.v_eval,self.adv_eval = build_rndcondition_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+                self.q_target, self.target, self.adv_target = build_rndcondition_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+            else:
+                self.q_eval, self.v_eval,self.adv_eval = build_rnd_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
+                self.q_target, self.target, self.adv_target = build_rnd_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
         elif self.condition:
             self.q_eval, self.v_eval,self.adv_eval = build_condition_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
             self.q_target, self.target, self.adv_target = build_condition_dqn(LEARNING_RATE, N_ACTIONS, state_num, KEEP_FRAMES, HIDDEN_1, HIDDEN_2)
@@ -503,8 +529,13 @@ class DQNAgent:
         #ダミーデータ処理
         #predict_on_batchやtrain_on_batchの初回呼び出しが遅いので、先に呼び出しておく。
         if self.RND:
-            self.NN_RND_avoid_overhead()
-            self.NN_RND_dqn_avoid_overhead()
+            if self.condition:
+                self.NN_condition_avoid_overhead()
+                self.NN_RND_avoid_overhead()
+                self.NN_RNDcondition_dqn_avoid_overhead()
+            else:
+                self.NN_RND_avoid_overhead()
+                self.NN_RND_dqn_avoid_overhead()
         elif self.condition:
             self.NN_condition_avoid_overhead()
             self.NN_condition_dqn_avoid_overhead()
@@ -562,7 +593,20 @@ class DQNAgent:
         self.q_eval.set_weights(self.q_eval.get_weights())
         self.q_target.set_weights(self.q_target.get_weights())
         buf4 = self.memory_per.total_p()
-        buf5 = np.empty((self.batch_size,1))    
+        buf5 = np.empty((self.batch_size,1))
+
+    def NN_RNDcondition_dqn_avoid_overhead(self):
+        data_dummy = np.array([[[0]*self.state_variables]*self.keep_frames]*self.batch_size)
+        reward_data_dummy = np.array([[0]*3]*self.batch_size)
+        reward_data_dummy_ = np.array([[0]*1]*self.batch_size)
+        buf1 = self.q_eval.predict_on_batch((data_dummy,reward_data_dummy,reward_data_dummy_))
+        buf2 = self.q_target.predict_on_batch((data_dummy,reward_data_dummy,reward_data_dummy_))
+        buf3 = np.copy(self.q_eval)
+        self.q_eval.train_on_batch((data_dummy,reward_data_dummy,reward_data_dummy_), buf1)
+        self.q_eval.set_weights(self.q_eval.get_weights())
+        self.q_target.set_weights(self.q_target.get_weights())
+        buf4 = self.memory_per.total_p()
+        buf5 = np.empty((self.batch_size,1))      
 
     def NN_RND_avoid_overhead(self):
         data_dummy = np.array([[[0]*STATE_VARIABLES]*self.keep_frames]*self.batch_size)
@@ -616,7 +660,14 @@ class DQNAgent:
         if self.parallel:
             Q_values = self.q_choose.predict_on_batch(states)
         elif self.RND:
-            Q_values = self.q_eval.predict_on_batch((states,extend))
+            if self.condition:
+                a = 0
+                pre_yaw = abs(self.con_net.predict_on_batch(states))
+                self.con = a*self.con+(1-a)*(pre_yaw[0]-abs(float(dyaw)))
+                self.con_log.append([self.con,pre_yaw[0],dyaw])
+                Q_values = self.q_eval.predict_on_batch((states,extend,self.con))
+            else:
+                Q_values = self.q_eval.predict_on_batch((states,extend))
         elif self.condition:
             #a = float(1/(2.0*3.14*self.cut_off*0.04+1.0))
             a = 0
@@ -897,8 +948,6 @@ class DQNAgent:
             rewards_in = np.ravel(np.clip(error,0,50)*beta)
             self.rnd_loss.append(self.predictor_nn.train_on_batch(states,target_val))
 
-            #print(states)
-            #print(beta_list)
             rewards_in = np.ravel(rewards_in)
             self.rnd_reward.append(rewards_in) #for Debug
             state_reward = np.concatenate([rewards.reshape(-1,1), rewards_in.reshape(-1,1), beta_list.reshape(-1,1)],axis=1)
@@ -914,9 +963,16 @@ class DQNAgent:
         #Fixed-Targetを実装
         #RND ver-----------------------------------------------------------------------------------------------------------------
         if self.RND:
-            extend = np.array([[0]*3])
-            q_eval = self.q_target.predict((states,extend))
-            q_next = self.q_target.predict((states_,extend))
+            if self.condition:
+                extend = np.array([[0]*3])
+                dyaw_ = dyaw.reshape(self.batch_size,-1)
+                con = abs(self.con_net.predict_on_batch(states))-abs(dyaw_)
+                q_eval = self.q_target.predict((states,extend,con))
+                q_next = self.q_target.predict((states_,extend,con))
+            else:
+                extend = np.array([[0]*3])
+                q_eval = self.q_target.predict((states,extend))
+                q_next = self.q_target.predict((states_,extend))
         #コンディション ver-----------------------------------------------------------------------------------------------------------------
         elif self.condition:
             dyaw_ = dyaw.reshape(self.batch_size,-1)
@@ -1022,8 +1078,12 @@ class DQNAgent:
         if self.global_step % self.learning_period == 0 or self.num_in_buffer == self.batch_size:
             #RND ver-----------------------------------------------------------------------------------------------------------------
             if self.RND:
-                loss = self.q_eval.train_on_batch((states,state_reward), q_target) 
-                self.past_state_reward = np.copy(state_reward)
+                if self.condition:
+                    loss = self.q_eval.train_on_batch((states,state_reward,con), q_target) 
+                    self.past_state_reward = np.copy(state_reward)
+                else:
+                    loss = self.q_eval.train_on_batch((states,state_reward), q_target) 
+                    self.past_state_reward = np.copy(state_reward)
             #コンディション ver-----------------------------------------------------------------------------------------------------------------
             elif self.condition:
                 loss = self.q_eval.train_on_batch((states,con), q_target)
@@ -1036,7 +1096,10 @@ class DQNAgent:
         else:
             #RND ver-----------------------------------------------------------------------------------------------------------------
             if self.RND:
-                loss = self.q_eval.train_on_batch((self.past_states,self.past_state_reward), q_target) 
+                if self.condition:
+                    loss = self.q_eval.train_on_batch((self.past_states,self.past_state_reward,self.past_con), q_target) 
+                else:
+                    loss = self.q_eval.train_on_batch((self.past_states,self.past_state_reward), q_target) 
             #コンディション ver-----------------------------------------------------------------------------------------------------------------
             elif self.condition:
                 loss = self.q_eval.train_on_batch((self.past_states,self.past_con), q_target)
@@ -1116,7 +1179,10 @@ class DQNAgent:
     def debug_nn(self):
         i=0
         if self.condition == True or self.RND == True:
-            i=4
+            if self.condition == True and self.RND == True:
+                i=6
+            else:
+                i=4
         l1 = self.q_eval.layers[i]
         l2 = self.q_eval.layers[i+1]
         l3 = self.q_eval.layers[i+2]
@@ -1128,12 +1194,18 @@ class DQNAgent:
             np.savetxt(f, l3.get_weights()[1])
             np.savetxt(f, l4.get_weights()[0])
             np.savetxt(f, l4.get_weights()[1])
-        if self.condition == True:
+        if self.RND == True:
+            if self.condition:
+                l = self.q_eval.layers[4]
+                np.savetxt(self.folder + '/debug_W_fc_con.csv', l.get_weights()[0], delimiter=',')
+                l = self.q_eval.layers[5]
+                np.savetxt(self.folder + '/debug_W_fc_add.csv', l.get_weights()[0], delimiter=',')
+            else:
+                l = self.q_eval.layers[3]
+                np.savetxt(self.folder + '/debug_W_fc_add.csv', l.get_weights()[0], delimiter=',')
+        elif self.condition == True:
             l = self.q_eval.layers[3]
             np.savetxt(self.folder + '/debug_W_fc_con.csv', l.get_weights()[0], delimiter=',')
-        if self.RND == True:
-            l = self.q_eval.layers[3]
-            np.savetxt(self.folder + '/debug_W_fc_add.csv', l.get_weights()[0], delimiter=',')
         np.savetxt(self.folder + '/debug_W_fc1.csv', l2.get_weights()[0], delimiter=',')
         np.savetxt(self.folder + '/debug_b_fc1.csv', l2.get_weights()[1], delimiter=',')
         np.savetxt(self.folder + '/debug_W_fc2.csv', l3.get_weights()[0], delimiter=',')

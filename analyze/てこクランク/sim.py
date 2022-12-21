@@ -83,7 +83,7 @@ if __name__ == '__main__':
     d = 15
     e = 220
 
-    bias = 10
+    bias = 8
     measure_time = 3
     mem = 10000
 
