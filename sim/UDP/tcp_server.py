@@ -18,20 +18,26 @@ sock, addr = s.accept()
 print('connected!')
 
 count = 0
+x = 255
+y = 50
 while count<50:
     count = count + 1
     print("count:"+str(count))
 
-    signal = [5,1]
-    s = str(signal)
-    s_ = s.strip("[""]")
-    s_l = s_.encode("utf-8")
+
+    s = f'{x:03}{y:03}'
+    s_l = s.encode("utf-8")
+    
     sock.send(s_l)
+    for i in range(800):
+        re = sock.recv(1024)
+        #time.sleep(0.0001)
     print("send"+str(len(s_l))+":"+str(s_l))
 
-    re = sock.recv(1024)
+    #re = sock.recv(1024)
     re_ = re.decode('utf-8')
-    print("receive"+str(len(re_))+":"+str(re_))
-    time.sleep(1)
+    print("receive"+":"+str(re_))
+    time.sleep(0.1)
+    y += 1
 
 sock.close()
