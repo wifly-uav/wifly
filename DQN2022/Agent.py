@@ -55,8 +55,8 @@ EPSILON = 0.1           #εの初期値
 EPSILON_DEC = 0    #1000stepで1から0.1までεを減少させる。
 EPSILON_END = 0.1       #εの最終的な値
 COPY_PERIOD = 50
-HIDDEN_1 = 10           
-HIDDEN_2 = 10           #先行研究では5だが、Duelingでは2等分したいので偶数の10にする。
+HIDDEN_1 = 20           
+HIDDEN_2 = 20           #先行研究では5だが、Duelingでは2等分したいので偶数の10にする。
 
 #for PER
 ALPHA = 0.4

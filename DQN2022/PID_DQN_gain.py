@@ -29,7 +29,7 @@ CHANGE_DEF = False
 amplitude_pwm = 20
 hz_pwm = 0.1
 
-REWARD_MODE = 5        #0:Normal 1:Hirai 2:罰則のみ 3:Noise 4:変化 5:u_I罰則
+REWARD_MODE = 0        #0:Normal 1:Hirai 2:罰則のみ 3:Noise 4:変化 5:u_I罰則
 
 CHANGE_TARGET = False
 amplitude = 20

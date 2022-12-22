@@ -94,7 +94,7 @@ class visual_act:
         num = len(self.angle)
         for i in range(num):
             x,y = self.angleact2pos(self.angle[i],self.action_conv[i])
-            print(str(255-int(255/num*i))+","+str(int(255/num*i)))
+            #print(str(255-int(255/num*i))+","+str(int(255/num*i)))
             self.draw.ellipse((x-self.point_size, y-self.point_size, x+self.point_size, y+self.point_size), fill=(255-int(255/num*i), 0, int(255/num*i)), outline=(0, 0, 0))
         for i in range(num):
             x,y = self.angleact2pos2(self.angle[i],self.pow_diff[i])
@@ -111,7 +111,7 @@ if __name__ == "__main__":
     #print("Which data?")
     #data_name  = input()
 
-    ac = visual_act(folder=path + '/result/1220_rndnei_5')
+    ac = visual_act(folder=path + '/result/22_conbeta_test_0_3')
     #ac = visual_act(folder=path + '/result/syuron/1215_dif_1')
     ac.load()
     ac.recog()
