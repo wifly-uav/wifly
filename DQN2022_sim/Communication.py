@@ -4,13 +4,6 @@ import serial.tools.list_ports
 import threading
 import statistics
 
-import socket
-import json
-import struct
-import numpy as np
-import time
-import matlab.engine
-
 RECEIVE_BYTE = 9    #receive_from_espの引数
 
 #[受信データ , 送信データ , time]
@@ -22,22 +15,45 @@ class Communicator():
     def __init__(self):
         """
         初期化
+        COMポートの自動選択をしています
         """
-        self.eng = matlab.engine.start_matlab()
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.bind(('127.0.0.1',9999))
-        self.s.listen(1)
-        print('waiting for connection...')
-        #eng.sym('com_test')
-        #time.sleep(1)
-        self.sock, self.addr = self.s.accept()
-        print('connected to simulink')
+        print('======================START========================')
+        ports = list(serial.tools.list_ports.comports())    #シリアルポートのリストを取得
+        devices = [info.device for info in ports]           #ポート名を取得?
+        if len(devices) == 0:
+            print("ポートが見つかりませんでした")
+        elif len(devices) == 1:
+            port_controller = devices[0]                    #port_controllerにポート名を格納
+        else:
+            for p in ports:
+                print(p)
+                print(p.hwid)                               #?
+            print('Input port number of the controller:')   #ポート番号の入力を指示
+            port_controller = 'COM' + input()               
+        #self.__ser = serial.Serial(port_controller, 115200)
+        self.__ser = serial.Serial(                     #SERIAL通信の設定
+                        port_controller,                #COMの番号
+                        baudrate = 460800,             #もとのボーレート
+                        #baudrate = 115200,             #遅くしてみた。
+                        #baudrate = 57600,              #さらに遅くしてみた。(Lazurite時代と同じ)
+                        #baudrate = 38400,               #9600, 14400, 19200, 28800
+                        parity = serial.PARITY_NONE,
+                        bytesize = serial.EIGHTBITS,
+                        stopbits = serial.STOPBITS_ONE,
+                        timeout = None,
+                        xonxoff = 0,
+                        rtscts = 0,
+                        )
+        
+        time.sleep(0.5)
 
         self.state = [0.0,0.0,0.0,0.0,0.0]
         
         print('Connected to controller')
 
+        self.__fail_counter = 0
         self.__raw_data = ""
+        self.terminal_flag = 1
         self.dataset_from_esp = []
         self.time_started = None
         self.time_last_receive = time.time()
