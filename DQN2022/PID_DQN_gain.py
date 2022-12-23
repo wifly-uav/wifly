@@ -29,7 +29,7 @@ CHANGE_DEF = False
 amplitude_pwm = 20
 hz_pwm = 0.1
 
-REWARD_MODE = 0        #0:Normal 1:Hirai 2:罰則のみ 3:Noise 4:変化 5:u_I罰則
+REWARD_MODE = 7        #0:Normal 1:Hirai 2:罰則のみ 3:Noise 4:変化 5:u_I罰則
 
 CHANGE_TARGET = False
 amplitude = 20
@@ -319,7 +319,10 @@ if __name__ == "__main__":
                 break
 
             u_i = pid.get_i()
-            reward = env.observe_reward(state_next, yaw_index=2, u_i=u_i)     #Yaw角の0.0度からのずれに基づいた報酬を観測
+            if REWARD_MODE  == 7:
+                reward = env.observe_reward(state_next, yaw_index=2, u_i=u_i, dyaw=dyaw)     #Yaw角の0.0度からのずれに基づいた報酬を観測
+            else:
+                reward = env.observe_reward(state_next, yaw_index=2, u_i=u_i)     #Yaw角の0.0度からのずれに基づいた報酬を観測
             score += reward
 
             if j == N_FRAMES - 1:

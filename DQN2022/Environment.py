@@ -102,7 +102,7 @@ class Environment():
     def update_target(self, angle):
         self.target_angle = angle
 
-    def observe_reward(self, data, yaw_index=2, u_i=0):
+    def observe_reward(self, data, yaw_index=2, u_i=0, dyaw=0):
         """
         報酬を定義する
         Args:
@@ -113,11 +113,6 @@ class Environment():
         err = abs(float(data[0][yaw_index])-self.target_angle)
         if self.reward_mode == 0:
             reward = 1-err/90.0
-        elif self.reward_mode == 6:
-            if err>10:
-                reward = (10-err)/80.0
-            else:
-                reward = 1-err/10.0
         elif self.reward_mode == 1:
             if err < 5:
                 reward = 1
@@ -134,6 +129,16 @@ class Environment():
             reward = 1-err/90.0+0.5*(err_-err-1)
         elif self.reward_mode == 5:
             reward = 1-err/10.0-0.01*abs(u_i)
+        elif self.reward_mode == 6:
+            if err>10:
+                reward = (10-err)/80.0
+            else:
+                reward = 1-err/10.0
+        elif self.reward_mode == 7:
+            if err>10:
+                reward = (10-err)/80.0-0.01*abs(dyaw)
+            else:
+                reward = 1-err/10.0-0.01*abs(dyaw)
 
         return reward
 
