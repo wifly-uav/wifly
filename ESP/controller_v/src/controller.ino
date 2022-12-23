@@ -2,28 +2,32 @@
 #include <WiFi.h>
 
 #include <SPI.h>
-// #define DEBUG
+//#define DEBUG
 
 int flag = 0;
 int flag_yaw = 0;
+int count = 0;
 
 unsigned long lastTime = 0;  
 unsigned long timerDelay = 60;  // send readings timer
+
 size_t data_pc_;
 uint8_t data_pc[5] = {0};
+
 int re_data[11] = {0};
-double re_data_angle[3] = {0};
+double re_data_angle[4] = {0};  //クォータニオン用
+
 int eular[3] = {0};
 char send_pc[40];
 int left_pwm, right_pwm, servo_angle, cog_angle;
-uint8_t data[5];
+//uint8_t data[5];
 int stick_lr, stick_ud, slider_l, slider_r, switch_1, switch_2, volume;
 
 // REPLACE WITH RECEIVER MAC Address
 //機体側のマイコンの番号にあったアドレスのみコメントアウトを外す。
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60}; //1
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x3D}; //2
-//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0xE4}; //3
+//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA2, 0x22}; //3
 uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x80, 0xC5}; //4
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0x98}; //5
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x80, 0xA6}; //6
@@ -37,7 +41,7 @@ double ysqr = 0;
 double t0,t1,t2,t3,t4 = 0;
 
 
-//quotanion（四元数）をEuler角に変換する関数
+//quotanion（四元数）をEular角に変換する関数
 void qu2eu(int eular[3], double quotanion[4]){
   double w = quotanion[0];
   double x = quotanion[1];
@@ -87,6 +91,7 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     //Serial.printf("Last Packet Recv Data(%d): ", data_len);
     //Serial.println();
     
+    //オイラーの場合はdata_len 11、クォータニオンの場合はdata_len 9
     //羽ばたきPWM
     for (int i = 0; i < 2; i++) {
       re_data[i] = 254 - data[i];
@@ -98,6 +103,10 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     re_data[3] = data[3];
     //更新時間間隔
     re_data[4] = data[4];
+
+
+    //オイラー角取得
+    
     //re_data5 pitch角
     if(data[5] != 0){
       re_data[5] = data[5];
@@ -113,9 +122,34 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     //re_data7 roll角 
     re_data[7] = data[9]+data[10];
     
-   sprintf(send_pc, "%d,%d,%d,%d,%d,%d,%d,%d,",re_data[0],re_data[1],re_data[2],re_data[3],re_data[4],re_data[5],re_data[6],re_data[7]);
-   Serial.println(send_pc);
-   Serial.flush();
+    
+    //クォータニオン取得 w,x,y,z
+    /*
+    for (int i = 5; i < 9; i++) {
+      re_data_angle[i-5] = data[i]*0.01-1;
+    }
+    qu2eu(eular, re_data_angle);    //クォータニオンからオイラー角 roll,pitch,yaw(実質roll)
+    for (int i = 5; i < 8; i++) {
+      re_data[i] = eular[i-5];
+    }
+    */
+    
+
+   //sprintf(send_pc, "%d,%d,%d,%d,%d,%d,%d,%d,",re_data[0],re_data[1],re_data[2],re_data[3],re_data[4],re_data[5],re_data[6],re_data[7]);
+   //Serial.println(send_pc);
+
+   count++;
+   Serial.print(count);
+   Serial.print(",");
+   for (int i = 0; i < 8; i++) {
+    Serial.print(re_data[i]);
+    Serial.print(",");
+   }
+   Serial.println();
+   
+
+   //Serial.flush();    //不要かも
+   delay(10);   //flushよりも重要かも
 }
 
 //送信時コールバック関数
@@ -137,12 +171,12 @@ void recieve_pc(){
   if(Serial.available()){                               //シリアルポートにデータが来ている場合
     if((int)Serial.read() == 255){                      //データの先頭が255である場合
       data_pc_ = Serial.readBytesUntil('\n',data_pc,5); //5つのデータを読み取り、data_pc_に格納
+      delay(10);    //重要 dataを読み切るための待機時間を追加
     }
   }
 }
 
 void setup() {
-
 
   //各コントローラごとのピン番号
   switch(controller_num){
@@ -167,7 +201,8 @@ void setup() {
     }
 
     //シリアル通信開始
-    Serial.begin(460800);    
+    //Serial.begin(460800);
+    Serial.begin(38400);
     
     //ピンモードの設定
     pinMode(stick_lr, INPUT);
@@ -339,6 +374,7 @@ void loop() {
 
     // Send message via ESP-NOW
     esp_now_send(castAddress, (uint8_t *) &data, sizeof(data));
+    delay(10);
     //esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
     lastTime = millis();
   }

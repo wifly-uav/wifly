@@ -14,7 +14,7 @@ N_FRAMES = 200
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 
 if __name__ == "__main__":    
-    tf.compat.v1.disable_eager_execution()     #tf1を無効
+    tf.compat.v1.disable_eager_execution()     #tf1を無効(tf2の場合、エラーが出るので推奨)
     path = os.path.dirname(__file__)
     print('save folder name:')
     save_folder = input()
@@ -33,7 +33,6 @@ if __name__ == "__main__":
         else:
             print('Quit')
             sys.exit()
-
     
     agent = DQNAgent(folder=save_file)
     
@@ -87,7 +86,7 @@ if __name__ == "__main__":
             #print("loop_time:" + str(time.time()-a))
             a = time.time()
             state_current = state_next
-            #action = agent.select_action_limit(state_current)    agent.learnで経験再生してる
+            #action = agent.select_action_limit(state_current)    //agent.learnで経験再生してる
             if terminal == True:
                 action = agent.choose_action(state_current)
                 if training_flag:

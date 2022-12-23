@@ -9,7 +9,7 @@
 #include <SPI.h>
 
 //#define DEBUG
-#define sensor
+#define sensor    //bno055センサを有効化
 
 #define PWM_FREQ 1000
 #define PWM_RANGE 255
@@ -30,7 +30,7 @@ Servo ladder;
 
 int com_flag = 0;
 int command[8] = {0};
-uint8_t data[11];
+uint8_t data[11];   //オイラーは11、クォータニオンは9
 uint8_t broadcastAddress[6];
 
 unsigned long lastTime = 0; 
@@ -170,8 +170,8 @@ void loop() {
     // - VECTOR_EULER         - degrees
     // - VECTOR_LINEARACCEL   - m/s^2
     // - VECTOR_GRAVITY       - m/s^2
-    imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
-    //imu::Quaternion quaternion = bno.getQuat();
+    imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);    //オイラー角出力
+    //imu::Quaternion quaternion = bno.getQuat();   //クォータニオン出力
   #endif
 
   Ti = millis();
@@ -182,7 +182,11 @@ void loop() {
     data[1] = command[1];
     data[2] = command[2];
     data[3] = command[3];
+    
     #ifdef sensor
+
+      //オイラー角出力
+      
       if(euler.z()>=0){  //z -> pitch
         data[5] = euler.z(); 
         data[6] = 0;
@@ -214,18 +218,25 @@ void loop() {
         data[9] = 180;
         data[10] = euler.x()-180;
       }
+      
+
+      //クォータニオン出力
       /*
       data[5] = (quaternion.w()+1)*100;
       data[6] = (quaternion.x()+1)*100;
       data[7] = (quaternion.y()+1)*100;
       data[8] = (quaternion.z()+1)*100;
       */
+      
     #else
       data[5] = 0;
       data[6] = 0;
       data[7] = 0;
+      data[8] = 0;
     #endif
-    data[4] = loopTi;
+
+    data[4] = loopTi;   //受信間隔
+
     #ifdef DEBUG
       #ifdef sensor
       //Serial.print("y:");
@@ -258,6 +269,7 @@ void loop() {
       #endif
     #endif
 
+    //機体の情報をコントローラに送信
     esp_now_send(broadcastAddress, (uint8_t *) &data, sizeof(data));
     lastTime = millis();
   }
