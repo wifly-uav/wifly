@@ -62,9 +62,9 @@ INC = False #N_ACTIONS=5
 MIX = False #N_ACTIONS=17,STATE_VARIABLES=3
 LIMIT = True
 
-RND = True
+RND = False
 NEIGHBOR = False
-PRE_REWARD = False
+PRE_REWARD = True
 
 PARALLEL = False
 

@@ -135,10 +135,10 @@ class Environment():
             else:
                 reward = 1-err/10.0
         elif self.reward_mode == 7:
-            if err>10:
-                reward = (10-err)/80.0-0.01*abs(dyaw)
+            if err>20:
+                reward = (20-err)/70.0-0.01*abs(dyaw)-0.01*abs(u_i)
             else:
-                reward = 1-err/10.0-0.01*abs(dyaw)
+                reward = 1-err/20.0-0.01*abs(dyaw)-0.01*abs(u_i)
 
         return reward
 
