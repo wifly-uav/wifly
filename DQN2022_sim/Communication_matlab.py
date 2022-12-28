@@ -33,6 +33,7 @@ class Communicator():
         self.motor_r = 0
         self.motor_l = 0
         self.angle = -90
+        self.omega = 0
 
         self.__raw_data = ""
         self.time_started = None
@@ -60,7 +61,7 @@ class Communicator():
         a = statistics.mean(self.old_dyaw_data)
 
         #persed_data:[モータ出力1, モータ出力2, Yaw, RC_Yaw, dyaw]
-        persed_data = [self.motor_r,self.motor_l,int(self.angle),0,0]
+        persed_data = [self.motor_r,self.motor_l,int(self.angle),int(self.omega),int(self.omega)]
         
         #受信データ、受信間隔（機体計測）、受信間隔(PC)を返す。
         self.old_data.pop(0)
@@ -86,6 +87,7 @@ class Communicator():
         #re = self.sock.recv(1024)
         self.re_ = re.decode('utf-8')
         self.angle = self.re_.split("\r")[0]
+        self.omega = self.re_.split("\r")[1].split(" ")[1]
 
 
     def serial_close(self):

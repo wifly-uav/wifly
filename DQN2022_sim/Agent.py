@@ -321,7 +321,7 @@ def build_act_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
     model = keras.Model(inputs=[state_branch,action_branch], outputs=[Q])
     model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
     model.summary()
-    plot_model(model,show_shapes=True, to_file='nn_model.png')
+    #plot_model(model,show_shapes=True, to_file='nn_model.png')
     return model,0,0 
 
 def build_rnd_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
@@ -337,7 +337,7 @@ def build_rnd_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
     model = keras.Model(inputs=[state_branch,reward_branch], outputs=[Q])
     model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
     model.summary()
-    plot_model(model,show_shapes=True, to_file='nn_model.png')
+    #plot_model(model,show_shapes=True, to_file='nn_model.png')
     return model,0,0 
 
 def build_condition_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
@@ -353,7 +353,7 @@ def build_condition_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_di
     model = keras.Model(inputs=[state_branch,condition_branch], outputs=[Q])
     model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
     model.summary()
-    plot_model(model,show_shapes=True, to_file='nn_model.png')
+    #plot_model(model,show_shapes=True, to_file='nn_model.png')
     return model,0,0 
 
 def build_rndcondition_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
@@ -371,7 +371,7 @@ def build_rndcondition_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2
     model = keras.Model(inputs=[state_branch,reward_branch,condition_branch], outputs=[Q])
     model.compile(optimizer = Adam(learning_rate=lr), loss ='huber_loss')
     model.summary()
-    plot_model(model,show_shapes=True, to_file='nn_model.png')
+    #plot_model(model,show_shapes=True, to_file='nn_model.png')
     return model,0,0 
 
 def build_condition(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
