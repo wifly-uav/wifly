@@ -1,0 +1,4 @@
+#ifndef RTW_HEADER_air_part1_python2_acc_types_h_
+#define RTW_HEADER_air_part1_python2_acc_types_h_
+typedef struct P_air_part1_python2_T_ P_air_part1_python2_T ;
+#endif
