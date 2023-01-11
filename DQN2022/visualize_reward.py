@@ -44,12 +44,13 @@ class visual_angle_act:
             name2 = name2.replace(os.sep,'/')
             #self.test_0_data[j][0] = np.loadtxt(name, delimiter=',', usecols=[-2])
             self.test_0_data[j][1] = np.loadtxt(name2, delimiter=',', usecols=[0])
-            self.test_0_reward_data[j][1] = -abs(self.test_0_data[j][1])/90
+            self.test_0_reward_data[j][1] = abs(self.test_0_data[j][1])/90
             self.test_0_reward_data[j][1] = self.test_0_reward_data[j][1].cumsum(dtype=float)
             self.test_0_data[j][0] = np.array([30.0/len(self.test_0_data[j][1])]*len(self.test_0_data[j][1]))
             self.test_0_data[j][0] = self.test_0_data[j][0].cumsum(dtype=float)
             self.test_0_reward_data[j][0] = self.test_0_data[j][0]
             j += 1
+        print(len(self.test_0_data[0][1]))
 
     def complement(self, mode='linear'):
         # 補間関数を作成
@@ -64,9 +65,9 @@ class visual_angle_act:
             self.train_data_comp[i][1] = f(t_resample)
             self.train_data_comp[i][0] = np.array([30.0/num]*len(self.train_data_comp[i][1]))
             self.train_data_comp[i][0] = self.train_data_comp[i][0].cumsum(dtype=float)
-        for i in range(len(self.test_data)):
+        for i in range(len(self.test_0_reward_data)):
             f = interpolate.interp1d(self.test_0_reward_data[i][0], self.test_0_reward_data[i][1], kind=mode, fill_value="extrapolate")
-            self.test_0_reward_data_comp[i][1] = f(t_resample)
+            self.test_0_reward_data_comp[i][1] = f(t_resample)*0.04
             self.test_0_reward_data_comp[i][0] = np.array([30.0/num]*len(self.test_0_reward_data_comp[i][1]))
             self.test_0_reward_data_comp[i][0] = self.test_0_reward_data_comp[i][0].cumsum(dtype=float)
         for i in range(len(self.test_0_data)):
@@ -101,6 +102,11 @@ class visual_angle_act:
         else:
             return self.test_0_reward_data_comp,self.test_0_reward_data,self.test_0_reward_data_max,self.test_0_reward_data_min
 
+    def comp(self):
+        self.load()
+        self.complement()
+        self.max_min()
+
     def visualize(self):
         target = []
         #for i in self.test_data_comp[0][0]:
@@ -132,30 +138,71 @@ class visual_angle_act:
 
 if __name__ == "__main__":
     path = os.path.dirname(__file__)
-    mode = 0
+    mode = 2
     
     print("Which data?")
     #data_name  = input()
     #ac = visual_angle_act(folder=path + '/result/syuron/', data_name=data_name)
     ac = visual_angle_act(folder=path + '/result/syuron/', data_name='1209_n')
-    ac.load()
-    ac.complement()
-    ac.max_min()
+    ac.comp()
     n_comp, n_test, n_max, n_min = ac.comp_data(mode=mode)
     #ac.visualize()
     ac_con = visual_angle_act(folder=path + '/result/syuron/', data_name='1215_con')
-    ac_con.load()
-    ac_con.complement()
-    ac_con.max_min()
+    ac_con.comp()
     con_comp, con_test, con_max, con_min = ac_con.comp_data(mode=mode)
+    
+    ac_nei = visual_angle_act(folder=path + '/result/syuron/', data_name='1208_nei')
+    ac_nei.comp()
+    nei_comp, nei_test, nei_max, nei_min = ac_nei.comp_data(mode=mode)
+
+    ac_pre = visual_angle_act(folder=path + '/result/syuron/', data_name='1208_pre')
+    ac_pre.comp()
+    pre_comp, pre_test, pre_max, pre_min = ac_pre.comp_data(mode=mode)
+
+    ac_beta = visual_angle_act(folder=path + '/result/syuron/', data_name='1208_beta')
+    ac_beta.comp()
+    beta_comp, beta_test, beta_max, beta_min = ac_beta.comp_data(mode=mode)
+
+    ac_mix = visual_angle_act(folder=path + '/result/syuron/', data_name='23_conprebeta')
+    ac_mix.comp()
+    mix_comp, mix_test, mix_max, mix_min = ac_nei.comp_data(mode=mode)
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.fill_between(n_comp[0][0],n_max,n_min, color='b',alpha=0.3)
-    ax.fill_between(con_comp[0][0],con_max,con_min, color='g',alpha=0.3)
-    plt.xlabel("Ｘ軸", fontname="MS Gothic")
-    plt.ylabel("Ｙ軸", fontname="MS Gothic")
-    ax.legend(["先行研究","提案手法"],prop={"family":"MS Gothic"})
-    ax.plot([0, n_comp[-1][0][-1]],[0, 0])
+    if mode==2:
+        ax.plot(n_comp[0][0],n_max-n_min, color='b',alpha=0.6)
+        #ax.plot(con_comp[0][0],con_max-con_min, color='g',alpha=0.6)
+        #ax.plot(pre_comp[0][0],pre_max-pre_min, color='r',alpha=0.6)
+        #ax.plot(nei_comp[0][0],nei_max-nei_min, color='m',alpha=0.6)
+        ax.plot(beta_comp[0][0],beta_max-beta_min, color='m',alpha=0.6)
+        #ax.plot(mix_comp[0][0],mix_max-mix_min, color='c')
+        print(np.mean(n_max-n_min))
+        print(np.mean(con_max-con_min))
+        print(np.mean(pre_max-pre_min))
+        print(np.mean(nei_max-nei_min))
+
+    else:
+        ax.fill_between(n_comp[0][0],n_max,n_min, color='b',alpha=0.3)
+        #ax.fill_between(con_comp[0][0],con_max,con_min, color='g',alpha=0.3)
+        #ax.fill_between(pre_comp[0][0],pre_max,pre_min, color='r',alpha=0.3)
+        #ax.fill_between(nei_comp[0][0],nei_max,nei_min, color='m',alpha=0.3)
+        ax.fill_between(beta_comp[0][0],beta_max,beta_min, color='m',alpha=0.3)
+        #ax.fill_between(mix_comp[0][0],mix_max,mix_min, color='c',alpha=0.3)
+
+    ax.set_xticks([0,5,10,15,20,25,30])
+    plt.xlabel("時間[s]", fontname="MS Gothic", fontsize=18)
+    if mode==2:
+        plt.ylabel("最大角度差[deg]", fontname="MS Gothic", fontsize=18)
+        ax.legend(["先行研究","提案手法"], prop={"family":"MS Gothic","size":12}, loc='upper right')
+    elif mode:
+        plt.ylabel("角度[deg]", fontname="MS Gothic", fontsize=18)
+        ax.legend(["先行研究","提案手法"], prop={"family":"MS Gothic","size":12}, loc='upper right')
+        ax.plot([0, n_comp[-1][0][-1]],[0, 0], color='r')
+    else:
+        plt.ylabel("累積偏差[deg・s]", fontname="MS Gothic", fontsize=18)
+        #ax.legend(["先行研究","提案手法"], prop={"family":"MS Gothic","size":12}, loc='upper left')
+        #ax.legend(["先行研究","潜在変数","報酬予測","報酬近似","ベータ分布","MIX"], prop={"family":"MS Gothic","size":12}, loc='upper left')
+    plt.rcParams["font.size"] = 18
+    plt.tick_params(labelsize=18)
+    plt.tight_layout()
     plt.show()
-    #ax.plot(n_test[-1][0],n_test[-1][1])

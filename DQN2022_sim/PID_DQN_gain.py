@@ -21,7 +21,7 @@ N_FRAMES = 750          #1epochあたりのステップ数
 P_GAIN = 2
 I_GAIN = 0.0002         #0.00001
 D_GAIN = 0              #-0.1              
-PWM_DEF = 209           #kitai側では+1されて195になる。
+PWM_DEF = 250           #kitai側では+1されて195になる。
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
 EPISODE_TIME = 10000.0
 

@@ -420,37 +420,49 @@ ssCallAccelRunBlock ( S , 26 , 243 , SS_CALL_MDL_OUTPUTS ) ;
 ssCallAccelRunBlock ( S , 26 , 244 , SS_CALL_MDL_OUTPUTS ) ;
 ssCallAccelRunBlock ( S , 26 , 245 , SS_CALL_MDL_OUTPUTS ) ;
 ssCallAccelRunBlock ( S , 26 , 246 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 247 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 248 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 249 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 250 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 251 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 252 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 253 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 254 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 255 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 256 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 257 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 258 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 259 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 260 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 261 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 262 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 263 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 264 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 265 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 266 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 267 , SS_CALL_MDL_OUTPUTS ) ;
-ssCallAccelRunBlock ( S , 26 , 268 , SS_CALL_MDL_OUTPUTS ) ; }
-UNUSED_PARAMETER ( tid ) ; } static void mdlOutputsTID6 ( SimStruct * S ,
-int_T tid ) { B_air_part1_python2_T * _rtB ; P_air_part1_python2_T * _rtP ;
-_rtP = ( ( P_air_part1_python2_T * ) ssGetModelRtp ( S ) ) ; _rtB = ( (
-B_air_part1_python2_T * ) _ssGetModelBlockIO ( S ) ) ; _rtB -> B_26_0_0 =
-_rtP -> P_172 ; _rtB -> B_26_1_0 = _rtP -> P_173 ; _rtB -> B_26_2_0 = _rtP ->
-P_120 ; _rtB -> B_26_3_0 = _rtP -> P_121 ; _rtB -> B_26_4_0_m = _rtP -> P_122
-; _rtB -> B_26_5_0 = _rtP -> P_123 ; _rtB -> B_26_6_0_c = _rtP -> P_124 ;
-_rtB -> B_26_7_0 = _rtP -> P_125 ; _rtB -> B_26_8_0_k = _rtP -> P_126 ; _rtB
--> B_26_9_0 = _rtP -> P_127 ; _rtB -> B_26_10_0 = _rtP -> P_128 ; _rtB ->
+ssCallAccelRunBlock ( S , 26 , 247 , SS_CALL_MDL_OUTPUTS ) ; { if ( _rtDW ->
+_asyncqueue_inserted_for_ToWorkspace1_PWORK_k . AQHandles && ssGetLogOutput (
+S ) ) { sdiWriteSignal ( _rtDW ->
+_asyncqueue_inserted_for_ToWorkspace1_PWORK_k . AQHandles , ssGetTaskTime ( S
+, 1 ) , ( char * ) & _rtB -> B_9_0_1 + 0 ) ; } } { if ( _rtDW ->
+_asyncqueue_inserted_for_ToWorkspace2_PWORK_b . AQHandles && ssGetLogOutput (
+S ) ) { sdiWriteSignal ( _rtDW ->
+_asyncqueue_inserted_for_ToWorkspace2_PWORK_b . AQHandles , ssGetTaskTime ( S
+, 1 ) , ( char * ) & _rtB -> B_26_104_0 + 0 ) ; } } ssCallAccelRunBlock ( S ,
+26 , 250 , SS_CALL_MDL_OUTPUTS ) ; ssCallAccelRunBlock ( S , 26 , 251 ,
+SS_CALL_MDL_OUTPUTS ) ; ssCallAccelRunBlock ( S , 26 , 252 ,
+SS_CALL_MDL_OUTPUTS ) ; ssCallAccelRunBlock ( S , 26 , 253 ,
+SS_CALL_MDL_OUTPUTS ) ; ssCallAccelRunBlock ( S , 26 , 254 ,
+SS_CALL_MDL_OUTPUTS ) ; ssCallAccelRunBlock ( S , 26 , 255 ,
+SS_CALL_MDL_OUTPUTS ) ; ssCallAccelRunBlock ( S , 26 , 256 ,
+SS_CALL_MDL_OUTPUTS ) ; ssCallAccelRunBlock ( S , 26 , 257 ,
+SS_CALL_MDL_OUTPUTS ) ; { if ( _rtDW ->
+_asyncqueue_inserted_for_ToWorkspace1_PWORK_k1 . AQHandles && ssGetLogOutput
+( S ) ) { sdiWriteSignal ( _rtDW ->
+_asyncqueue_inserted_for_ToWorkspace1_PWORK_k1 . AQHandles , ssGetTaskTime (
+S , 1 ) , ( char * ) & _rtB -> B_26_117_0 + 0 ) ; } } ssCallAccelRunBlock ( S
+, 26 , 259 , SS_CALL_MDL_OUTPUTS ) ; ssCallAccelRunBlock ( S , 26 , 260 ,
+SS_CALL_MDL_OUTPUTS ) ; ssCallAccelRunBlock ( S , 26 , 261 ,
+SS_CALL_MDL_OUTPUTS ) ; ssCallAccelRunBlock ( S , 26 , 262 ,
+SS_CALL_MDL_OUTPUTS ) ; ssCallAccelRunBlock ( S , 26 , 263 ,
+SS_CALL_MDL_OUTPUTS ) ; ssCallAccelRunBlock ( S , 26 , 264 ,
+SS_CALL_MDL_OUTPUTS ) ; ssCallAccelRunBlock ( S , 26 , 265 ,
+SS_CALL_MDL_OUTPUTS ) ; ssCallAccelRunBlock ( S , 26 , 266 ,
+SS_CALL_MDL_OUTPUTS ) ; ssCallAccelRunBlock ( S , 26 , 267 ,
+SS_CALL_MDL_OUTPUTS ) ; ssCallAccelRunBlock ( S , 26 , 268 ,
+SS_CALL_MDL_OUTPUTS ) ; ssCallAccelRunBlock ( S , 26 , 269 ,
+SS_CALL_MDL_OUTPUTS ) ; ssCallAccelRunBlock ( S , 26 , 270 ,
+SS_CALL_MDL_OUTPUTS ) ; ssCallAccelRunBlock ( S , 26 , 271 ,
+SS_CALL_MDL_OUTPUTS ) ; } UNUSED_PARAMETER ( tid ) ; } static void
+mdlOutputsTID6 ( SimStruct * S , int_T tid ) { B_air_part1_python2_T * _rtB ;
+P_air_part1_python2_T * _rtP ; _rtP = ( ( P_air_part1_python2_T * )
+ssGetModelRtp ( S ) ) ; _rtB = ( ( B_air_part1_python2_T * )
+_ssGetModelBlockIO ( S ) ) ; _rtB -> B_26_0_0 = _rtP -> P_172 ; _rtB ->
+B_26_1_0 = _rtP -> P_173 ; _rtB -> B_26_2_0 = _rtP -> P_120 ; _rtB ->
+B_26_3_0 = _rtP -> P_121 ; _rtB -> B_26_4_0_m = _rtP -> P_122 ; _rtB ->
+B_26_5_0 = _rtP -> P_123 ; _rtB -> B_26_6_0_c = _rtP -> P_124 ; _rtB ->
+B_26_7_0 = _rtP -> P_125 ; _rtB -> B_26_8_0_k = _rtP -> P_126 ; _rtB ->
+B_26_9_0 = _rtP -> P_127 ; _rtB -> B_26_10_0 = _rtP -> P_128 ; _rtB ->
 B_26_11_0_c = _rtP -> P_129 ; _rtB -> B_26_12_0 = _rtP -> P_130 ; _rtB ->
 B_26_13_0 = _rtP -> P_131 ; _rtB -> B_26_14_0_b = _rtP -> P_132 ; _rtB ->
 B_26_15_0_p = _rtP -> P_133 ; _rtB -> B_26_16_0 = _rtP -> P_134 ; _rtB ->
@@ -721,9 +733,9 @@ _rtXdot -> Integrator3_CSTATE = _rtB -> B_26_70_0 ; _rtXdot ->
 Integrator2_CSTATE = _rtB -> B_26_197_0 ; _rtXdot -> Integrator_CSTATE_p =
 _rtB -> B_26_218_0 ; _rtXdot -> Integrator1_CSTATE_j = _rtB -> B_26_237_0 ;
 _rtXdot -> Integrator_CSTATE_h = _rtB -> B_26_232_0 ; { } { } } static void
-mdlInitializeSizes ( SimStruct * S ) { ssSetChecksumVal ( S , 0 , 1861098971U
-) ; ssSetChecksumVal ( S , 1 , 1456358409U ) ; ssSetChecksumVal ( S , 2 ,
-1876453746U ) ; ssSetChecksumVal ( S , 3 , 373413388U ) ; { mxArray *
+mdlInitializeSizes ( SimStruct * S ) { ssSetChecksumVal ( S , 0 , 3033975632U
+) ; ssSetChecksumVal ( S , 1 , 303587088U ) ; ssSetChecksumVal ( S , 2 ,
+786652794U ) ; ssSetChecksumVal ( S , 3 , 801828522U ) ; { mxArray *
 slVerStructMat = ( NULL ) ; mxArray * slStrMat = mxCreateString ( "simulink"
 ) ; char slVerChar [ 10 ] ; int status = mexCallMATLAB ( 1 , & slVerStructMat
 , 1 , & slStrMat , "ver" ) ; if ( status == 0 ) { mxArray * slVerMat =
