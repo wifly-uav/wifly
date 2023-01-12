@@ -138,7 +138,7 @@ class visual_angle_act:
 
 if __name__ == "__main__":
     path = os.path.dirname(__file__)
-    mode = 2
+    mode = 1
     
     print("Which data?")
     #data_name  = input()
@@ -159,7 +159,7 @@ if __name__ == "__main__":
     ac_pre.comp()
     pre_comp, pre_test, pre_max, pre_min = ac_pre.comp_data(mode=mode)
 
-    ac_beta = visual_angle_act(folder=path + '/result/syuron/', data_name='1208_beta')
+    ac_beta = visual_angle_act(folder=path + '/result/syuron/', data_name='1209_ls')
     ac_beta.comp()
     beta_comp, beta_test, beta_max, beta_min = ac_beta.comp_data(mode=mode)
 
@@ -174,26 +174,27 @@ if __name__ == "__main__":
         #ax.plot(con_comp[0][0],con_max-con_min, color='g',alpha=0.6)
         #ax.plot(pre_comp[0][0],pre_max-pre_min, color='r',alpha=0.6)
         #ax.plot(nei_comp[0][0],nei_max-nei_min, color='m',alpha=0.6)
-        ax.plot(beta_comp[0][0],beta_max-beta_min, color='m',alpha=0.6)
+        ax.plot(beta_comp[0][0],beta_max-beta_min, color='darkorange',alpha=0.6)
         #ax.plot(mix_comp[0][0],mix_max-mix_min, color='c')
         print(np.mean(n_max-n_min))
         print(np.mean(con_max-con_min))
         print(np.mean(pre_max-pre_min))
         print(np.mean(nei_max-nei_min))
+        print(np.mean(beta_max-beta_min))
 
     else:
-        ax.fill_between(n_comp[0][0],n_max,n_min, color='b',alpha=0.3)
-        #ax.fill_between(con_comp[0][0],con_max,con_min, color='g',alpha=0.3)
+        ax.fill_between(n_comp[0][0],n_max,n_min, color='orangered',alpha=0.7)
+        ax.fill_between(con_comp[0][0],con_max,con_min, color='b',alpha=0.5)
         #ax.fill_between(pre_comp[0][0],pre_max,pre_min, color='r',alpha=0.3)
         #ax.fill_between(nei_comp[0][0],nei_max,nei_min, color='m',alpha=0.3)
-        ax.fill_between(beta_comp[0][0],beta_max,beta_min, color='m',alpha=0.3)
+        #ax.fill_between(beta_comp[0][0],beta_max,beta_min, color='r',alpha=0.3)
         #ax.fill_between(mix_comp[0][0],mix_max,mix_min, color='c',alpha=0.3)
 
     ax.set_xticks([0,5,10,15,20,25,30])
     plt.xlabel("時間[s]", fontname="MS Gothic", fontsize=18)
     if mode==2:
         plt.ylabel("最大角度差[deg]", fontname="MS Gothic", fontsize=18)
-        ax.legend(["先行研究","提案手法"], prop={"family":"MS Gothic","size":12}, loc='upper right')
+        ax.legend(["先行研究","LSTM"], prop={"family":"MS Gothic","size":12}, loc='upper right')
     elif mode:
         plt.ylabel("角度[deg]", fontname="MS Gothic", fontsize=18)
         ax.legend(["先行研究","提案手法"], prop={"family":"MS Gothic","size":12}, loc='upper right')
