@@ -46,7 +46,7 @@ int stick_lr,stick_ud,slider_l,slider_r,switch_1,switch_2,volume;
 uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA2, 0x22}; //3
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0xAC}; //4
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0x98}; //5
-//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA2, 0xBF};   //6
+//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x80, 0xA6};   //6
 
 esp_now_peer_info_t peerInfo;
 
@@ -63,8 +63,8 @@ CalPID yaw_pid(0,0,0,40,0); //nomi
 
 void forward(){
   pitch_pid.resetIntegral();
-  servo.kp = 2.2;
-  servo.ki = 0.000;
+  servo.kp = 1.4;
+  servo.ki = 0.0005;
   servo.kd = 0.0002;
   servo.Target = 30; 
   pitch_pid.setParameter(servo.kp,servo.ki,servo.kd);
@@ -73,7 +73,7 @@ void forward(){
 void normal(){
   pitch_pid.resetIntegral();
   servo.kp = 0.8;
-  servo.ki = 0.0001;
+  servo.ki = 0.0005;
   servo.kd = 0.0000;
   servo.Target = 0;
   pitch_pid.setParameter(servo.kp,servo.ki,servo.kd);
@@ -83,18 +83,18 @@ void back(){
   pitch_pid.resetIntegral();
   servo.kp = 1.5;
   servo.ki = 0.000;
-  servo.kd = 0.0007;
-  servo.Target = -20;
+  servo.kd = 0.0002;
+  servo.Target = -40;
   pitch_pid.setParameter(servo.kp,servo.ki,servo.kd);
 }
 
 //↓ここから左右のYAW制御
 void left(){
   yaw_pid.resetIntegral();
-  motor.kp = 3.0;
+  motor.kp = 2.0;
   motor.ki = 0.0005;
-  motor.kd = 0.000;
-  motor.Target = 20; 
+  motor.kd = 0.0001;
+  motor.Target = 30; 
   yaw_pid.setParameter(motor.kp,motor.ki,motor.kd);
 }
 
@@ -111,8 +111,8 @@ void right(){
   yaw_pid.resetIntegral();
   motor.kp = 3.0;
   motor.ki = 0.0005;
-  motor.kd = 0.0000;
-  motor.Target = -20; 
+  motor.kd = 0.0001;
+  motor.Target = -30; 
   yaw_pid.setParameter(motor.kp,motor.ki,motor.kd);
 }
 
