@@ -39,7 +39,7 @@ class logger():
 
         #row_ = [state_list_[0][1],state_list_[0][-2],reward,time]
         
-        #row_:[Roll角,報酬,時間？]
+        #row_:[Roll角,報酬,時間]
         row_ = [state_list_[0][2],reward,time]
         self.log2.append(row_)
 
@@ -117,10 +117,10 @@ class logger():
         fig = plt.figure()                                              #白紙のグラフの作成
         #1つのグラフを作成
         ax = fig.add_subplot(111)
-        ax.plot(x, lst_angle, label = "Yaw angle" ,color="C3")        #lossの移動平均をプロット
+        ax.plot(x, lst_angle, label = "Roll angle" ,color="C3")        #lossの移動平均をプロット
         ax.set_xlabel("Step")
-        ax.set_ylabel("Yaw angle")
+        ax.set_ylabel("Roll angle")
         ax.tick_params(axis = "x",direction = "in")
         ax.tick_params(axis = "y",direction = "in")
-        plt.savefig(self.folder + '/Yaw.png')
+        plt.savefig(self.folder + '/Roll.png')
         plt.show()

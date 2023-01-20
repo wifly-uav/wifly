@@ -83,12 +83,11 @@ class Communicator():
             data_to_send (list): 送信するデータ
         """
         self.__ser.flushInput()                 #受信キャッシュをflush
-        #self.__ser.reset_input_buffer()        #pyserialのflush書き換え
+        self.__ser.reset_input_buffer()        #pyserialのflush書き換え
         self.__ser.flushOutput()                #送信キャッシュをflush
-        #self.__ser.reset_output_buffer()
+        self.__ser.reset_output_buffer()
         self.send_to_esp(data_to_send)          #data_to_sendをESPに送信
         self.time_started = time.time()         #最初に送信した時間を記録
-        #self.receive_from_laz(False, 5)
         self.time_last_receive = time.time()    #未使用?
     
     def save_communicate_log(self):
@@ -110,23 +109,33 @@ class Communicator():
             float: 前回受信してからの時間
         """
         self.__ser.flushInput()         #受信キャッシュ内のデータを破棄（初期化）
-        #self.__ser.reset_input_buffer()
+        self.__ser.reset_input_buffer()
+
+        while self.__ser.in_waiting > 80:       #データセット1あたり27 Byte
+            input_size = self.__ser.in_waiting
+            print("flushing in_w: " + str(input_size))
+            self.__ser.flushInput()
+            self.__ser.reset_input_buffer()
+            self.__ser.readlines(input_size)
+
         while True:
             self.__ser.flushInput()      #flush追加
-            print(self.__ser.in_waiting)
-            self.__ser.flushInput()
-            print(self.__ser.in_waiting)
+            self.__ser.reset_input_buffer()
+            print("in_w: "+str(self.__ser.in_waiting))
             if self.__ser.in_waiting > 0:           #in_waitingはキャッシュ内に受信されたデータのbyte数を返す。 
                 #self.__ser.reset_input_buffer()     #flush追加
-                self.__raw_data =self.__ser.readline().decode('utf-8')      #受信データを1行分読み取り、文字列に変換したものを取得
+                #line = self.__ser.readline()
+                #print(line)
+                #self.__raw_data = line.decode('utf-8')
+                self.__raw_data = self.__ser.readline().decode('utf-8', 'ignore')      #受信データを1行分読み取り、文字列に変換したものを取得
                 #print(self.__raw_data) 
                 #self.__ser.flushInput()
                 #self.__ser.reset_input_buffer()
                 persed_data = self.__raw_data.split(",")                    #__raw_dataを","区切りにしたものを取得
 
-                persed_data.pop(-1)
+                persed_data.pop(-1)     #改行削除
                 print(persed_data)
-                persed_data.pop(0)                    
+                #persed_data.pop(0)                    
                 #出力:[モータ1出力,モータ2出力,サーボ1,サーボ2,受信間隔,Pitch,Yaw,Roll]  確認！
                 
                 if len(persed_data) == byt:                                     #受信データ長が指定通りならば...
@@ -155,7 +164,7 @@ class Communicator():
                         return self.dataset_from_esp, receive_time_, delta_time
                 else:
                     self.__ser.flushInput()
-                    #self.__ser.reset_input_buffer()
+                    self.__ser.reset_input_buffer()
 
             elif 10 <= self.__fail_counter <= 20:       #受信失敗回数が10回以上20回以下なら
                 self.send_to_esp(try_data)              #データを送ってLazuriteを送信モードにすることを試みる
@@ -173,12 +182,19 @@ class Communicator():
         Args:
             data_to_send (list): 送信するデータ
         """
-        print(data_to_send)
+        #self.__ser.close()
+        #self.__ser.open()
+        time.sleep(0.001)
+
+        #print("send: "+str(data_to_send))
         self.__ser.flushOutput()                    #送信用キャッシュのflush
-        #self.__ser.reset_output_buffer()
+        self.__ser.reset_input_buffer()
+
+
         for datum in data_to_send:                  #data_to_sendの各要素を...
             self.__ser.write(bytes([int(datum)]))   #2進数に変換したものを送信
             time.sleep(0.001)                       #時間調整（これがないと羽ばたき出力の変更が反映されない） 
+        
         self.__data_sent = data_to_send             #送信済みデータとして記録
         time.sleep(0.001)                           #時間調整(超重要!!!これがないとデータ受信ができない)
 

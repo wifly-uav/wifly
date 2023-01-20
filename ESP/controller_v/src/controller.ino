@@ -6,6 +6,7 @@
 
 int flag = 0;
 int flag_yaw = 0;
+
 int count = 0;
 
 unsigned long lastTime = 0;  
@@ -138,9 +139,10 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
    //sprintf(send_pc, "%d,%d,%d,%d,%d,%d,%d,%d,",re_data[0],re_data[1],re_data[2],re_data[3],re_data[4],re_data[5],re_data[6],re_data[7]);
    //Serial.println(send_pc);
 
-   count++;
-   Serial.print(count);
-   Serial.print(",");
+   //count++;
+   //Serial.print(count);
+   //Serial.print(",");
+
    for (int i = 0; i < 8; i++) {
     Serial.print(re_data[i]);
     Serial.print(",");
@@ -334,6 +336,8 @@ void loop() {
     
     if(data[0]>240){data[0] = 255;}
     if(data[1]>240){data[1] = 255;}
+    //if(data[2]>170){data[2] = 180;}
+    //if(data[3]>170){data[3] = 180;}
 
     #ifdef DEBUG
       /*

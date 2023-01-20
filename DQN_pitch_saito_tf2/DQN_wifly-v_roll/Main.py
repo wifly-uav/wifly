@@ -8,9 +8,10 @@ import sys
 from visualize_nn import visual_nn
 import os
 import time
+import concurrent.futures
 
-N_EPOCHS = 10
-N_FRAMES = 200
+N_EPOCHS = 5
+N_FRAMES = 400
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 
 if __name__ == "__main__":    
@@ -20,6 +21,8 @@ if __name__ == "__main__":
     save_folder = input()
     save_file = os.path.join(path, 'result', save_folder)
     print(save_file)
+
+    #executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
 
     if not os.path.exists(save_file):
         # ディレクトリが存在しない場合、ディレクトリを作成する
@@ -62,21 +65,26 @@ if __name__ == "__main__":
         training_flag = True
 
     log = logger(folder=save_file)
-    env = Environment()
+    env = Environment(agent.keep_frames)
     vi = visual_nn(folder=save_file)
     
-    #print("press y to start")
+    #time.sleep(3)
 
     #try:
     for i in range(N_EPOCHS):
+        env.stop_control()
+        #env.test_control()
+        print("Epoch "+str(i+1)+", push reset button and press any key")
+        ans_key = input()
+
         #init
-        #frame = 0
+        frame = 0
         loss = 0.0
         Q_max = 0.0
-        reward = 0
+        reward = 0.0
         terminal = True
         data = True
-        env.reset(i=i)
+        env.reset()      #env.reset(i=i)
         state_next = env.observe_state()
         action = 0
         #print("i"+str(i))
@@ -86,24 +94,29 @@ if __name__ == "__main__":
             #print("loop_time:" + str(time.time()-a))
             a = time.time()
             state_current = state_next
-            #action = agent.select_action_limit(state_current)    //agent.learnで経験再生してる
+            agent.get_angle(state_current)
+            #action = agent.select_action_limit(state_current)
             if terminal == True:
                 action = agent.choose_action(state_current)
                 if training_flag:
                     agent.epsilon -= 0.1 / 2000
                 else:
-                    agent.epsilon = 0
-                env.excute_action(action)
+                    agent.epsilon = 0.0
+                #executor.submit(env.execute_action(action))
+                env.execute_action_7(action)     #行動数:5 or 7 or 19
             if (j != 0 and training_flag == True):
-                #agent.experience_replay()
+                #agent.experience_replay()      #agent.learnで経験再生してる
                 agent.learn()
             if terminal == True:
+                #feature = executor.submit(env.observe_update_state())
+                #state_next, ti, ti_ = feature.result()
                 state_next, ti, ti_ = env.observe_update_state()
             #action, data = env.reaction(state_next)
             reward = env.observe_reward(state_next)
             #terminal = env.observe_terminal()
             terminal = True     #terminalをTrueに固定
-            print(i,j,action,state_next[0], reward, terminal)
+            #print(i,j,action,state_next[0], reward, terminal)
+            print("ep: " + str(i+1) + ", fr: " + str(j+1) + ", action: " + str(action) + ", reward: " + str(reward))
             #agent.store_experience(state_current, action, reward, state_next, terminal)
             '''
             print("state_current:"+str(state_current))
@@ -128,9 +141,11 @@ if __name__ == "__main__":
         #print("Key finish")
         #print(state_next)
 
+    env.stop_control()
 
     #agent.save_model()
     agent.debug_nn()
+    agent.debug_yaw()
     '''
     agent.debug_memory()
     agent.debug_minibatch()
@@ -142,6 +157,12 @@ if __name__ == "__main__":
     loss = agent.check_loss()
     log.loss_graph(loss)
     log.angle_graph()
+
+    #roll角保存
+    x = list(range(len(agent.log_yaw_angle)))
+    #print(agent.log_yaw_angle)
+    #print(type(agent.log_yaw_angle))
+    log.angle_graph_2(x,agent.log_yaw_angle)
 
     vi.visualize()
 

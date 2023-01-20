@@ -116,7 +116,7 @@ if __name__ == "__main__":
                     agent.epsilon -= 0.1/3000
                 else:
                     agent.epsilon = 0
-                env.excute_action_pid(action, actions)
+                env.execute_action_pid(action, actions)
                 if (j != 0 and training_flag == True):
                     agent.experience_replay()
                 state_next, ti, ti_ = env.observe_update_state_pid(pid=diff)

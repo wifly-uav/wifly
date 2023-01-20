@@ -33,7 +33,7 @@ DUELING = False
 DOUBLE = False
 
 #行動空間設定
-N_ACTIONS = 7
+N_ACTIONS = 7   #5 or 7 or 19
 ENABLE_ACTIONS = [i for i in range(N_ACTIONS)]
 
 #hyperparameter各種
@@ -44,6 +44,7 @@ REPLAY_MEMORY_SIZE = 10000
 EPSILON = 0.1
 EPSILON_DEC = 1e-3
 EPSILON_END = 0.01
+
 KEEP_FRAMES = 4     #入力フレーム数
 STATE_VARIABLES = 3     #状態変数の数
 COPY_PERIOD = 20
@@ -104,7 +105,7 @@ class ReplayBuffer():
 def build_dqn(lr, n_actions, input_dims, keep_frames ,fc1_dims, fc2_dims):
     """
     NNの作成
-    -NNの入力:4つの状態（Qを求めたい状態sとその3フレーム前までの3つの状態を合わせた合計4つの状態）
+    -NNの入力:4つの状態(Qを求めたい状態sとその3フレーム前までの3つの状態を合わせた合計4つの状態)
     -NNの出力:状態sにおける各Q
     -state dequeの先頭に状態sが入っている
     """
@@ -205,7 +206,7 @@ class DQNAgent:
         self.learning_rate = LEARNING_RATE
         self.gamma = DISCOUNT_FACTOR
         self.epsilon = EPSILON
-        self.eps_dec = EPSILON_DEC                 
+        self.eps_dec = EPSILON_DEC
         self.eps_min = EPSILON_END
         self.batch_size = MINIBATCH_SIZE
         self.keep_frames = KEEP_FRAMES
@@ -428,7 +429,7 @@ class DQNAgent:
         a = time.time()
 
         if (self.global_step % self.copy_period == 0):
-            print("Copy Weight")
+            #print("Copy Weight")
             '''
             self.q_eval.layers[0].set_weights(self.q_target.layers[0].get_weights())
             self.q_eval.layers[1].set_weights(self.q_target.layers[1].get_weights())
@@ -442,7 +443,7 @@ class DQNAgent:
         #self.epsilon = self.epsilon - self.eps_dec if self.epsilon > self.eps_min else self.eps_min
 
     def get_angle(self,states):
-        self.log_yaw_angle.append(float(states[0][5]))
+        self.log_yaw_angle.append(float(states[0][2]))
 
     def create_checkpoint(self):
         #self.saver.save(self.sess, os.path.join(self.model_dir, self.checkpoint_name + datetime.now().strftime('%H%M%S')))
@@ -518,7 +519,7 @@ class DQNAgent:
                 writer.writerows(self.log_adv)
     
     def debug_yaw(self):
-        with open(self.folder + '/debug_yaw.csv', 'w') as f:
+        with open(self.folder + '/debug_roll.csv', 'w') as f:
             writer = csv.writer(f, lineterminator ='\n')
             writer.writerow(list(self.log_yaw_angle))
 

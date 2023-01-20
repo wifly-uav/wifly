@@ -87,6 +87,9 @@ void setup() {
     Serial.println();
   #endif
 
+  //Serial.begin(115200);               //シリアル通信開始（速度指定）
+  //Serial.println();                   //改行出力
+
   pinMode(pwm1, OUTPUT);
   pinMode(pwm2, OUTPUT);
   pinMode(led, OUTPUT);
@@ -184,9 +187,7 @@ void loop() {
     data[3] = command[3];
     
     #ifdef sensor
-
       //オイラー角出力
-      
       if(euler.z()>=0){  //z -> pitch
         data[5] = euler.z(); 
         data[6] = 0;
