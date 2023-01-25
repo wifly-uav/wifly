@@ -12,18 +12,19 @@ int flag = 0;
 int flag_yaw = 0;
 
 typedef struct param_{
-  double kp = 0;
-  double ki = 0;
-  double kd = 0;
-  double Target;
-  double Error;
-  double State;
-  double Output;
-  double max;
+  double kp = 0;    //Pゲイン
+  double ki = 0;    //Iゲイン
+  double kd = 0;    //Dゲイン
+  double Target;    //目標値
+  double Error;     //偏差
+  double State;     //現在の角度
+  double Output;    //操作量
+  double max;       
   double min = 0;
-  float dt = 40;
+  float dt = 40;    //Time Step
 }param;
 
+// モータとサーボ用の構造体
 param servo;
 param motor; //nomi
 
@@ -61,6 +62,13 @@ void recieve_pc();
 CalPID pitch_pid(0,0,0,40,0);
 CalPID yaw_pid(0,0,0,40,0); //nomi
 
+/*----------------------------------------------------
+- Pitch制御によって移動する用の関数
+- 各移動ごとに、各種ゲインと目標値を設定する。
+  forward:前進
+  normal:目標値0
+  back:後退
+*/
 void forward(){
   pitch_pid.resetIntegral();
   servo.kp = 1.4;
@@ -87,7 +95,15 @@ void back(){
   servo.Target = -40;
   pitch_pid.setParameter(servo.kp,servo.ki,servo.kd);
 }
+//----------------------------------------------------
 
+/*----------------------------------------------------
+- Yaw制御によって移動する用の関数
+- 各移動ごとに、各種ゲインと目標値を設定する。
+  left:左飛行
+  normal_Yaw:目標値0
+  right:右飛行
+*/
 //↓ここから左右のYAW制御
 void left(){
   yaw_pid.resetIntegral();
@@ -115,17 +131,18 @@ void right(){
   motor.Target = -30; 
   yaw_pid.setParameter(motor.kp,motor.ki,motor.kd);
 }
-
 //↑ここまでが左右のYqw制御
+//----------------------------------------------------
+
 
 void setup() {
  //垂直飛行のみ
   /*servo.kp = 0.8;
   servo.ki = 0.0002;
   servo.kd = 0.000;*/
-  servo.max = 90;
-  servo.dt = 40;
-  servo.Target = 0;
+  servo.max = 90;     //サーボ角の中央位置からのずれの最大値（サーボは90°が中央で指令値は0~180）
+  servo.dt = 40;      //PitchPID制御で使用する際のTime Step
+  servo.Target = 0;   //Pitch角の目標値
   
  /*↓書き足した
   servo_hover.kp = 1;
@@ -147,18 +164,23 @@ void setup() {
   /*motor.kp = 0.5;
   motor.ki = 0.0001;
   motor.kd = 0.000;*/
-  motor.max = 255;
-  motor.dt = 40;
-  motor.Target = 0;
-//nomi
-  pitch_pid.setParameter(servo.kp,servo.ki,servo.kd);
-  pitch_pid.setDELTA_T(servo.dt);
-  pitch_pid.setMaxValue(servo.max);
+  motor.max = 255;    //DCモータ出力の最大値
+  motor.dt = 40;      //PIDによるYaw角制御のタイムステップ
+  motor.Target = 0;   //Yaw角の目標値
 
+//Picth角周りの設定の初期化
+//CalPIDクラスに反映
 //nomi
-  yaw_pid.setParameter(motor.kp,motor.ki,motor.kd);
-  yaw_pid.setDELTA_T(motor.dt);
-  yaw_pid.setMaxValue(motor.max);
+  pitch_pid.setParameter(servo.kp,servo.ki,servo.kd); //ゲイン
+  pitch_pid.setDELTA_T(servo.dt);                     //Time Step
+  pitch_pid.setMaxValue(servo.max);                   //サーボの最大角
+
+//Yaw角周りの設定の初期化
+//CalPIDクラスに反映
+//nomi
+  yaw_pid.setParameter(motor.kp,motor.ki,motor.kd); //ゲインの初期化 
+  yaw_pid.setDELTA_T(motor.dt);                     //Time Step
+  yaw_pid.setMaxValue(motor.max);                   //DCモータ出力の最大値
 //nomi
 
   //各コントローラごとのピン番号
@@ -264,14 +286,13 @@ void loop() {
           */
 //↑垂直飛行のみ
 //nomi
-            //スライドボリューム右（羽ばたき出力）最小
+          //スライドボリューム右（羽ばたき出力）最小
           if(sli_R>240){sli_R = 255;}
           //ジョイスティック左右中央
           if(left_LR<152 && left_LR>102){left_LR = 127;}
           //ジョイスティック上下中央
           if(left_UD<152 && left_UD>102){left_UD = 127;}
           
-
           if(left_UD<127 && mode_flag!=1){
             forward();
             mode_flag = 1;
@@ -283,12 +304,12 @@ void loop() {
             mode_flag = 3;
           }
         
-
-          servo.State = re_data[5];
-          servo.Error = servo.Target-servo.State;
-          servo.Output = pitch_pid.calPID(servo.Error);
+          servo.State = re_data[5];                     //現在のPicth角
+          servo.Error = servo.Target-servo.State;       //Pitch角の偏差
+          servo.Output = pitch_pid.calPID(servo.Error); //サーボの出力を計算
 
          //↓左右のYaw制御
+         //mode_flag_yawを立てないと、毎回Iの累積値がリセットされてしまう。
          if(left_LR<127 && mode_flag_yaw!=1){
            left();
            mode_flag_yaw = 1;
@@ -301,28 +322,32 @@ void loop() {
          }
 
          
-         motor.State = re_data[6];
-         motor.Error = motor.Target-motor.State;
-         motor.Output = yaw_pid.calPID(motor.Error);
+         motor.State = re_data[6];                    //現在のYaw角を取得
+         motor.Error = motor.Target-motor.State;      //Yaw角の偏差
+         motor.Output = yaw_pid.calPID(motor.Error);  //DCモータの出力差
 
          //↑左右のYaw制御
 
+          //DCモータの出力差を反映する。
+          //出力が負にならないようにしている。
           int yaw_pid = abs((int)motor.Output);
-          int left_pwm,rigit_pwm = 255;
+          int left_pwm,rigit_pwm = 255;         //255への初期化は特に意味なし?
           if(motor.Error > 0 ){
-            left_pwm = max(0,sli_R);  //左（要確認）
+            left_pwm = max(0,sli_R);            //左（要確認）
             right_pwm = max(0,sli_R - yaw_pid); //右（要確認）
           }else{
             left_pwm = max(0,sli_R - yaw_pid);  //左（要確認）
-            right_pwm = max(0,sli_R); //右（要確認）
+            right_pwm = max(0,sli_R);           //右（要確認）
           }
           
         
 
-          
-          data[0] = left_pwm;          
+          //送信データの準備
+          //servo.Outputはサーボの90°からのずれ
+          //data[2],data[3]はサーボ角(片方のサーボは向きが逆なので、-1をかけている)
+          data[0] = left_pwm;
           data[1] = right_pwm;
-          data[2] = -1*servo.Output+90;
+          data[2] = -1*servo.Output+90; 
           data[3] = servo.Output+90;
           
     
