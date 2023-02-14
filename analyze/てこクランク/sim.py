@@ -72,18 +72,20 @@ class Frame:
 
 if __name__ == '__main__':
 
+    # ウィンドウ（GUI）の設定
     controlBox = np.zeros((300,512,3), np.uint8)
     cv2.namedWindow('panel')
     cv2.createTrackbar('deg', 'panel', 0, 1080, lambda x: None)
     cv2.createTrackbar('hz', 'panel', 0, 15, lambda x: None)
 
-    a = 35.5
-    b = 7
-    c = 32.5
-    d = 15
-    e = 220
+    # 各部の長さ(mm)
+    a = 35.5    # 羽の軸からモータまでの距離
+    b = 7       # ピアノ線の長さ
+    c = 32.5    # リンクロッド
+    d = 15      # 羽軸の片方の長さ
+    e = 220     # 羽（カーボンロット）の長さ
 
-    bias = 8
+    bias = 8    # ウィンドウ内での倍率
     measure_time = 3
     mem = 10000
 
