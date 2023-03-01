@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+from Communication import Communicator
 from Environment import Environment
 from Agent import MINIBATCH_SIZE, DQNAgent
 from Logger import logger
@@ -13,18 +14,20 @@ import time
 
 N_EPOCHS = 1            #学習epoch数
 N_FRAMES = 200          #1epochあたりのステップ数
-I_GAIN = 0.0001 #0.0001
-D_GAIN = 0
-PWM_DEF = 194           #kitai側では+1されて190になる。
+I_GAIN = 0.0001         #0.0001
+D_GAIN = 0              
+PWM_DEF = 209           #kitai側では+1されて195になる。
 ER = 0
 MODEL_NAME_HEADER = "WiflyDual_DQN"
 YAW_INDEX = 2           #[モータ出力1,モータ出力2,Yaw,p_gain](logger,environmentで一致しているか確認)
+#DET_ACT = True         #DET_ACTはAgent側で管理している。
+
 
 if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
     #PID_param
-    saturations = [0,150]           #PID操作量の制限
-    pwm_def = PWM_DEF                   #モーター出力デフォルト値(Environmemtのdefault_paramsもチェック)
+    saturations = [0,100]           #PID操作量の制限
+    pwm_def = PWM_DEF               #モーター出力デフォルト値(Environmemtのdefault_paramsもチェック)
     pid = calc_PID(saturations)     #calc_PIDクラスのインスタンス作成（__init__が呼び出され、初期化が行われる）
     param = [1.5,I_GAIN,D_GAIN,0]   #[P-gain,I-gain,D-gain,Target Yaw angle]
     ti = 10                         #PIDの微積分計算で用いる最小の時間幅
@@ -77,6 +80,9 @@ if __name__ == "__main__":
         else:
             training_flag = False
             print('test')
+            agent.epsilon = 0
+
+        #agent.epsilon = 1.0
 
         """
         use_folder = input()                                   
@@ -111,7 +117,7 @@ if __name__ == "__main__":
     
     #print("press y to start")                   #未実装
     #print("Start after 3 seconds")
-    #stime.sleep(3)
+    time.sleep(3)
 
     Time_start = time.time()
 #try:
@@ -125,6 +131,7 @@ if __name__ == "__main__":
         terminal = False                        #終状態フラグ（もとはTrue）
         data = True                             #?
         com_fail = False                        #通信に失敗した場合にTrueにする。
+        score = 0                               #累積報酬
 
         #状態を格納するdequeを作成
         #この中でstart_espも行われる。（現在の初期送信データ長は4）
@@ -140,7 +147,10 @@ if __name__ == "__main__":
             #terminal = env.observe_terminal()              #未使用
             state_current = state_next                      #次状態を現在の状態とする
             agent.get_angle(state_current)                  #現在の状態から、Yaw角を取得して記録する(log用)
-            action = agent.choose_action(state_current)     #ε-greedy方策によってactionを決定
+            if agent.det_act:
+                action = agent.determined_action(state_current)
+            else:
+                action = agent.choose_action(state_current) #ε-greedy方策によってactionを決定
             p_gain = env.execute_action_gain(action)        #actionに対応するPgainを取得
             param = [p_gain,I_GAIN,D_GAIN,0]                #paramを更新（Pgainを更新）
             pid.update_params(param)                        #calc_PIDクラスにparamの変更を反映
@@ -191,6 +201,7 @@ if __name__ == "__main__":
             #print(t_20)
 
             reward = env.observe_reward(state_next)     #Yaw角の0.0度からのずれに基づいた報酬を観測
+            score += reward
 
             #t_21 = time.time() - t_start
             #print("t_21:", end = "")
@@ -216,16 +227,25 @@ if __name__ == "__main__":
                     "STEP:%d" % j,
                     "Grobal_STEP:%d" % agent.global_step, 
                     "Latest state:" + str(state_next[0]), 
-                    "Yaw angle:%f" % agent.log_yaw_angle[-1],
+                    "Yaw angle:%f" % float(state_next[0][YAW_INDEX]),
                     "Reward:%d" % reward,
                     "Epsilon:%4f" % agent.epsilon, 
                     "u_I:%6f" % u_i)
 
             #if (j != 0 and training_flag == True):
             if training_flag == True:
+                if agent.det_act == True:
+                    #det_actを使う場合は、そのepochで収集した経験のみをミニバッチに使う。
+                    #そのため、そのepochで収集した経験がミニバッチの個数以上になるまでは学習しない。
+                    if j >= agent.batch_size - 1:
+                        agent.learn()
+                    else:
+                        pass
                 #agent.experience_replay()           #経験再生(NNパラメータのミニバッチ学習を行う)
-                agent.learn()
-            
+                else:
+                    agent.learn()
+            else:
+                pass
             #t_4 = time.time() - t_start
             #print("t_4:", end = "")
             #print(t_4)
@@ -234,7 +254,8 @@ if __name__ == "__main__":
             
             if training_flag:                       #学習を行う場合…
                 #agent.epsilon -= 0.1/3000          #ランダム行動確率を下げていく。
-                pass                                #モデルの変化を考慮して、探索させる確率を下げない。
+                agent.update_epsilon()
+                #pass                                #モデルの変化を考慮して、探索させる確率を下げない。
             else:                                   #学習を行わない場合…
                 agent.epsilon = 0                   #ランダム行動はさせない。
 
@@ -283,6 +304,7 @@ if __name__ == "__main__":
     env.execute_action_([0,0])
     env.execute_action_([0,0])
     env.execute_action_([0,0])
+    env.communicator.serial_close()     #念のため追加
 
     agent.hyper_params()
     #agent.save_NN_model()      #NNモデルの保存
@@ -323,8 +345,10 @@ if __name__ == "__main__":
     #ac.visualize()
 
     agent.save_param(filepath = save_dir)
+    agent.save_score(save_dir, score)
     agent.save_log_loss(filepath = save_dir)
 
     print("finish")
     print(save_dir)
+    print(score)
     print("Time:%2f" % Time)

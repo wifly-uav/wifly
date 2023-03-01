@@ -9,7 +9,7 @@
 
 #include <SPI.h>
 
-#define DEBUG         //シリアルモニタで各スイッチの出力を確認できる。
+//#define DEBUG         //シリアルモニタで各スイッチの出力を確認できる。
 #define sensor        //操縦時はコメントアウト
 
 //int kitai_number = 4;   
@@ -234,6 +234,7 @@ void loop() {
       */
     #endif
 
+    //機体の状態をコントローラに送信
     esp_now_send(broadcastAddress, (uint8_t *) &data, sizeof(data));
     lastTime = millis();
   }

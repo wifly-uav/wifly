@@ -2,24 +2,28 @@
 #include <WiFi.h>
 
 #include <SPI.h>
-#define DEBUG
+//#define DEBUG
 
 unsigned long lastTime = 0;  
 unsigned long timerDelay = 60;  // send readings timer
-size_t data_pc_;
+size_t data_pc_;                //size_t:オブジェクトのバイト数を表現できる程度に十分に大きい符号なし整数型
 uint8_t data_pc[5] = {0};
 int re_data[5] = {0};
 double re_data_angle[4] = {0};
 
 // REPLACE WITH RECEIVER MAC Address
+
 //機体側のマイコンの番号にあったアドレスのみコメントアウトを外す。
-//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60}; //1
+//uint8_t castAddress[] = {0x8C, 0xCE, 0x4E, 0xEA, 0xB1, 0xC9}; //0
+//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60}; //旧1
+uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x81, 0x0A};   //新1
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x3D}; //2
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0xE4}; //3
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0xAC}; //4
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0x98}; //5
-//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA2, 0xBF};   //6
-uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA3, 0x2D};   //7
+//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x80, 0xA6}; //6　修正済み
+//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA3, 0x2D}; //7
+//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x81, 0x89}; //9 李さん作
 
 esp_now_peer_info_t peerInfo;
 
@@ -77,9 +81,10 @@ void qu2eu(int eular[3], double quotanion[4]){
 //受信時コールバック関数（データを受信すると実行される）
 //引数:送信元macアドレス情報,受信データ,受信データ長
 void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
+    //noInterrupts();
+    //taskDISABLE_INTERRUPTS();
     char macStr[18];
-
-    //データの送信元のmacアドレスを表示する
+    //データの送信元のmacアドレスを整形し（%02X:等を付け）て、macStr配列に書き込む。
     //%02Xは2桁以上の16進数で表示することを指定（桁が足りない場合、上位の桁が0埋めされる。）
     snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
         mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
@@ -88,7 +93,10 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     //Serial.printf("Last Packet Recv from: %s\n", macStr);
     //Serial.printf("Last Packet Recv Data(%d): ", data_len);
     //Serial.println();
-    
+
+    //受信データの整形
+    //data_lenは9
+    //[pwm1, pwm2, servo1, servo2, 受信間隔, quaternion1,quaternion2,quaternion3,quaternion4]
     for (int i = 0; i < data_len; i++) {
         if(i > 4){
           //受信データの5番目以降（quotanion）は、処理してre_data_angleに格納していく。
@@ -98,12 +106,12 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
           re_data[i] = 255 - data[i];
         }
         else{
-          //残りはそのままre_dataに格納
+          //残り(受信間隔とquaternion4つ)はそのままre_dataに格納
           re_data[i] = data[i];
         }
     }
-
-    //カンマ区切りでre_dataの中身を表示
+    
+    //カンマ区切りでre_dataの中身をシリアルポートに送信
     for (int i = 0; i < 5; i++) {
       Serial.print(re_data[i]);
       if(i != 4){
@@ -111,40 +119,50 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
       }
     }
 
-    //受信したquotanionをEuler角に変換
+    //受信したquotarnionをEuler角に変換
     qu2eu(eular,re_data_angle);
-
     Serial.print(",");
 
-    //Euler角を表示（角度の順番を要確認!）
+    //Euler角（Pitch, Yaw, Roll）をシリアルポートに送信
     for (int i = 0; i < 3; i++) {
       Serial.print(eular[i]);
       if(i != 2){
         Serial.print(",");
       }
     }
-    Serial.println();
+    Serial.println();           
+    //Serial.flush();     //データを送信しきるまで（送信バッファが空になるまで）待つ。
+    delay(10);            //flushじゃだめかもしれない？
+    //interrupts();
+    //taskENABLE_INTERRUPTS();
+    //delay(10);           //さらに待機
 }
 
 //送信時コールバック関数
 //送信が成功したかどうかを表示する。
 void OnDataSent(const uint8_t* mac_addr, esp_now_send_status_t status) {
-  Serial.println();
-  Serial.printf("ESP32\n");
-  Serial.print("Last Packet Send Status: ");
-  if (status == 0){
-    Serial.println("Delivery success");
-  }
-  else{
-    Serial.println("Delivery fail");
-  }
+  #ifdef DEBUG
+    Serial.println();
+    Serial.printf("ESP32\n");
+    Serial.print("Last Packet Send Status: ");
+    if (status == 0){
+      Serial.println("Delivery success");
+    }
+    else{
+      Serial.println("Delivery fail");
+    }
+  #endif
 }
 
 //PCからの情報を受信する関数
 void recieve_pc(){
   if(Serial.available()){                               //シリアルポートにデータが来ている場合
     if((int)Serial.read() == 255){                      //データの先頭が255である場合
-      data_pc_ = Serial.readBytesUntil('\n',data_pc,5); //5つのデータを読み取り、data_pc_に格納
+
+      //5つのデータを読み取り、data_pcに格納する。
+      //data_pc_にはデータ長が格納される
+      data_pc_ = Serial.readBytesUntil('\n',data_pc,5);
+      delay(10);  //dataを読み切るための待機時間を追加 
     }
   }
 }
@@ -174,7 +192,13 @@ void setup() {
     }
 
     //シリアル通信開始
-    Serial.begin(460800);    
+    //Serial.begin(460800);   もとのボーレート
+    //Serial.begin(115200);   一段階下げたもの
+    //9600, 14400, 19200, 28800,38400
+    //Serial.begin(57600);    もう一段階下げたもの（Lazurite時代と同じ）
+    Serial.begin(38400);
+    while(!Serial);
+    
     
     //ピンモードの設定
     pinMode(stick_lr, INPUT);
@@ -204,6 +228,7 @@ void setup() {
     }
     
     //esp_now_register_send_cb(OnDataSent);
+    //受信時コールバック関数の指定
     esp_now_register_recv_cb(onReceive);
     
 }
@@ -221,13 +246,15 @@ void loop() {
   int btn_L = digitalRead(switch_1);
   int btn_R = digitalRead(switch_2);
 
-  if ((millis() - lastTime) > timerDelay) { //受信間隔がtimerDelay以内であれば、
+  if ((millis() - lastTime) > timerDelay) { //受信間隔がtimerDelay以上であれば、
     uint8_t data[5];
 
     //PCモード
     if(btn_L == 1){
       recieve_pc();                         //PCからデータ受信
       //Serial.print("PC_mode");
+
+      //PCから受け取った情報を機体側のマイコンに送信する準備
       for(int i=0;i<2;++i){
         data[i] = 254 - data_pc[i];         //受信データの先頭2つ（羽ばたき出力）は反転
       }
@@ -253,7 +280,7 @@ void loop() {
           data[0] = sli_L;
           data[1] = sli_R;
           data[2] = left_UD;
-          data[3] = btn_R*40;
+          data[3] = btn_R*120;
           data[4] = btn_R;
           break;
         
@@ -295,49 +322,58 @@ void loop() {
       }
     }
     
+    //羽ばたき出力の矯正
+    //大体Maxの値になっていたらMaxの出力にしてやる
     if(data[0]>240){data[0] = 255;}
     if(data[1]>240){data[1] = 255;}
 
-    #ifdef DEBUG
-      /*
-      Serial.print("lx:");
-      Serial.print(left_LR);
-      Serial.print("ly:");
-      Serial.print(left_UD);
-      Serial.print("sli_L:");
-      Serial.print(sli_L);
-      Serial.print("sli_R:");
-      Serial.print(sli_R);
-      Serial.print("vol:");
-      Serial.print(vol);
-      Serial.print("btn1:");
-      Serial.print(btn_R);
-      Serial.print("btn2:");
-      Serial.print(btn_L);
-      */
-      Serial.print(data[0]);
-      Serial.print(data[1]);
-      Serial.print(data[2]);
-      Serial.print(data[3]);
-      Serial.println();
-      Serial.print(btn_R);
-      /*
-      Serial.print("rx:");
-      Serial.print(right_LR);
-      Serial.print("ry:");
-      Serial.print(right_UD);
-      Serial.print("btnr:");
-      Serial.print(btn_r);
-      Serial.print("btnl");
-      Serial.print(btn_l);
-      Serial.println();
-      */
-    #endif
+    //コントローラモードの場合のみ
+    if(btn_L != 1){
+      //PC側にコントローラから指示された値を返してやる。
+      //PC側にシリアル通信で送信することで、シリアルモニタに表示される。
+      //PC_modeでこれをやったらダメ!receive_from_espがバグる。
+      #ifdef DEBUG
+        /*
+        Serial.print("lx:");
+        Serial.print(left_LR);
+        Serial.print("ly:");
+        Serial.print(left_UD);
+        Serial.print("sli_L:");
+        Serial.print(sli_L);
+        Serial.print("sli_R:");
+        Serial.print(sli_R);
+        Serial.print("vol:");
+        Serial.print(vol);
+        Serial.print("btn1:");
+        Serial.print(btn_R);
+        Serial.print("btn2:");
+        Serial.print(btn_L);
+        */
+        Serial.print(data[0]);
+        Serial.print(data[1]);
+        Serial.print(data[2]);
+        Serial.print(data[3]);
+        Serial.println();
+        Serial.print(btn_R);
+        /*
+        Serial.print("rx:");
+        Serial.print(right_LR);
+        Serial.print("ry:");
+        Serial.print(right_UD);
+        Serial.print("btnr:");
+        Serial.print(btn_r);
+        Serial.print("btnl");
+        Serial.print(btn_l);
+        Serial.println();
+        */
+      #endif
+    }
 
     //delay(10);
 
     // Send message via ESP-NOW
     esp_now_send(castAddress, (uint8_t *) &data, sizeof(data));
+    delay(10);
     //esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
     lastTime = millis();
   }
