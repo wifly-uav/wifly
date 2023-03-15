@@ -85,8 +85,8 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     //taskDISABLE_INTERRUPTS();
     char macStr[18];
     //データの送信元のmacアドレスを整形し（%02X:等を付け）て、macStr配列に書き込む。
-    //%02Xは2桁以上の16進数で表示することを指定（桁が足りない場合、上位の桁が0埋めされる。）
-    snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
+    //%02Xは2桁以上の16進数で表示することを指定（桁が足りない場合、上位の桁が0埋めされる。) MACアドレスは0~9、A~Fは16新数でA0:B2のように表示される
+    snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X", 
         mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
     //Serial.println();
     //Serial.printf("ESP32\n");
@@ -106,7 +106,7 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
           re_data[i] = 255 - data[i];
         }
         else{
-          //残り(受信間隔とquaternion4つ)はそのままre_dataに格納
+          //残り(受信間隔とservo1または2の二つ)はそのままre_dataに格納(ただしservo1,2はつないぐとき尾翼servoと重心移動機構のどちらかは変わる)
           re_data[i] = data[i];
         }
     }
@@ -115,7 +115,7 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     for (int i = 0; i < 5; i++) {
       Serial.print(re_data[i]);
       if(i != 4){
-        Serial.print(",");
+        Serial.print(",");    //データの最後にカンマを打たないようにするため
       }
     }
 
@@ -135,7 +135,7 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     delay(10);            //flushじゃだめかもしれない？
     //interrupts();
     //taskENABLE_INTERRUPTS();
-    //delay(10);           //さらに待機
+    //delay(10);           //さらに待機 受信処理が終わるまで待っている
 }
 
 //送信時コールバック関数
@@ -172,7 +172,7 @@ void setup() {
   //各コントローラごとのピン番号
   switch(controller_num){
     case 1:
-      stick_lr = 34;
+      stick_lr = 34;  // マイコンのどの番号とつながっているかを表している
       stick_ud = 35;
       slider_l = 33;
       slider_r = 32;
@@ -196,12 +196,12 @@ void setup() {
     //Serial.begin(115200);   一段階下げたもの
     //9600, 14400, 19200, 28800,38400
     //Serial.begin(57600);    もう一段階下げたもの（Lazurite時代と同じ）
-    Serial.begin(38400);
-    while(!Serial);
+    Serial.begin(38400);  // 転送レートの初期化,つまり転送の準備を開始
+    while(!Serial); // 上の転送の準備ができるのを待つ
     
     
     //ピンモードの設定
-    pinMode(stick_lr, INPUT);
+    pinMode(stick_lr, INPUT); // デジタルピン番号を入力に設定
     pinMode(stick_ud, INPUT);
     pinMode(slider_l, INPUT);
     pinMode(slider_r, INPUT);
@@ -213,23 +213,23 @@ void setup() {
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
 
-    if (esp_now_init() == ESP_OK) {
+    if (esp_now_init() == ESP_OK) { // esp_now_init()を呼び出し初期化、これが成功したか確認するための条件文
         //Serial.println("ESP-Now Init Success");
     }
       // Register peer
-    memcpy(peerInfo.peer_addr, castAddress, 6);
+    memcpy(peerInfo.peer_addr, castAddress, 6); // おまじない
     peerInfo.channel = 0;  
     peerInfo.encrypt = false;
     
     // Add peer        
-    if (esp_now_add_peer(&peerInfo) != ESP_OK){
+    if (esp_now_add_peer(&peerInfo) != ESP_OK){ // esp_now_add_peer()で設定をESP-NOWに適用するが、失敗したときにメッセージを表示する
       Serial.println("Failed to add peer");
       return;
     }
     
     //esp_now_register_send_cb(OnDataSent);
     //受信時コールバック関数の指定
-    esp_now_register_recv_cb(onReceive);
+    esp_now_register_recv_cb(onReceive);  // esp_now_init()で初期化をして、esp_now_register_recv_cb()でデータが受信されたときに実行する関数を登録する
     
 }
 
