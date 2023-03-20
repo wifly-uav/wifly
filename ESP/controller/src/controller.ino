@@ -85,7 +85,7 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     //taskDISABLE_INTERRUPTS();
     char macStr[18];
     //データの送信元のmacアドレスを整形し（%02X:等を付け）て、macStr配列に書き込む。
-    //%02Xは2桁以上の16進数で表示することを指定（桁が足りない場合、上位の桁が0埋めされる。）
+    //%02Xは2桁以上の16進数(Xは16進数)で表示することを指定（桁が足りない場合、上位の桁が0埋めされる。）
     snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
         mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
     //Serial.println();
@@ -106,14 +106,14 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
           re_data[i] = 255 - data[i];
         }
         else{
-          //残り(受信間隔とquaternion4つ)はそのままre_dataに格納
+          //残り(受信間隔とservo2つ)はそのままre_dataに格納
           re_data[i] = data[i];
         }
     }
     
     //カンマ区切りでre_dataの中身をシリアルポートに送信
     for (int i = 0; i < 5; i++) {
-      Serial.print(re_data[i]);
+      Serial.print(re_data[i]); //確認用の出力
       if(i != 4){
         Serial.print(",");
       }
@@ -132,7 +132,7 @@ void onReceive(const uint8_t* mac_addr, const uint8_t* data, int data_len) {
     }
     Serial.println();           
     //Serial.flush();     //データを送信しきるまで（送信バッファが空になるまで）待つ。
-    delay(10);            //flushじゃだめかもしれない？
+    delay(10);            //flushじゃだめかもしれない？10msなので注意
     //interrupts();
     //taskENABLE_INTERRUPTS();
     //delay(10);           //さらに待機
@@ -196,8 +196,8 @@ void setup() {
     //Serial.begin(115200);   一段階下げたもの
     //9600, 14400, 19200, 28800,38400
     //Serial.begin(57600);    もう一段階下げたもの（Lazurite時代と同じ）
-    Serial.begin(38400);
-    while(!Serial);
+    Serial.begin(38400); //通信の開始(通信速度)
+    while(!Serial)//通信開始待機
     
     
     //ピンモードの設定
@@ -209,26 +209,26 @@ void setup() {
     pinMode(switch_1, INPUT_PULLUP);  //トグルスイッチのプルアップ、ダウンはここで設定
     pinMode(switch_2, INPUT_PULLUP);
 
-    Serial.println(WiFi.macAddress());
+    Serial.println(WiFi.macAddress());  //おまじない？
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
 
-    if (esp_now_init() == ESP_OK) {
+    if (esp_now_init() == ESP_OK) { //通信の初期化が出来た時？
         //Serial.println("ESP-Now Init Success");
     }
       // Register peer
-    memcpy(peerInfo.peer_addr, castAddress, 6);
-    peerInfo.channel = 0;  
-    peerInfo.encrypt = false;
+    memcpy(peerInfo.peer_addr, castAddress, 6); //peerinfoにcastaddの先頭６バイトをぶち込む
+    peerInfo.channel = 0;  //ステーションもしくはソフトウェアがONになっている現在のチャンネルを利用する
+    peerInfo.encrypt = false; //暗号化しない
     
     // Add peer        
-    if (esp_now_add_peer(&peerInfo) != ESP_OK){
+    if (esp_now_add_peer(&peerInfo) != ESP_OK){   //peerのaddに失敗したらエラー吐いて終了
       Serial.println("Failed to add peer");
       return;
     }
     
     //esp_now_register_send_cb(OnDataSent);
-    //受信時コールバック関数の指定
+    //受信時コールバック関数の[指定]
     esp_now_register_recv_cb(onReceive);
     
 }
