@@ -209,7 +209,7 @@ void setup() {
     pinMode(switch_1, INPUT_PULLUP);  //トグルスイッチのプルアップ、ダウンはここで設定
     pinMode(switch_2, INPUT_PULLUP);
 
-    Serial.println(WiFi.macAddress());  //おまじない？?
+    Serial.println(WiFi.macAddress());  //おまじない？??
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
 
