@@ -27,7 +27,7 @@ uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x81, 0x0A};   //新1
 
 esp_now_peer_info_t peerInfo;
 
-const int controller_num = 1; //1:A 2:B
+const int controller_num = 1; //1:A 2:B　変数の値を変更せずに定数として宣言　書き換えできず読み取り専用
 
 //pin
 //各ボタンのピン番号
@@ -232,7 +232,7 @@ void setup() {
     esp_now_register_recv_cb(onReceive);  // esp_now_init()で初期化をして、esp_now_register_recv_cb()でデータが受信されたときに実行する関数を登録する
     
 }
-
+  //setup終わってからloopが走る
 //各アナログスイッチ入力値格納用
 int left_LR;
 int left_UD;
@@ -243,11 +243,11 @@ int vol;
 void loop() {
   
   //トグルスイッチの入力値読み取り
-  int btn_L = digitalRead(switch_1);
-  int btn_R = digitalRead(switch_2);
+  int btn_L = digitalRead(switch_1);  //スイッチ1の値をボタンLが読み取る(値は0or1)
+  int btn_R = digitalRead(switch_2);  //スイッチ2の値をボタンRが読み取る(値は0or1)
 
-  if ((millis() - lastTime) > timerDelay) { //受信間隔がtimerDelay以上であれば、
-    uint8_t data[5];
+  if ((millis() - lastTime) > timerDelay) { //受信間隔がtimerDelay以上であれば、(setupからの実行時間からif文が終わった時間を引いたものが受信間隔)　lastTime=millisとなるため大きくなるので受信間隔はほぼ変わらない  millis():実行中のプログラムがスタートしてからの時間(setupも含む) 符号なしの整数型(unsigned long)
+    uint8_t data[5];  //符号なし8bit整数型として、data[5]を宣言
 
     //PCモード
     if(btn_L == 1){
@@ -256,7 +256,7 @@ void loop() {
 
       //PCから受け取った情報を機体側のマイコンに送信する準備
       for(int i=0;i<2;++i){
-        data[i] = 254 - data_pc[i];         //受信データの先頭2つ（羽ばたき出力）は反転
+        data[i] = 254 - data_pc[i];         //受信データの先頭2つ（羽ばたき出力）は反転 254の謎、なぜ255ではないのか？？
       }
       for(int i=2;i<5;++i){
         data[i] = data_pc[i];
@@ -267,15 +267,15 @@ void loop() {
     
       switch(controller_num){
         case 1:
-          left_LR = map(analogRead(stick_lr),0,4096,0,255);
+          left_LR = map(analogRead(stick_lr),0,4096,0,255); //mapは整数のみを扱う(小数点以下は切り捨て)　つまりリマッピング関数　コントローラーの値が0～4096、これを機体の数字0~255に変換　数が収まるようにまずstick_lrの値が連続的に読まれたものをLeft_LRに代入
           left_UD = map(analogRead(stick_ud),0,4096,0,180);
           sli_L = map(analogRead(slider_l),0,4096,0,255);
           sli_R = map(analogRead(slider_r),0,4096,0,255);
           vol = map(analogRead(volume),0,4096,0,255);
           //btn_R = digitalRead(switch_2);
 
-          if(left_LR<152 && left_LR>102){left_LR = 127;}
-          if(left_UD<105 && left_UD>75){left_UD = 90;}
+          if(left_LR<152 && left_LR>102){left_LR = 127;}  //スティックの誤差を修正する(左右)、デッドゾーン補正
+          if(left_UD<105 && left_UD>75){left_UD = 90;}  //スティックの誤差を修正(上下)、デッドゾーン補正
 
           data[0] = sli_L;
           data[1] = sli_R;
