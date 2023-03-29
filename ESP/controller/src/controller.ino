@@ -266,41 +266,41 @@ void loop() {
     }else{  
     
       switch(controller_num){
-        case 1:
+        case 1: //コントローラーA
           left_LR = map(analogRead(stick_lr),0,4096,0,255); //mapは整数のみを扱う(小数点以下は切り捨て)　つまりリマッピング関数　コントローラーの値が0～4096、これを機体の数字0~255に変換　数が収まるようにまずstick_lrの値が連続的に読まれたものをLeft_LRに代入
-          left_UD = map(analogRead(stick_ud),0,4096,0,180);
-          sli_L = map(analogRead(slider_l),0,4096,0,255);
-          sli_R = map(analogRead(slider_r),0,4096,0,255);
+          left_UD = map(analogRead(stick_ud),0,4096,0,180); // 尾翼サーボ
+          sli_L = map(analogRead(slider_l),0,4096,0,255); // 羽ばたき出力　(臨機応変に左右変更)　コードが変ならつなぎなおす
+          sli_R = map(analogRead(slider_r),0,4096,0,255); // 羽ばたき出力　(臨機応変に左右変更)　コードが変ならつなぎなおす
           vol = map(analogRead(volume),0,4096,0,255);
           //btn_R = digitalRead(switch_2);
 
-          if(left_LR<152 && left_LR>102){left_LR = 127;}  //スティックの誤差を修正する(左右)、デッドゾーン補正
-          if(left_UD<105 && left_UD>75){left_UD = 90;}  //スティックの誤差を修正(上下)、デッドゾーン補正
+          if(left_LR<152 && left_LR>102){left_LR = 127;}  //　スティックの誤差を修正する(左右)、デッドゾーン補正
+          if(left_UD<105 && left_UD>75){left_UD = 90;}  //　スティックの誤差を修正(上下)、デッドゾーン補正
 
           data[0] = sli_L;
           data[1] = sli_R;
           data[2] = left_UD;
-          data[3] = btn_R*120;
+          data[3] = btn_R*120;  // 右ボタンが0または1で、0度なら水平飛行の態勢、ボタンが1となると90度を180分割して2度が1度となるので60度が120度となる
           data[4] = btn_R;
           break;
         
-        case 2:
-          left_LR = map(analogRead(stick_lr),0,4096,0,255); //揚力差
-          left_UD = map(analogRead(stick_ud),0,4096,0,255); //割り当てなし
-          sli_L = map(analogRead(slider_l),0,4096,0,180);   //尾翼サーボ
-          sli_R = map(analogRead(slider_r),0,4096,0,255);   //羽ばたき出力
+        case 2: // コントローラーB
+          left_LR = map(analogRead(stick_lr),0,4096,0,255); //　揚力差　mapは整数のみを扱う(小数点以下は切り捨て)　つまりリマッピング関数　コントローラーの値が0～4096、これを機体の数字0~255に変換　数が収まるようにまずstick_lrの値が連続的に読まれたものをLeft_LRに代入
+          left_UD = map(analogRead(stick_ud),0,4096,0,255); //　割り当てなし
+          sli_L = map(analogRead(slider_l),0,4096,0,180);   //　尾翼サーボ　数字の255と180自体に意味はない、ただし尾翼なら最大数値が180ということ　case1でも180が尾翼サーボとなっている
+          sli_R = map(analogRead(slider_r),0,4096,0,255);   //　羽ばたき出力
           //btn_L = digitalRead(switch_1);
           //vol = map(analogRead(volume),0,4096,0,255);
           //btn_R = digitalRead(switch_2);
 
           //スライドボリューム左（尾翼）最小
-          if(sli_L>170){sli_L = 180;}
+          if(sli_L>170){sli_L = 180;} //　左スライドの値が170より大きければ、左スライドに180を代入、スライドの誤差調整
           //スライドボリューム右（羽ばたき出力）最小
-          if(sli_R>240){sli_R = 255;}
+          if(sli_R>240){sli_R = 255;} //　右スライドの値が240よりも大きければ、右スライドに255を代入、スライドの誤差調整
           //ジョイスティック左右中央
-          if(left_LR<152 && left_LR>102){left_LR = 127;}
+          if(left_LR<152 && left_LR>102){left_LR = 127;}  //　スティックの誤差を修正する(左右)、デッドゾーン補正
           //ジョイスティック上下中央
-          if(left_UD<152 && left_UD>102){left_UD = 127;}
+          if(left_UD<152 && left_UD>102){left_UD = 127;}  //　スティックの誤差を修正(上下)、デッドゾーン補正
 
           /*
           int left_pwm = abs(sli_R - 255) - (left_LR - 127)/4;  //左（要確認）
