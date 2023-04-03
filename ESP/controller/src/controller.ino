@@ -156,12 +156,12 @@ void OnDataSent(const uint8_t* mac_addr, esp_now_send_status_t status) {
 
 //PCからの情報を受信する関数
 void recieve_pc(){
-  if(Serial.available()){                               //シリアルポートにデータが来ている場合
-    if((int)Serial.read() == 255){                      //データの先頭が255である場合
+  if(Serial.available()){                               //シリアルポートにデータが来ている場合(この関数は何バイトのデータがポートに到着したかを返す)
+    if((int)Serial.read() == 255){                      //データの先頭が255である場合(シリアルデータを１バイト分読み込む関数)
 
       //5つのデータを読み取り、data_pcに格納する。
       //data_pc_にはデータ長が格納される
-      data_pc_ = Serial.readBytesUntil('\n',data_pc,5);
+      data_pc_ = Serial.readBytesUntil('\n',data_pc,5); //size_t型のdeta_pc_とuint8_t型のdeta_pcがある
       delay(10);  //dataを読み切るための待機時間を追加 
     }
   }
@@ -243,58 +243,59 @@ int vol;
 void loop() {
   
   //トグルスイッチの入力値読み取り
-  int btn_L = digitalRead(switch_1);
-  int btn_R = digitalRead(switch_2);
+  int btn_L = digitalRead(switch_1);  //指定したデジタルピン(switch1)から1か0を読みとる  
+  int btn_R = digitalRead(switch_2);  //1と0:HIGHとLOW btn:ボタン
 
-  if ((millis() - lastTime) > timerDelay) { //受信間隔がtimerDelay以上であれば、
-    uint8_t data[5];
+  if ((millis() - lastTime) > timerDelay) { //受信間隔がtimerDelay以上であれば、(millisはプログラム開始から経過時間をカウント)
+    uint8_t data[5]; //unit8_t型のdata[5]の宣言
 
-    //PCモード
+    //PCモード(強化学習に利用するモード)
     if(btn_L == 1){
-      recieve_pc();                         //PCからデータ受信
+      recieve_pc();                         //PCからデータ受信(上に関数あり)
       //Serial.print("PC_mode");
 
       //PCから受け取った情報を機体側のマイコンに送信する準備
       for(int i=0;i<2;++i){
         data[i] = 254 - data_pc[i];         //受信データの先頭2つ（羽ばたき出力）は反転
       }
-      for(int i=2;i<5;++i){
+      for(int i=2;i<5;++i){       //受信データ後3つ(サーボの角度)はそのまま
         data[i] = data_pc[i];
       }
     
-    //コントローラモード
+    //コントローラモード(コントローラーで動かすとき)
     }else{  
     
-      switch(controller_num){
-        case 1:
-          left_LR = map(analogRead(stick_lr),0,4096,0,255);
-          left_UD = map(analogRead(stick_ud),0,4096,0,180);
-          sli_L = map(analogRead(slider_l),0,4096,0,255);
-          sli_R = map(analogRead(slider_r),0,4096,0,255);
-          vol = map(analogRead(volume),0,4096,0,255);
+      switch(controller_num){   //1:白いやつ　2：配線見えてる方
+        case 1:                
+          left_LR = map(analogRead(stick_lr),0,4096,0,255);   //割り当てなし　スティックの左右方向の連続値(0~4096)を機体で扱えるよう0~255まで圧縮する関数
+          left_UD = map(analogRead(stick_ud),0,4096,0,180);   //尾翼サーボ
+          sli_L = map(analogRead(slider_l),0,4096,0,255);     //左の羽ばたき出力
+          sli_R = map(analogRead(slider_r),0,4096,0,255);     //右の羽ばたき出力
+          vol = map(analogRead(volume),0,4096,0,255);         //割り当てなし
           //btn_R = digitalRead(switch_2);
+          //スティックが完全に垂直になっていることはないため、スティックに触っていない時(スティックが中央にあるとき)の補正をする。(デッドゾーン補正)
+          if(left_LR<152 && left_LR>102){left_LR = 127;}      //左右のスティックを中央にしたときのずれを矯正する
+          if(left_UD<105 && left_UD>75){left_UD = 90;}        //上下               //                       ただし中央の値が90をとることに注意
 
-          if(left_LR<152 && left_LR>102){left_LR = 127;}
-          if(left_UD<105 && left_UD>75){left_UD = 90;}
-
-          data[0] = sli_L;
+          data[0] = sli_L;         //deta配列にコントローラーの操作による値を代入していく
           data[1] = sli_R;
           data[2] = left_UD;
-          data[3] = btn_R*120;
+          data[3] = btn_R*120;     //重心移動機構を120°に傾ける
           data[4] = btn_R;
           break;
         
         case 2:
-          left_LR = map(analogRead(stick_lr),0,4096,0,255); //揚力差
-          left_UD = map(analogRead(stick_ud),0,4096,0,255); //割り当てなし
-          sli_L = map(analogRead(slider_l),0,4096,0,180);   //尾翼サーボ
-          sli_R = map(analogRead(slider_r),0,4096,0,255);   //羽ばたき出力
+          left_LR = map(analogRead(stick_lr),0,4096,0,255); //揚力差　スティックの左右方向の連続値(0~4096)を機体で扱えるよう0~255まで圧縮する関数
+          left_UD = map(analogRead(stick_ud),0,4096,0,255); //割り当てなし　スティックの上下
+          sli_L = map(analogRead(slider_l),0,4096,0,180);   //尾翼サーボ　　スライドの左　
+          sli_R = map(analogRead(slider_r),0,4096,0,255);   //羽ばたき出力　　スライドの右
           //btn_L = digitalRead(switch_1);
           //vol = map(analogRead(volume),0,4096,0,255);
           //btn_R = digitalRead(switch_2);
 
+          //コントローラー１と同じようにスティックとスライダーの補正をする。
           //スライドボリューム左（尾翼）最小
-          if(sli_L>170){sli_L = 180;}
+          if(sli_L>170){sli_L = 180;}             
           //スライドボリューム右（羽ばたき出力）最小
           if(sli_R>240){sli_R = 255;}
           //ジョイスティック左右中央
@@ -303,15 +304,15 @@ void loop() {
           if(left_UD<152 && left_UD>102){left_UD = 127;}
 
           /*
-          int left_pwm = abs(sli_R - 255) - (left_LR - 127)/4;  //左（要確認）
+          int left_pwm = abs(sli_R - 255) - (left_LR - 127)/4;  //左（要確認）　　
           int right_pwm = abs(sli_R - 255) + (left_LR - 127)/4; //右（要確認）
           int servo_angle = abs(sli_L-180);                     //尾翼サーボ角
           */
 
-          int left_pwm = max(0,sli_R - max(0, (left_LR - 127)/4 ));  //左（要確認）
+          int left_pwm = max(0,sli_R - max(0, (left_LR - 127)/4 ));  //左（要確認）　
           int right_pwm = max(0,sli_R - max(0, (127 - left_LR)/4)); //右（要確認）
           int servo_angle = sli_L;                   //尾翼サーボ角
-          int cog_angle = 40*btn_R;                 //重心移動機構の角度
+          int cog_angle = 40*btn_R;                 //重心移動機構の角度(多分120°だけど変え忘れてる)
 
           data[0] = left_pwm;          
           data[1] = right_pwm;
