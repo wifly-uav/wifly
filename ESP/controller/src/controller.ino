@@ -2,7 +2,7 @@
 #include <WiFi.h>
 
 #include <SPI.h>
-//#define DEBUG
+// #define DEBUG
 
 unsigned long lastTime = 0;  
 unsigned long timerDelay = 60;  // send readings timer
@@ -327,12 +327,12 @@ void loop() {
     if(data[0]>240){data[0] = 255;} // 機体の羽ばたき出力が240のとき、右スライドの位置(一番上との間隔)はほぼ機体の羽ばたき出力が255のときと数mmの差しかない、なので255に補正してしまう。
     if(data[1]>240){data[1] = 255;} // 機体の羽ばたき出力が240のとき、右スライドの位置(一番上との間隔)はほぼ機体の羽ばたき出力が255のときと数mmの差しかない、なので255に補正してしまう。
 
-    //コントローラモードの場合のみ
-    if(btn_L != 1){ // btn_Lの1でないとき
+    //コントローラモードの場合のみ　PCモードの時はデバックするとPCで受信した値とデバックした値が混ざるのでコントローラーモードのみで実行
+    if(btn_L != 1){ // btn_Lの1でないとき　ボタンLの0or1でPCモードとコントローラーモードを区別する、このプログラムでは0がコントローラーモード
       //PC側にコントローラから指示された値を返してやる。
       //PC側にシリアル通信で送信することで、シリアルモニタに表示される。
       //PC_modeでこれをやったらダメ!receive_from_espがバグる。
-      #ifdef DEBUG  // 
+      #ifdef DEBUG  // 5行目のDEBUGがdefineされていれば、#ifdef~#endifまでを実行、今は5行目がコメントアウトされているためoffとなっている。それぞれのdataにそれぞれの値が正確に入っているか確認したいだけ
         /*
         Serial.print("lx:");
         Serial.print(left_LR);
@@ -369,10 +369,10 @@ void loop() {
       #endif
     }
 
-    //delay(10);
+    //delay(10);  // このdelayは気にしないでよい
 
     // Send message via ESP-NOW
-    esp_now_send(castAddress, (uint8_t *) &data, sizeof(data));
+    esp_now_send(castAddress, (uint8_t *) &data, sizeof(data)); // esp_now_send()というのが呼び出されると、送信が実行。ここでカッコ内の変数は次のようになる。esp_now_send(送信先MACアドレス、送信するデータ、送信するデータのサイズ) (uint8_tは符号なし8bit整数型)　uint8_t *　これは符号なし8bit整数型のポインタ　(uint8_t *) &data　&dataはアドレス(値を格納しているもの)　uint8_t *は符号なしの８8bit整数型ポインタなので、&dataの中の値を符号なしの8bitの整数にしてくれということ。　dataは配列なのでそのまま変数として渡すことはできないのでポインタに変換して渡している、uint8_t dataはできない。
     delay(10);
     //esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
     lastTime = millis();
