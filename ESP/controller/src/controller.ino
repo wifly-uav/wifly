@@ -14,9 +14,9 @@ double re_data_angle[4] = {0};
 // REPLACE WITH RECEIVER MAC Address
 
 //機体側のマイコンの番号にあったアドレスのみコメントアウトを外す。
-//uint8_t castAddress[] = {0x8C, 0xCE, 0x4E, 0xEA, 0xB1, 0xC9}; //0
+uint8_t castAddress[] = {0x8C, 0xCE, 0x4E, 0xEA, 0xB1, 0xC9}; //0
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x60}; //旧1
-uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x81, 0x0A};   //新1
+//uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x81, 0x0A};   //新1
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0x3D}; //2
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0x95, 0xE4}; //3
 //uint8_t castAddress[] = {0xB4, 0xE6, 0x2D, 0x2F, 0xA1, 0xAC}; //4
@@ -162,7 +162,7 @@ void recieve_pc(){
       //5つのデータを読み取り、data_pcに格納する。
       //data_pc_にはデータ長が格納される
       data_pc_ = Serial.readBytesUntil('\n',data_pc,5);
-      delay(10);  //dataを読み切るための待機時間を追加 
+      delay(10);  // dataを読み切るための待機時間を追加 
     }
   }
 }
@@ -372,9 +372,9 @@ void loop() {
     //delay(10);  // このdelayは気にしないでよい
 
     // Send message via ESP-NOW
-    esp_now_send(castAddress, (uint8_t *) &data, sizeof(data)); // esp_now_send()というのが呼び出されると、送信が実行。ここでカッコ内の変数は次のようになる。esp_now_send(送信先MACアドレス、送信するデータ、送信するデータのサイズ) (uint8_tは符号なし8bit整数型)　uint8_t *　これは符号なし8bit整数型のポインタ　(uint8_t *) &data　&dataはアドレス(値を格納しているもの)　uint8_t *は符号なしの８8bit整数型ポインタなので、&dataの中の値を符号なしの8bitの整数にしてくれということ。　dataは配列なのでそのまま変数として渡すことはできないのでポインタに変換して渡している、uint8_t dataはできない。
-    delay(10);
-    //esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
-    lastTime = millis();
+    esp_now_send(castAddress, (uint8_t *) &data, sizeof(data)); // esp_now_send()というのが呼び出されると、送信が実行。ここでカッコ内の変数は次のようになる。esp_now_send(送信先MACアドレス、送信するデータ、送信するデータのサイズ) (uint8_tは符号なし8bit整数型)　uint8_t *　これは符号なし8bit整数型のポインタ　(uint8_t *) &data　&dataはアドレス(値を格納しているもの)　uint8_t *は符号なしの８8bit整数型ポインタなので、&dataの中の値を符号なしの8bitの整数にしてくれということ。　dataは配列なのでそのまま変数として渡すことはできないのでポインタに変換して渡している、uint8_t dataはできない。送信先のMacアドレスCastaderessの中身の値の意味はマイコンごとの値(その値に意味はなく、マイコンごとの番地のようなものなのでマイコンによって決まる)　かつこれは配列なので中身の値が8bitの符号なし整数型ということ
+    delay(10);  // データを受け取る前に変な処理が走らないための、待機時間
+    // esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
+    lastTime = millis();  // millis()リセットして空の時間経過をミリ秒単位で返す　空の時間経過とは？？　unsigned long型の数値を返す 現在の経過時間を取得
   }
 }
