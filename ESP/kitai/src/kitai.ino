@@ -43,20 +43,20 @@ Servo ladder; // 尾翼のServoクラスの作成
 int command[8] = {0}; // 配列0~7を初期化するために、すべて0埋め
 uint8_t data[9];  // 符号なし8bit整数型の配列、配列の中身は0~8の番号
 
-unsigned long lastTime = 0;     //最新の受信時刻
-unsigned long recvTime = 0;     //受信時刻(未使用)
+unsigned long lastTime = 0;     // 最新の受信時刻 符号なし長整数型 バイト長4
+unsigned long recvTime = 0;     // 受信時刻(未使用)
 unsigned long Ti = 0;
-unsigned long loopTi = 0;       //受信間隔
+unsigned long loopTi = 0;       // 受信間隔
 unsigned long timerDelay = 20;  // send readings timer
 unsigned long watchdogtime = 100;  // timer
 
-double w,x,y,z = 0;
+double w,x,y,z = 0; // double型は実数を扱うことができる
 
 int i = 0;
 
 // Callback when data is sent
-//DEBUG時には送信が成功したかどうかを表示する。
-void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus) {
+// DEBUG時には送信が成功したかどうかを表示する。
+void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus) {  // メッセージが送信されるときに実行されるコールバック関数、この関数はメッセージが正常に配信されたかどうかを単純に出力する。 esp_now_sendが走ったらOndatasent実行　sendStatusはesp_now_sendが成功したかどうか0or1で判断 Macaddrは引数として必要で、値としては呼び出されるときに送信先のmacaddrが入る。 今回なら送信先のmacaddrはbroadcastaddressであり、そのアドレスが入る。結局はbraodcastadressの値となる。
   #ifdef DEBUG_SENT
     Serial.println();
     Serial.print("Last Packet Send Status: ");
