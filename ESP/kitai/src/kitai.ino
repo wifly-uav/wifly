@@ -56,10 +56,10 @@ int i = 0;
 
 // Callback when data is sent
 // DEBUG時には送信が成功したかどうかを表示する。
-void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus) {  // メッセージが送信されるときに実行されるコールバック関数、この関数はメッセージが正常に配信されたかどうかを単純に出力する。 esp_now_sendが走ったらOndatasent実行　sendStatusはesp_now_sendが成功したかどうか0or1で判断 Macaddrは引数として必要で、値としては呼び出されるときに送信先のmacaddrが入る。 今回なら送信先のmacaddrはbroadcastaddressであり、そのアドレスが入る。結局はbraodcastadressの値となる。
+void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus) {  // メッセージが送信されるときに実行されるコールバック関数、この関数はメッセージが正常に受信されたかどうかを単純に出力する。 esp_now_sendが走ったらOndatasent実行　sendStatusはesp_now_sendが成功したかどうか0or1で判断 Macaddrは引数として必要で、値としては呼び出されるときに送信先のmacaddrが入る。 今回なら送信先のmacaddrはbroadcastaddressであり、そのアドレスが入る。結局はbraodcastadressの値となる。
   #ifdef DEBUG_SENT
-    Serial.println();
-    Serial.print("Last Packet Send Status: ");
+    Serial.println(); // 改行
+    Serial.print("Last Packet Send Status: ");  // "Last Packet Send Status: "に入る値は何？？
   if (sendStatus == 0){
     Serial.println("Delivery success");
   }
@@ -70,11 +70,11 @@ void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus) {  // メッセージが�
 }
 
 // Callback function that will be executed when data is received
-void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t len) {
-  digitalWrite(led, HIGH);  //LED点灯
-  //char macStr[18];
+void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t len) { // メッセージが受信されたときに実行されるコールバック関数　lenというのはdata_lenであってる？？そしてその値は何になる？？
+  digitalWrite(led, HIGH);  // LED点灯 HIGHを引数で呼ぶことでLEDは暗く光る ledは37行目のconst led int = 15というもの これを入れることでそのピン番号に接続されているLEDが光るということであってる？？
+  //char macStr[18]; macStrという文字列の配列の定義であり、その文字列サイズが18である。
   //snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
-  //    mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+  //    mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]); 改行している関数
   #ifdef DEBUG
     Serial.println();
     //Serial.printf("Last Packet Recv from: %s\n", macStr);
