@@ -21,7 +21,7 @@ char controller = 'A';  //大きいコントローラ：A 小さいコントロ�
 
 //---------------------------------------------------------------------
 
-#define PWM_FREQ 1000 // FREQ(周波数)1000 PWM出力とはオンとオフの繰り返しスイッチングを行い、出力される電力を制御する 周波数が大きすぎると何がおきる？？(調べる、理由は保留)
+#define PWM_FREQ 1000 // FREQ(周波数)1000 PWM出力とはオンとオフの繰り返しスイッチングを行い、出力される電力を制御する 周波数が大きすぎると何がおきる？？(調べる、理由は保留) 周波数が高くなりすぎるとデューティ比の0近くと1023近くで挙動がおかしくなる Source:https://www.ei.tohoku.ac.jp/xkozima/lab/espTutorial0.html
 #define PWM_RANGE 255 // PWM値の制限をかけている、最大が大きすぎないようにする
 
 #ifdef sensor
@@ -78,19 +78,19 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t len) { // データ�
   #ifdef DEBUG
     Serial.println(); //  改行
     // Serial.printf("Last Packet Recv from: %s\n", macStr);  // %s\nは文字列を出力、今回はmacStrという文字列を出力
-    Serial.printf("Last Packet Recv Data(%d): ", len);  // %dは符号あり整数を表示、ここで矛盾があるのだが、lenは符号なしの8bit型の整数なのに出力は可能なのか？？
+    Serial.printf("Last Packet Recv Data(%d): ", len);  // %dは符号あり整数を表示、ここで矛盾があるのだが、lenは符号なしの8bit型の整数なのに出力は可能なのか？？→lenが正の値なので代入しても大丈夫
   #endif
 
   //データ受信
   for (i = 0; i < len; ++i) {
-    command[i] = data[i]; // 43行目で定義されている配列0~7に44行目の配列の値を代入　dataの値ってどこに入ってる？？、もう一つの疑問としてはintの配列にuint8_tは代入できるの？？
+    command[i] = data[i]; // 43行目で定義されている配列0~7に44行目の配列の値を代入　dataの値ってどこに入ってる？？→これはOnDataRecvの*dataのことであり、これはポインタなので43行目のdata配列に格納される、もう一つの疑問としてはintの配列にuint8_tは代入できるの？？→intは大枠なのでuint8_tを代入することは可能
     #ifdef DEBUG
       Serial.print(data[i]);  // data[i]を出力して下の行でスペース出力
       Serial.print(" ");
     #endif
   }
   digitalWrite(led, LOW); // LED消灯（受信を繰り返すことでLEDが高速点滅）
-  recvTime = millis();  // ここまでのプログラムの実行時間をrecvTimeに代入、それが受信時刻となる　1行目からプログラムが走ってここまでの時間であってる？？
+  recvTime = millis();  // ここまでのプログラムの実行時間をrecvTimeに代入、それが受信時刻となる　1行目からプログラムが走ってここまでの時間であってる？？→それで大丈夫
 }
 
 uint8_t broadcastAddress[6];  // 符号なし8bit整数型の配列、配列の中身は0~5となっている。
@@ -98,33 +98,33 @@ void setup() {
   Serial.begin(115200);               // シリアル通信開始（速度指定）
   Serial.println();                   // 改行出力
 
-  pinMode(pwm1, OUTPUT);              // 羽ばたきモータ出力1に対応するピンを出力モードにする。
-  pinMode(pwm2, OUTPUT);              // 羽ばたきモータ出力2に対応するピンを出力モードにする。
+  pinMode(pwm1, OUTPUT);              // 羽ばたきモータ出力1に対応するピンを出力モードにする。ピン番号は32行目で12と設定されている
+  pinMode(pwm2, OUTPUT);              // 羽ばたきモータ出力2に対応するピンを出力モードにする。ピン番号は33行目で13と設定されている
   pinMode(led, OUTPUT);               // LEDに対応するピンを出力モードにする。
   analogWriteFreq(PWM_FREQ);          // アナログ出力の周波数を指定 PWM_FREQ24行目で定義
   analogWriteRange(PWM_RANGE);        // アナログ出力の範囲を指定 PWM_RANGE25行目で定義
 
   digitalWrite(led, HIGH);            // LED点灯
-  analogWrite(pwm1, PWM_RANGE);       // 羽ばたきを止める
+  analogWrite(pwm1, PWM_RANGE);       // 羽ばたきを止める　pinMode関数を呼び出して出力に設定する必要はなし　analogWrite(pin, value)　pin出力したいピン番号、デューティ比0(常にオフ)~255(常にオン)　ここで使用可能なデータ型はintのみ　これって値の変換を行う要素もある？
   analogWrite(pwm2, PWM_RANGE);       // 羽ばたきを止める
   
-  cog.attach(cog_pin,900,1900);       // 重心移動機構サーボ出力の上限下限を設定
+  cog.attach(cog_pin,900,1900);       // 重心移動機構サーボ出力の上限下限を設定　cog_pinは重心移動機構のあるピンの番号
   ladder.attach(ladder_pin,900,1900); // 尾翼サーボ出力の上限下限を設定
   
-  cog.write(0);                       // サーボの角度をリセット（0°）重心移動機構の角度
+  cog.write(0);                       // サーボの角度をリセット（0°）重心移動機構の角度 setupだから値を初期値の0に持っていきたい115行目も同様
   ladder.write(0);                    // 尾翼サーボの角度をリセット
 
   // REPLACE WITH RECEIVER MAC Address
   // 各コントローラのMACアドレス
   if(controller == 'A'){
-    broadcastAddress[0] = 0x8C;
+    broadcastAddress[0] = 0x8C; // 8Cの計算 Cは12であるこれ間違えないように!! 8C=8*16^1+(C=12)=140
     broadcastAddress[1] = 0x4B;
-    broadcastAddress[2] = 0x14;
+    broadcastAddress[2] = 0x14; // 0x14の計算 0X14=1*16+4*16^0=20
     broadcastAddress[3] = 0x16;
     broadcastAddress[4] = 0x63;
-    broadcastAddress[5] = 0x0C;
+    broadcastAddress[5] = 0x0C; // 表記的な疑問　0xが16進数という意味になるなら0を入れるのはなぜ？？ 0xの後ろには二桁必要なの？？→書式として必要
   }else if(controller == 'B'){
-    broadcastAddress[0] = 0xC8;
+    broadcastAddress[0] = 0xC8; // 0xC8=(C=12)*16^1+8=200
     broadcastAddress[1] = 0x2B;
     broadcastAddress[2] = 0x96;
     broadcastAddress[3] = 0xB9;
@@ -136,12 +136,12 @@ void setup() {
     Serial.println("-");
     Serial.println("start");
 
-    Serial.print("ESP8266 Board MAC Address:  ");
-    Serial.println(WiFi.macAddress());
+    Serial.print("ESP8266 Board MAC Address:  "); // MAC Adddressの後には次の行が入る
+    Serial.println(WiFi.macAddress());  // この上の行のスペースに入るWiFi.macAddress()は何？？この値は
   #endif
  
   // Set device as a Wi-Fi Station
-  WiFi.mode(WIFI_STA);
+  WiFi.mode(WIFI_STA);  // STA(ステーションモード)で動作、アクセスポイントに接続し、クラウドへデータを送信するのが一般的
 
   // Init ESP-NOW
   if (esp_now_init() != 0) {
