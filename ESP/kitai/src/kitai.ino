@@ -76,46 +76,46 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t len) { // データ�
   //snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
   //    mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]); mac_addr[]の値を"%02X:%02X:%02X:%02X:%02X:%02X"の16進数の文字列に変換してmacStrという文字配列に書き込む、書き込む文字数はmacStrのサイズの文字数となっている(今回は18である) %02xは整数を16進数で出力する
   #ifdef DEBUG
-    Serial.println();
-    // Serial.printf("Last Packet Recv from: %s\n", macStr);
-    Serial.printf("Last Packet Recv Data(%d): ", len);
+    Serial.println(); //  改行
+    // Serial.printf("Last Packet Recv from: %s\n", macStr);  // %s\nは文字列を出力、今回はmacStrという文字列を出力
+    Serial.printf("Last Packet Recv Data(%d): ", len);  // %dは符号あり整数を表示、ここで矛盾があるのだが、lenは符号なしの8bit型の整数なのに出力は可能なのか？？
   #endif
 
   //データ受信
   for (i = 0; i < len; ++i) {
-    command[i] = data[i];
+    command[i] = data[i]; // 43行目で定義されている配列0~7に44行目の配列の値を代入　dataの値ってどこに入ってる？？、もう一つの疑問としてはintの配列にuint8_tは代入できるの？？
     #ifdef DEBUG
-      Serial.print(data[i]);
+      Serial.print(data[i]);  // data[i]を出力して下の行でスペース出力
       Serial.print(" ");
     #endif
   }
-  digitalWrite(led, LOW); //LED消灯（受信を繰り返すことでLEDが高速点滅）
-  recvTime = millis();
+  digitalWrite(led, LOW); // LED消灯（受信を繰り返すことでLEDが高速点滅）
+  recvTime = millis();  // ここまでのプログラムの実行時間をrecvTimeに代入、それが受信時刻となる　1行目からプログラムが走ってここまでの時間であってる？？
 }
 
-uint8_t broadcastAddress[6];
+uint8_t broadcastAddress[6];  // 符号なし8bit整数型の配列、配列の中身は0~5となっている。
 void setup() {
-  Serial.begin(115200);               //シリアル通信開始（速度指定）
-  Serial.println();                   //改行出力
+  Serial.begin(115200);               // シリアル通信開始（速度指定）
+  Serial.println();                   // 改行出力
 
-  pinMode(pwm1, OUTPUT);              //羽ばたきモータ出力1に対応するピンを出力モードにする。
-  pinMode(pwm2, OUTPUT);              //羽ばたきモータ出力2に対応するピンを出力モードにする。
-  pinMode(led, OUTPUT);               //LEDに対応するピンを出力モードにする。
-  analogWriteFreq(PWM_FREQ);          //アナログ出力の周波数を指定
-  analogWriteRange(PWM_RANGE);        //アナログ出力の範囲を指定
+  pinMode(pwm1, OUTPUT);              // 羽ばたきモータ出力1に対応するピンを出力モードにする。
+  pinMode(pwm2, OUTPUT);              // 羽ばたきモータ出力2に対応するピンを出力モードにする。
+  pinMode(led, OUTPUT);               // LEDに対応するピンを出力モードにする。
+  analogWriteFreq(PWM_FREQ);          // アナログ出力の周波数を指定 PWM_FREQ24行目で定義
+  analogWriteRange(PWM_RANGE);        // アナログ出力の範囲を指定 PWM_RANGE25行目で定義
 
-  digitalWrite(led, HIGH);            //LED点灯
-  analogWrite(pwm1, PWM_RANGE);       //羽ばたきを止める
-  analogWrite(pwm2, PWM_RANGE);       //羽ばたきを止める
+  digitalWrite(led, HIGH);            // LED点灯
+  analogWrite(pwm1, PWM_RANGE);       // 羽ばたきを止める
+  analogWrite(pwm2, PWM_RANGE);       // 羽ばたきを止める
   
-  cog.attach(cog_pin,900,1900);       //重心移動機構サーボ出力の上限下限を設定
-  ladder.attach(ladder_pin,900,1900); //尾翼サーボ出力の上限下限を設定
+  cog.attach(cog_pin,900,1900);       // 重心移動機構サーボ出力の上限下限を設定
+  ladder.attach(ladder_pin,900,1900); // 尾翼サーボ出力の上限下限を設定
   
-  cog.write(0);                       //サーボの角度をリセット（0°）
-  ladder.write(0);
+  cog.write(0);                       // サーボの角度をリセット（0°）重心移動機構の角度
+  ladder.write(0);                    // 尾翼サーボの角度をリセット
 
   // REPLACE WITH RECEIVER MAC Address
-  //各コントローラのMACアドレス
+  // 各コントローラのMACアドレス
   if(controller == 'A'){
     broadcastAddress[0] = 0x8C;
     broadcastAddress[1] = 0x4B;
