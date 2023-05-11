@@ -141,10 +141,10 @@ void setup() {
   #endif
  
   // Set device as a Wi-Fi Station
-  WiFi.mode(WIFI_STA);  // STA(ステーションモード)で動作、アクセスポイントに接続し、クラウドへデータを送信するのが一般的
+  WiFi.mode(WIFI_STA);  // STA(ステーションモード)で動作、アクセスポイントに接続し、クラウドへデータを送信するのが一般的 wifi機能をステーションモードで起動 ステーションモードとはWi-Fi機器の動作モードの一つで、端末（無線LAN子機）としてWi-Fiアクセスポイント（AP）に接続するモード アクセスポイントとは無線でスマートフォン、ノートパソコン、ゲーム機といった複数の無線LAN（Wi-Fi）機能付きの端末を、家庭内LANに接続するための機械 
 
   // Init ESP-NOW
-  if (esp_now_init() != 0) {
+  if (esp_now_init() != 0) {  // esp_now_intit()を呼び出すことで初期化←これはこの文で初期化されるのか？？ここでも初期化でないならどこでesp_now_init()は定義　そもそもesp_now_intit()はwifi機能を使用　もしesp_now_init()は0でないなら下のエラー文を出力
     #ifdef DEBUG
       Serial.println("Error initializing ESP-NOW");
     #endif
@@ -153,8 +153,8 @@ void setup() {
   
   // Once ESPNow is successfully Init, we will register for Send CB to
   // get the status of Trasnmitted packet
-  esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
-  //esp_now_register_send_cb(OnDataSent);
+  esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER); // set self roleってことは役割を決めてる？？その役割とは？？　上のCBとは何を示しているの？
+  //esp_now_register_send_cb(OnDataSent); Esp-nowコールバック登録のsendの方　コメントアウトしている理由は？
   
   // Register peer
   esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
@@ -173,7 +173,7 @@ void setup() {
     }
   #endif
 
-  //通信の初期設定に成功したら、LED(オレンジ?)を消す。
+  // 通信の初期設定に成功したら、LED(オレンジ?)を消す。
   digitalWrite(led, LOW);
 }
 
