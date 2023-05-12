@@ -10,7 +10,7 @@
 #include <SPI.h>
 
 //#define DEBUG         // シリアルモニタで各スイッチの出力を確認できる。
-#define sensor        // 操縦時はコメントアウト
+//#define sensor        // 操縦時はコメントアウト←これをワンチャンコメントアウトしてみる
 
 //int kitai_number = 4;   
 //1~5:Pch 6:Nch
@@ -105,7 +105,7 @@ void setup() {
   analogWriteRange(PWM_RANGE);        // アナログ出力の範囲を指定 PWM_RANGE25行目で定義
 
   digitalWrite(led, HIGH);            // LED点灯
-  analogWrite(pwm1, PWM_RANGE);       // 羽ばたきを止める　pinMode関数を呼び出して出力に設定する必要はなし　analogWrite(pin, value)　pin出力したいピン番号、デューティ比0(常にオフ)~255(常にオン)　ここで使用可能なデータ型はintのみ　これって値の変換を行う要素もある？
+  analogWrite(pwm1, PWM_RANGE);       // 羽ばたきを止める　pinMode関数を呼び出して出力に設定する必要はなし　analogWrite(pin, value)　pin出力したいピン番号、デューティ比0(常にオフ)~255(常にオン)　ここで使用可能なデータ型はintのみ　結局ピン番号とその上限値をしていしているのみ
   analogWrite(pwm2, PWM_RANGE);       // 羽ばたきを止める
   
   cog.attach(cog_pin,900,1900);       // 重心移動機構サーボ出力の上限下限を設定　cog_pinは重心移動機構のあるピンの番号
@@ -137,14 +137,14 @@ void setup() {
     Serial.println("start");
 
     Serial.print("ESP8266 Board MAC Address:  "); // MAC Adddressの後には次の行が入る
-    Serial.println(WiFi.macAddress());  // この上の行のスペースに入るWiFi.macAddress()は何？？この値は
+    Serial.println(WiFi.macAddress());  // この上の行のスペースに入るWiFi.macAddress()は何？？この値は→引数は()に何も入らない、けど書式として必要、ないと変数か関数かがわからないのでエラーがはかれる。
   #endif
  
   // Set device as a Wi-Fi Station
   WiFi.mode(WIFI_STA);  // STA(ステーションモード)で動作、アクセスポイントに接続し、クラウドへデータを送信するのが一般的 wifi機能をステーションモードで起動 ステーションモードとはWi-Fi機器の動作モードの一つで、端末（無線LAN子機）としてWi-Fiアクセスポイント（AP）に接続するモード アクセスポイントとは無線でスマートフォン、ノートパソコン、ゲーム機といった複数の無線LAN（Wi-Fi）機能付きの端末を、家庭内LANに接続するための機械 
 
   // Init ESP-NOW
-  if (esp_now_init() != 0) {  // esp_now_intit()を呼び出すことで初期化←これはこの文で初期化されるのか？？ここでも初期化でないならどこでesp_now_init()は定義　そもそもesp_now_intit()はwifi機能を使用　もしesp_now_init()は0でないなら下のエラー文を出力
+  if (esp_now_init() != 0) {  // esp_now_init()はincludeでESP8266WiFi.hをやっているのでそこに含まれているから定義しなくても使用可能　そもそもesp_now_intit()はwifi機能を使用　もしesp_now_init()は0でないなら下のエラー文を出力
     #ifdef DEBUG
       Serial.println("Error initializing ESP-NOW");
     #endif
@@ -153,23 +153,23 @@ void setup() {
   
   // Once ESPNow is successfully Init, we will register for Send CB to
   // get the status of Trasnmitted packet
-  esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER); // set self roleってことは役割を決めてる？？その役割とは？？　上のCBとは何を示しているの？
-  //esp_now_register_send_cb(OnDataSent); Esp-nowコールバック登録のsendの方　コメントアウトしている理由は？
+  esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER); // set self roleってことは役割を決めてる？？その役割とは？？　上のCBとは何を示しているの？←これ不明保留
+  //esp_now_register_send_cb(OnDataSent); Esp-nowコールバック登録のsendの方　コメントアウトしている理由は？←これはOnDataSent関数がコメントの出力しかしないのでコメントアウトしている。また163行目の受信のほうはLEDの点滅として使用するのでこちらはコメントアウトせず
   
-  // Register peer
-  esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
+  // Register peer peerとはネットワーク通信において接続している相手のコンピューターや通信機器のこと。なのでこれを登録するということ
+  esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_SLAVE, 1, NULL, 0); // 引数何を取っている?? 保留
 
-  //受信コールバック関数の指定
-  esp_now_register_recv_cb(OnDataRecv);
+  // 受信コールバック関数の指定
+  esp_now_register_recv_cb(OnDataRecv); // 引数には受信のコールバック関数を用いる
 
   #ifdef sensor
-    if(!bno.begin()){
-      /* There was a problem detecting the BNO055 ... check your connections */
+    if(!bno.begin()){ // センサを!bno.begin()でセンサの初期化を行う　ただ#define sensorをコメントアウトするとセンサが使えなくなってしまう
+      /* There was a problem detecting the BNO055 ... check your connections */ //BNO055とは角度センサのこと
       #ifdef DEBUG
         Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
       #endif
-      digitalWrite(led, HIGH);
-      while(1);
+      digitalWrite(led, HIGH);  // この下にwhile(1)があるのでこのライトは光り続ける、なぜならwhile(1)でコードが終わることはないから
+      while(1); //ここで無限ループする意味とは？？→これは失敗したら待機するようなもの、失敗しているのでコードを続けたくない、つまりコードをそこのままでとどめておきたいということ。
     }
   #endif
 
@@ -178,7 +178,7 @@ void setup() {
 }
 
 //float型用のmap関数を自作
-float mapfloat(float x, long in_min, long in_max, long out_min, long out_max)
+float mapfloat(float x, long in_min, long in_max, long out_min, long out_max) // 型名をfloatで宣言、関数名がmapfloat floatとは実数を扱うことのできるデータ型　ここでの実数は整数型と比べて値の桁数が多く少数も扱えるような数値となっている　引数mapfloat(変換したい数値、現在の範囲の下限、現在の範囲の上限、変換後の範囲の下限、変換後の範囲の上限) float型なのにその数値の現在の範囲の下限と上限がlong型とは？？　floatが少数も扱える変数型なのでlongで定義してもよいということ？？
 {
   return (float)(x - in_min) * (out_max - out_min) / (float)(in_max - in_min) + out_min;
 }
