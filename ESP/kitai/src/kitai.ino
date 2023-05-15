@@ -198,11 +198,11 @@ void loop() {
   #endif
 
   Ti = millis();              // 現在時刻
-  loopTi = Ti - lastTime;     // 前回受信からの時間差 // 239行目でlastTime更新最初はlastTime=0となっている
-  if (loopTi > timerDelay) {
+  loopTi = Ti - lastTime;     // 前回受信からの時間差 // 239行目でlastTime更新、最初はlastTime=0となっている
+  if (loopTi > timerDelay) {  // timerDelay=20よりも大きければif文が走る
     // Set values to send
     // 送信データを準備
-    data[0] = command[0];     // 羽ばたき出力1     
+    data[0] = command[0];     // 羽ばたき出力1     43行目でcommandの配列が定義されている、86行目において43行目でポインタによりdata配列に格納されたcommandの値を各データに代入
     data[1] = command[1];     // 羽ばたき出力2
     data[2] = command[2];     // 尾翼サーボ角度
     data[3] = command[3];     // 受信移動機構角度
@@ -234,9 +234,9 @@ void loop() {
       */
     #endif
 
-    //機体の状態をコントローラに送信
+    //　機体の状態をコントローラに送信
     esp_now_send(broadcastAddress, (uint8_t *) &data, sizeof(data));
-    lastTime = millis();
+    lastTime = millis();  // 今までのコードが走った時間をlastTimeに書きこむ
   }
   /*
   if ((Ti - recvTime) > watchdogtime){
