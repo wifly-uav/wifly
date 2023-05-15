@@ -178,7 +178,7 @@ void setup() {
 }
 
 //float型用のmap関数を自作
-float mapfloat(float x, long in_min, long in_max, long out_min, long out_max) // 型名をfloatで宣言、関数名がmapfloat floatとは実数を扱うことのできるデータ型　ここでの実数は整数型と比べて値の桁数が多く少数も扱えるような数値となっている　引数mapfloat(変換したい数値、現在の範囲の下限、現在の範囲の上限、変換後の範囲の下限、変換後の範囲の上限) float型なのにその数値の現在の範囲の下限と上限がlong型とは？？　floatが少数も扱える変数型なのでlongで定義してもよいということ？？
+float mapfloat(float x, long in_min, long in_max, long out_min, long out_max) // 型名をfloatで宣言、関数名がmapfloat floatとは実数を扱うことのできるデータ型　ここでの実数は整数型と比べて値の桁数が多く少数も扱えるような数値となっている　引数mapfloat(変換したい数値、現在の範囲の下限、現在の範囲の上限、変換後の範囲の下限、変換後の範囲の上限) float型なのにその数値の現在の範囲の下限と上限がlong型とは？？　floatが少数も扱える変数型なのでlongで定義してもよいということ？？　保留して後で出てきた場合に確認
 {
   return (float)(x - in_min) * (out_max - out_min) / (float)(in_max - in_min) + out_min;
 }
@@ -188,24 +188,24 @@ void loop() {
   #ifdef sensor
     // Possible vector values can be:
     // - VECTOR_ACCELEROMETER - m/s^2
-    // - VECTOR_MAGNETOMETER  - uT
-    // - VECTOR_GYROSCOPE     - rad/s
+    // - VECTOR_MAGNETOMETER  - uT (マイクロテスラ)　1μTとは5Aの電流が流れている電線から1m離れた場所での磁界の大きさを表している　Magnetometer:磁力計
+    // - VECTOR_GYROSCOPE     - rad/s ジャイロスコープ
     // - VECTOR_EULER         - degrees
     // - VECTOR_LINEARACCEL   - m/s^2
     // - VECTOR_GRAVITY       - m/s^2
-    //imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
-    imu::Quaternion quaternion = bno.getQuat();
+    //imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);　センサーフュージョンによる方向推定値の取得
+    imu::Quaternion quaternion = bno.getQuat(); // センサフュージョンの方向推定値のクオータニオン クオータニオンとは四元数と呼ばれ、二次元平面の回転を表現する複数の拡張として、3次元の回転を表現可能
   #endif
 
-  Ti = millis();              //現在時刻
-  loopTi = Ti - lastTime;     //前回受信からの時間差
+  Ti = millis();              // 現在時刻
+  loopTi = Ti - lastTime;     // 前回受信からの時間差 // 239行目でlastTime更新最初はlastTime=0となっている
   if (loopTi > timerDelay) {
     // Set values to send
-    //送信データを準備
-    data[0] = command[0];     //羽ばたき出力1     
-    data[1] = command[1];     //羽ばたき出力2
-    data[2] = command[2];     //尾翼サーボ角度
-    data[3] = command[3];     //受信移動機構角度
+    // 送信データを準備
+    data[0] = command[0];     // 羽ばたき出力1     
+    data[1] = command[1];     // 羽ばたき出力2
+    data[2] = command[2];     // 尾翼サーボ角度
+    data[3] = command[3];     // 受信移動機構角度
     #ifdef sensor
       data[5] = (quaternion.w()+1)*100;
       data[6] = (quaternion.x()+1)*100;
@@ -217,7 +217,7 @@ void loop() {
       data[7] = 0;
       data[8] = 0;
     #endif
-    data[4] = loopTi;         //受信間隔
+    data[4] = loopTi;         // 受信間隔
     #ifdef DEBUG
       //Serial.print("y:");
       //Serial.print(euler.y());
