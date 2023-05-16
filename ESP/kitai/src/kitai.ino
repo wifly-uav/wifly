@@ -48,7 +48,7 @@ unsigned long recvTime = 0;     // 受信時刻(未使用)
 unsigned long Ti = 0;
 unsigned long loopTi = 0;       // 受信間隔
 unsigned long timerDelay = 20;  // send readings timer
-unsigned long watchdogtime = 100;  // timer
+unsigned long watchdogtime = 100;  // timer マイコンのプログラムが停止・暴走をしていないかを確認するためのタイマ
 
 double w,x,y,z = 0; // double型は実数を扱うことができる
 
@@ -202,7 +202,7 @@ void loop() {
   if (loopTi > timerDelay) {  // timerDelay=20よりも大きければif文が走る
     // Set values to send
     // 送信データを準備
-    data[0] = command[0];     // 羽ばたき出力1     43行目でcommandの配列が定義されている、86行目において43行目でポインタによりdata配列に格納されたcommandの値を各データに代入
+    data[0] = command[0];     // 羽ばたき出力1     43行目でcommandの配列が定義されている、dataを送信するため86行目において43行目でポインタによりdata配列に格納されたcommandの値を各データに代入
     data[1] = command[1];     // 羽ばたき出力2
     data[2] = command[2];     // 尾翼サーボ角度
     data[3] = command[3];     // 受信移動機構角度
@@ -212,14 +212,14 @@ void loop() {
       data[7] = (quaternion.y()+1)*100;
       data[8] = (quaternion.z()+1)*100;
     #else
-      data[5] = 0;
+      data[5] = 0; // 86行目でデータを受信する際にdata[]はcommand[]に代入したのでいまはdata[5~8]には値がないため、これに0を代入
       data[6] = 0;
       data[7] = 0;
       data[8] = 0;
     #endif
-    data[4] = loopTi;         // 受信間隔
+    data[4] = loopTi;         // 受信間隔 201行目でloopTi=Ti-lastTimeとなっている loop文の中でloopTiとTiとlastTimeが代入されていくので結局受信間隔は変わらない
     #ifdef DEBUG
-      //Serial.print("y:");
+      //Serial.print("y:");　センサを初めから使用すると考えていないのかもしれないなのでEuler角のxが存在しない？？
       //Serial.print(euler.y());
       //Serial.print("z:");
       /*
@@ -235,14 +235,14 @@ void loop() {
     #endif
 
     //　機体の状態をコントローラに送信
-    esp_now_send(broadcastAddress, (uint8_t *) &data, sizeof(data));
+    esp_now_send(broadcastAddress, (uint8_t *) &data, sizeof(data));  // OnDataRecv関数に送信され、OnDataRecv関数が受信したらその関数が走る、また送信の成功によってOnDatasent関数も走る
     lastTime = millis();  // 今までのコードが走った時間をlastTimeに書きこむ
   }
   /*
-  if ((Ti - recvTime) > watchdogtime){
-    digitalWrite(led, HIGH);
-    analogWrite(pwm1, 0);
-    analogWrite(pwm2, 0);
+  if ((Ti - recvTime) > watchdogtime){　Ti(現在時刻)からrecvTime(受信時刻)を引いたものがタイマよりも大きいと暴走している可能性があるので
+    digitalWrite(led, HIGH);　LEDを光らせる
+    analogWrite(pwm1, 0);　羽ばたき出力モータ1を0にする
+    analogWrite(pwm2, 0);　羽ばたき出力モータ2を0にする
   }
   */
   //受信データに基づき各出力を変更
