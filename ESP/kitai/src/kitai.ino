@@ -56,7 +56,7 @@ int i = 0;
 
 // Callback when data is sent
 // DEBUG時には送信が成功したかどうかを表示する。
-void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus) {  // メッセージが送信されるときに実行されるコールバック関数、この関数はメッセージが正常に受信されたかどうかを単純に出力する。 esp_now_sendが走ったらOndatasent実行　sendStatusはesp_now_sendが成功したかどうか0or1で判断 Macaddrは引数として必要で、値としては呼び出されるときに送信先のmacaddrが入る。 今回なら送信先のmacaddrはbroadcastaddressであり、そのアドレスが入る。結局はbraodcastadressの値となる。
+void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus) {  // メッセージが送信されるときに実行されるコールバック関数、この関数はメッセージが正常に受信されたかどうかを単純に出力する。 esp_now_sendが走ったらOndatasent実行　sendStatusはesp_now_sendが成功したかどうか0or1で判断 Macaddrは引数として必要で、値としては呼び出されるときに送信先のmacaddrが入る。 今回なら送信先のmacaddrはbroadcastaddressであり、そのアドレスが入る。結局はbraodcastadressの値となる。macAddrとしてもbroadcastAddrでも問題はない、関数内で使われる名前はそこで使われる名前なので送信する関数の名前と変わっても大丈夫。例えば数字a,b,c...を引き渡すとして関数内の引数をいちいちa,b,c...とか書いてられないからそこをnumとするとかがよい例である。ここでMacaddrをbroadcastaddrとしてもよい、それでも変わらない。ただし型を変えるのはだめ。
   #ifdef DEBUG_SENT
     Serial.println(); // 改行
     Serial.print("Last Packet Send Status: ");  // "Last Packet Send Status: " 空白にはif文の中printlnの文字が続く
@@ -178,7 +178,7 @@ void setup() {
 }
 
 //float型用のmap関数を自作
-float mapfloat(float x, long in_min, long in_max, long out_min, long out_max) // 型名をfloatで宣言、関数名がmapfloat floatとは実数を扱うことのできるデータ型　ここでの実数は整数型と比べて値の桁数が多く少数も扱えるような数値となっている　引数mapfloat(変換したい数値、現在の範囲の下限、現在の範囲の上限、変換後の範囲の下限、変換後の範囲の上限) float型なのにその数値の現在の範囲の下限と上限がlong型とは？？　floatが少数も扱える変数型なのでlongで定義してもよいということ？？　保留して後で出てきた場合に確認
+float mapfloat(float x, long in_min, long in_max, long out_min, long out_max) // 型名をfloatで宣言、関数名がmapfloat floatとは実数を扱うことのできるデータ型　ここでの実数は整数型と比べて値の桁数が多く少数も扱えるような数値となっている　引数mapfloat(変換したい数値、現在の範囲の下限、現在の範囲の上限、変換後の範囲の下限、変換後の範囲の上限) float型なのにその数値の現在の範囲の下限と上限がlong型とは？？　floatが少数も扱える変数型なのでlongで定義してもよいということ？？　保留して後で出てきた場合に確認 floatは4byte=16bitでありlong int(long)型も4byte=16bitであるのでもし今回の範囲が負になることはないから大枠というfloatの中にlong intがあるので変換したい変数がfloatでその範囲がlong intとなることは可能である。 http://www.isc.meiji.ac.jp/~mcelab/www_jyo_en2/jyo_jissu_2_cast.htm
 {
   return (float)(x - in_min) * (out_max - out_min) / (float)(in_max - in_min) + out_min;
 }
