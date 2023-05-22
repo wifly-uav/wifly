@@ -205,7 +205,7 @@ void loop() {
     data[0] = command[0];     // 羽ばたき出力1     43行目でcommandの配列が定義されている、dataを送信するため86行目において43行目でポインタによりdata配列に格納されたcommandの値を各データに代入
     data[1] = command[1];     // 羽ばたき出力2
     data[2] = command[2];     // 尾翼サーボ角度
-    data[3] = command[3];     // 受信移動機構角度
+    data[3] = command[3];     // 重心移動機構角度
     #ifdef sensor
       data[5] = (quaternion.w()+1)*100;
       data[6] = (quaternion.x()+1)*100;
@@ -246,10 +246,10 @@ void loop() {
   }
   */
   //受信データに基づき各出力を変更
-  analogWrite(pwm1, command[0]);
+  analogWrite(pwm1, command[0]);  // 205~208でcommand[0~3]はdata[0~3]に代入しているが、それによって今commandの値は空になってしまっているのでは？
   analogWrite(pwm2, command[1]);
-  ladder.write(command[2]);
-  cog.write(command[3]);
+  ladder.write(command[2]); // 尾翼サーボ角度
+  cog.write(command[3]);  // 重心移動機構角度
   
-  //delay(50);
+  //delay(50); wait for a second
 }
