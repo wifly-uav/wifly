@@ -246,7 +246,7 @@ void loop() {
   }
   */
   //受信データに基づき各出力を変更
-  analogWrite(pwm1, command[0]);  // 205~208でcommand[0~3]はdata[0~3]に代入しているが、それによって今commandの値は空になってしまっているのでは？
+  analogWrite(pwm1, command[0]);  // 205~208でcommand[0~3]はdata[0~3]に代入しているが、それによってcommandの値は消えないから大丈夫!!、入れ替えの場合は上書きとなってしまう。
   analogWrite(pwm2, command[1]);
   ladder.write(command[2]); // 尾翼サーボ角度
   cog.write(command[3]);  // 重心移動機構角度
