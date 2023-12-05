@@ -1,46 +1,48 @@
-import serial #シリアル通信を始めるためのimport、シリアル通信とはデータを送受信するための伝送路を1本、または2本使用して、データを1ビットずつ連続的に送受信する通信方式
-import time #timeモジュールの実装、実行時間の計測が可能
-import serial.tools.list_ports #シリアルポートポートの一覧を取得するメソッド
-import datetime #日付や時刻を操作するができるモジュール
-import csv #CSVファイルの読み込みと書き込みを行うモジュール ここでテキストデータを使う意味は?? CSVの説明 : https://ja.wikipedia.org/wiki/Comma-Separated_Values
-import msvcrt # キー入力をそのまま受け取るモジュール
-import sys #sysとはPythonのインタプリタや実行環境に関する情報を扱うためのライブラリである。使用しているプラットフォームを調べるときや、スクリプトの起動パラメータを取得する場合などに利用 https://freestyle.nvo.jp/archives/3632
+import serial
+import time
+import serial.tools.list_ports
+import datetime
+import csv
+import msvcrt
+import sys
 
-KEYS_LOG = ["Slope", "Pitch", "R-servo", "L-servo", "R-DC", "L-DC", "time"] # KEYS_LOGリスト作成　DCモータの左と右をL-DC，R-DC
+RECEIVE_BYTE = 8    #receive_from_espの引数
+
+#KEYS_LOG = ["Slope", "Pitch", "servo", "R-DC", "L-DC", "time"] # wifly2でサーボ1つだからいらない wifly2よりservo1つ KEYS_LOGはcsvファイルのそれぞれの行の見出し
+KEYS_LOG = ["DC1", "DC2", "servo1", "servo2", "受信間隔", "Pitch", "yaw", "Roll"]
 #[受信データ , 送信データ , time]
-class Communicator():   # Communicatorクラスの作成
-    """
-    マイコンと通信するためのクラス
-    このクラスの使用方法はプログラムの最後にあります ←TEST CODE以下
-    """
-    def __init__(self): # コンストラクタ インスタンスを生成した際にまず自動的に呼び出すメソッド　ここでインスタンスとはclass Communicatorをもとに生成した実体(class Cmomunicator()全体で起こったこと)
-        """
-        初期化
-        COMポートの自動選択をしています     COMポートとはhttps://e-words.jp/w/COM%E3%83%9D%E3%83%BC%E3%83%88.html
-        """
+class Communicator():
+    
+    # 要確認!!
+    def __init__(self): # 変更なし
         print('======================START========================')
-        ports = list(serial.tools.list_ports.comports())    #　シリアルポートの一覧を取得
-        devices = [info.device for info in ports]   #　ポート名をリストとしてdevicesに格納する、ただしリストなので複数存在する場合もあるためそれを調べることも可能
-        if len(devices) == 0:   # シリアル通信できるデバイスが見つからなかった場合
+        ports = list(serial.tools.list_ports.comports())    #シリアルポートのリストを取得
+        devices = [info.device for info in ports]           #ポート名を取得? ポート名の取得がこれでできてない？
+        # print(ports) # いったんports表示
+        # port_controller = 0
+        if len(devices) == 0:
             print("ポートが見つかりませんでした")
-        elif len(devices) == 1: #　ポートが一つ見つかった場合(devicesはリストよりlen(devices)で要素数の判定を行っている)はport_controllerにdevicesのポート名(文字列)を代入
-            port_controller = devices[0]    #　リストdevicesの中にある要素は文字列
-        else:   # ポートが複数見つかった場合はそれらを表示させる
-            for p in ports: #　デバイスに代入したポート名だけを出力するのではなく、シリアルポートにある一覧の中の細かい情報までprintするためにfor i in range(len(devices[i]))を使用せずにfor p in portsとしている
-                print(p)    # これによってex) COM3 - USBシリアルデバイス(COM3)のような情報が出てくる https://ganbaranai.tech/tech-blog/python-pySerial-listPorts/
-                print(p.hwid)   # これによってex)USB VID:PID=2341:0042 SER=85734323331351C0F1A0 LOCATION=1-2のような情報が出る hwidとはwindowsがドライバーパッケージにデバイスを照合するたえに使用するベンダー定義の識別文字列
-            print('Input port number of the controller:')   # コントローラーのポート番号をインプットさせる
-            port_controller = 'COM' + input()   #　COMとinput関数によって入力した番号をport_controllerに代入する(ここではprintからfor文を抜け出しているのでfor文でプリントされたポート番号の中からどれがよいか自分でポート番号を選ぶことによってport_controllerに代入する)
-        #self.__ser = serial.Serial(port_controller, 115200) 基本的にはこれでデバイス名とボーレートを設定しポートをオープンする
-        self.__ser = serial.Serial( #SERIAL通信の設定 defしたときに第一引数をselfとしているためself.にしている　この作業によってポートを開く際にオプションの指定が可能
-                        port_controller, #COMの番号
-                        baudrate = 57600,   #　ボーレート(1秒あたり何ビットのデータを送るかという単位で通信速度を表す)　つまり1秒あたり57600回変調・復調できる
-                        parity = serial.PARITY_NONE,    # パリティの初期値をparityに代入 通信の信頼性を確保するためパリティビットを設定することができる。そもそもパリティは誤り検出に用いられる技術
-                        bytesize = serial.EIGHTBITS,    # データのビット数を指定する 初期値を代入する bytesizeとは文字列のバイト長を整数で返すことが可能、byteseizeを8bitにするとカタカナや漢字を送信可能
-                        stopbits = serial.STOPBITS_ONE, # ストップビットを指定する 初期値を代入 シリアル通信において、ひとまとまりのデータの終了を通知するためのマークとして付けられるビット情報
-                        timeout = None, #　タイムアウトの時間　読み取り時のタイムアウトを指定する　Noneなら無限に待つ
-                        xonxoff = 0, # XON/XOFFの使用を指定する、無手順通信方式において、通信の一時停止と再開とを指示するために用いるフロー制御方式のこと、もしくはその制御に用いられる符号のこと 受信者のバッファがあふれそうになった、あるいは受信データに処理が追いつかない、といった場合に、受信側が送信側に対してデータの送信を一旦停止するよう要請するときに「X-OFF」符号が用いられる
-                        rtscts = 0, # RTS/CTSの使用を指定する、RTS/CTSフロー制御は、無線通信が行われる際に使用される一種の通信制御方式。RTSは送信側が通信開始の意思を送信先に伝えるために使用、CTSとは通信先が送信側に通信してもよいと伝えるために使用
+        elif len(devices) == 1:
+            port_controller = devices[0]                    #port_controllerにポート名を格納
+        else:
+            for p in ports:
+                print(p)
+                print(p.hwid)                               #?これ何？
+            print('Input port number of the controller:')   #ポート番号の入力を指示
+            port_controller = 'COM' + input()               
+        #self.__ser = serial.Serial(port_controller, 115200)
+        self.__ser = serial.Serial(                     #SERIAL通信の設定
+                        port_controller,                #COMの番号
+                        #baudrate = 460800,             #もとのボーレート
+                        #baudrate = 115200,             #遅くしてみた。
+                        #baudrate = 57600,              #さらに遅くしてみた。(Lazurite時代と同じ)
+                        baudrate = 38400,               #9600, 14400, 19200, 28800
+                        parity = serial.PARITY_NONE,
+                        bytesize = serial.EIGHTBITS,
+                        stopbits = serial.STOPBITS_ONE,
+                        timeout = None,
+                        xonxoff = 0,
+                        rtscts = 0,
                         )
         #self.__ser = serial.Serial(port_controller, 115200, parity = serial.PARITY_NONE, bytesize = serial.EIGHTBITS, stopbits = serial.STOPBITS_ONE)
         #self.__ser = serial.Serial(port_controller, 115200, parity=serial.PARITY_NONE)
@@ -55,33 +57,34 @@ class Communicator():   # Communicatorクラスの作成
         self.__ser.open()
         '''
         
-        time.sleep(0.5) # 引き数にした時間の間(秒)、プログラムが停止する 一定の間隔で処理を実行するとか指定した時間に処理を開始する、猶予時間を経て処理を実行するなどの場合に便利
+        time.sleep(0.5)
         
         print('Connected to controller')
-
-        self.__fail_counter = 0 # 62~69行目これは何をしたい？？そもそもおいてる変数の意味がわからない 一応このような変数を定義しているとする、それのみで
+        
+        self.__fail_counter = 0
         self.__test_count = 0
-        self.__raw_data = "" # 空の文字列をつくる
+        self.__raw_data = ""
         self.terminal_flag = 1
-        self.dataset_from_laz = []  # Lazriteからのデータセットを格納するためのリストを作成
-        self.log = [KEYS_LOG]   # リストの中にリストつまり二次元配列を作る self.log = [["Slope", "Pitch", "R-servo", "L-servo", "R-DC", "L-DC", "time"]] self.log[0][0] = "Slope" self.log[0][1] = "Pitch"
+        self.dataset_from_esp = []
+        self.log = [KEYS_LOG]
         self.time_started = None
-        self.time_last_receive = time.time()    #　UNIXエポックからの経過秒数を代入
-
-    def start_laz(self, data_to_send):  # data_to_send = output_values_to_laz = [255, 1, 2, 3, 4, 5](ただしこの値は初期値)
+        self.time_last_receive = time.time()
+        
+    def start_esp(self, data_to_send):
         """
-        シリアル通信の準備とラズライトに準備させるための関数
+        シリアル通信の準備とESPに準備させるための関数
         適当なデータを一回送信する
         Args:
             data_to_send (list): 送信するデータ
         """
-        self.__ser.flushInput() # 入力バッファをflushする　入力バッファとは本器で受信データを貯めておくところつまり準備なら一回キャッシュするということ
-        self.__ser.flushOutput()    # 出力バッファをflushする　出力バッファとは通信機器において、一時的に通信データを格納する場所なので準備段階で一回キャッシュするということ
-        self.send_to_laz(data_to_send)  #data_to_sendをlazriteに送信
-        self.time_started = time.time() # 最初に送信した時間を記録
-        #self.recieve_from_laz(False, 5)
-        self.time_last_receive = time.time()    #　最新の受信時間を記録する?
-
+        self.__ser.flushInput()                 #受信キャッシュをflush
+        self.__ser.flushOutput()                #送信キャッシュをflush 
+        self.send_to_esp(data_to_send)          #data_to_sendをESPに送信
+        print(data_to_send)
+        self.time_started = time.time()         #最初に送信した時間を記録
+        #self.receive_from_laz(False, 5)
+        self.time_last_receive = time.time()    #未使用?
+        
     def create_log(self, persed_data,  time):
         """
         記録をとるための関数
@@ -100,87 +103,110 @@ class Communicator():   # Communicatorクラスの作成
         #    print("error")
         #    print(persed_data)
         #    sys.exit()
-
+        
     def save_communicate_log(self):
         """
         通信のログをcsvに出力する関数
         """
-        with open('com_log_{0:%Y%m%d_%H%M%S}'.format(datetime.datetime.now())+ ".csv", 'w') as f:
+        with open('C:/Users/naush/Downloads/result/{0:%Y%m%d}'.format(datetime.datetime.now()) + '/{0:%Y%m%d_%H}'.format(datetime.datetime.now()) + '/com_log_{0:%Y%m%d_%H%M%S}'.format(datetime.datetime.now())+ ".csv", 'w') as f: # 番号を随時更新
             writer = csv.writer(f, lineterminator='\n')
             writer.writerows(self.log)
-
-    def recieve_from_laz(self, mode=False, byt=4):
+            
+    def receive_from_esp(self, byt = RECEIVE_BYTE, try_data = [255,254,254,0,0,0]): # 通信が失敗した場合に送るデータがtry_dataである
         """
         マイコンからデータを受け取る関数
         whileを使っているので抜け出せなくなる可能性あり
         Args:
-            mode (bool): Trueの場合、通信のログを取る
             byt (int): 受け取るデータの数
         Returns:
             list or bool: 通信が成功した場合は、マイコンから送られてきたデータのlist、失敗した場合は、False
             float: 前回受信してからの時間
         """
-        self.__ser.flushInput() #　受信バッファをフラッシュする
+        self.__ser.flushInput()         #受信キャッシュ内のデータを破棄（初期化）
         while True:
             #print(self.__ser.in_waiting)
-            if self.__ser.in_waiting > 0: # シリアルバッファに受信データがあるか(バッファに含まれるバイト数)を調べる https://qiita.com/mml/items/ccc66ecc46d8299b3346
-                self.__raw_data =self.__ser.readline().decode('utf-8')  # decode : バイト列を文字列に戻す  utf-8の意味→https://zerofromlight.com/blogs/detail/89/#_2 self.__ser.readline()のバイト列を文字列に戻したものに64行目で空の文字列を作ったものに代入する
-                #print(self.__raw_data)
-                #self.__ser.flushInput()
-                persed_data = self.__raw_data.split(",")
-                #print(str(persed_data) + str(len(persed_data)))
-                if len(persed_data) == byt:
-                    recieve_time = str(time.time() - self.time_started)
-                    delta_time = time.time() - self.time_last_receive
-                    self.time_last_receive = time.time()
-                    if (persed_data.pop(0).startswith('S') and persed_data.pop(-1).startswith('E')):
-                        if (persed_data[0] != '' or persed_data[0] != '-'):
-                            #recieve_time_ = 0
-                            #add_log = self.create_log(persed_data, recieve_time)
-                            #if mode == True:
-                            #    self.log.append(add_log)
-                            self.dataset_from_laz = persed_data
-                            #print(str(self.dataset_from_laz) + ":" + str(recieve_time))
-                            self.__fail_counter = 0
-                            return self.dataset_from_laz
-                        else:
-                            print(persed_data[0])
-                            print("no data")
-                            print(persed_data)
-                    else:
-                        self.send_to_laz(self.__data_sent)
-                        print("error SE")
-                        self.__ser.flushInput()
+            if self.__ser.in_waiting > 0:                                   #in_waitingはキャッシュ内に受信されたデータのbyte数を返す。 
+                #print("Data found")
+                self.__raw_data =self.__ser.readline().decode('utf-8')      #受信データを1行分読み取り、文字列に変換したものを取得　
+                #print(self.__raw_data) 
+                #self.__ser.flushInput() # これいる？
+                persed_data = self.__raw_data.split(",")                    #__raw_dataを","区切りにしたものを取得
+                #print("persed_data:", end = "")
+                #print(persed_data)                    
+                #出力:[モータ1出力,モータ2出力,サーボ1,サーボ2,受信間隔,Pitch,Yaw,Roll] ←このサーボ1,2は尾翼とcogのどっち?,多分後ろの三つは角度センサの値
+                # pop(-1)とかだとリストの末尾(最後 = -1)からデータを削除
+                
+                #print(persed_data)
+
+                if len(persed_data) == byt:                                     #受信データ長が指定通りならば...
+                    if persed_data[0] != " " and persed_data[0] != "":          #先頭の文字抜けが無ければ…
+                        #print(str(persed_data) + str(len(persed_data)))
+                        #receive_time = str(time.time() - self.time_started)    #受信した時間を記録
+                        delta_time = time.time() - self.time_last_receive       #最後の受信との時間間隔をPC側で記録
+                        self.time_last_receive = time.time()                    #最後の受信時刻を更新  
+                        #receive_time_ = int(persed_data.pop(4))                #機体側のマイコンで計測された受信間隔の読み取り（popなので削除もされる）
+                        receive_time_ = int(persed_data[4])                     #機体側のマイコンで計測された受信間隔の読み取り(pop画像処理において、削除はだめ)
+                        #persed_data.pop(-1)                                    #Roll角削除
+                        #persed_data:[モータ出力1,モータ出力2,尾翼サーボ,重心移動機構サーボ,Pitch,Yaw]
+                        #output_values_to_esp = [ヘッダ, LDC, RDC, servo, mode]
+                        
+                        #persed_data.pop(-1) # yaw削除
+                        #ersed_data.pop(-1) # Pitch削除
+                        #persed_data.pop(-1) # 重心移動機構サーボ削除
+                        #persed_data.pop(0)
+                        #persed_data.pop(0)
+                        #persed_data.pop(0)
+                    
+
+                        # persed_data:[モータ出力1, モータ出力2, 尾翼サーボ]
+
+                        """
+                        #状態の整形
+                        for i in range(3):
+                            persed_data.pop(-2)
+
+                        #persed_data:[モータ出力1,モータ出力2,Yaw]
+                        """
+
+                        self.dataset_from_esp = persed_data                     #受信データとして記録
+                        
+                        self.__fail_counter = 0                                 #受信失敗回数をリセット
+
+                        #受信データ、受信間隔（機体計測）、受信間隔(PC)を返す。
+                        return self.dataset_from_esp, receive_time_, delta_time
                 else:
-                    recieve_time = str(time.time() - self.time_started)
-                    delta_time = time.time() - self.time_last_receive
-                    self.time_last_receive = time.time()
-                    print("error byt")
-                    print(persed_data)
+                    #print("Data found but length error.")
+                    self.__ser.flushInput()         #受信キャッシュ内のデータを破棄（初期化）
+                    
+            elif 10 <= self.__fail_counter <= 20:       #受信失敗回数が10回以上20回以下なら
+                print("Data not found. Send try_data.")
+                self.send_to_esp(try_data)              #データを送ってLazuriteを送信モードにすることを試みる
+                
+            elif self.__fail_counter > 20:              #受信失敗回数が20回を超えているなら…
+                print("data receive timeout error!")    #タイムアウト（諦める）
+                return False , 0, 0                     #この場合はFalseを返すことに注意
+            else:
+                #print("Data not found. Retry.")
+                pass
 
-            elif self.__fail_counter > 10:
-                self.send_to_laz(self.__data_sent)
-            elif self.__fail_counter > 20:
-                print("data receive timeout error!")
-                return False , 0, 0 # これによってFalseにすることでwhileを抜け出す
-
-            self.__fail_counter += 1
+            self.__fail_counter += 1                    #受信失敗回数を更新
             #time.sleep(0.005)
-
-
-    def send_to_laz(self, data_to_send):    # send_tp_lazは引数でdata_to_sendをとる、そもそもこのdata_to_sendは71行目にmainからもらったものである。80行目でdata_to_sendを引数としてこのメソッドを使用、そのときにdata_to_sendの値がここに送られてくる
+            time.sleep(0.00000001) # もとは0.001→0.0000001に変更 どのtimeが適切??
+            
+    def send_to_esp(self, data_to_send):
         """
         マイコンにデータを送る関数
         Args:
             data_to_send (list): 送信するデータ
         """
-        self.__ser.flushOutput()    # 出力バッファをflushする 
-        for datum in data_to_send:  # data_to_sendの要素0~5までをdatumに代入してself._ser.write(bytes([int(datum)]))の処理を行う
-            self.__ser.write(bytes([int(datum)]))   # ポートオブジェクトserに対してwrite()を使用することで送信が可能、バイト型にするためにbytes()としてそれを送信する　int(datum)そもそもdatumがfloatの可能性があるのでintにする(floatからbyteに変換は不可能だから)　[]は必要これがないと求めている数字にならないことを実験的に証明。あとbytes型というのはb'文字列'という形式であるこの形覚えておく
-        #print("SENT{0}".format(data_to_send))
-        self.__data_sent = data_to_send # self._data_sent = data_to_send = [255, 1, 2, 3, 4, 5]
-        time.sleep(0.001)   # 0.001秒間プログラムを停止させる
-
+        self.__ser.flushOutput()                    #送信用キャッシュのflush
+        for datum in data_to_send:                  #data_to_sendの各要素を...
+            self.__ser.write(bytes([int(datum)]))   #2進数に変換したものを送信
+            time.sleep(0.00000001)                       #時間調整（これがないと羽ばたき出力の変更が反映されない） 
+        self.__data_sent = data_to_send             #送信済みデータとして記録
+        time.sleep(0.00000001)                           #時間調整(超重要!!!これがないとデータ受信ができない)　初期time0.001
+        #self.__ser.flush()
+        
     def termination_switch(self, deta_to_send):
         """
         ターミナルスイッチを確認する関数
@@ -199,45 +225,5 @@ class Communicator():   # Communicatorクラスの作成
                 print("terminal wait")
         #return self.terminal_flag
 
-        """
-        fail_counter = 0
-        self.__ser.flushInput()
-        while True:
-            flag_termination = self.__ser.readline().decode('utf-8')
-            split_data = flag_termination.split(",")
-            if len(split_data) == 3:
-                #print(split_data)
-                if (split_data[0] == "O" or split_data[-1][0] == "N"): # Error check
-                    #print(split_data)
-                    if split_data[1] == "1":
-                        ##通信失敗時に送られる値
-                        print("terminal wait")
-                        #self.send_to_laz(deta_to_send)
-                        time.sleep(0.001)
-                    if split_data[1] == "0":
-                        return True
-                    #return True
-            fail_counter += 1
-            #if fail_counter > 10:
-            #    return False
-        """
-
     def serial_close(self):
-        self.__ser.close()  # ポートのクローズ
-
-
-#------------------------TEST CODE -----------------------------------
-if __name__ == "__main__": #　インスタンスの実体 ただしこれは_name_ == "_main_"はこのCommunication.py自体を実行しない限り、絶対に走らない
-    communicator = Communicator()
-    #output_values_to_laz = [255, 0, 0, 0, 0, 0, 0, 0, 0]
-    output_values_to_laz = [255, 10, 20, 30, 40]
-    communicator.start_laz(output_values_to_laz)
-    print(output_values_to_laz)
-    while True:
-        a = time.time()
-        
-        _, _ = communicator.recieve_from_laz(False, 5)
-        print("test")
-        #data_from_laz , _ = communicator.recieve_from_laz(True, 5)
-        communicator.send_to_laz(output_values_to_laz)
-        print("test")
+        self.__ser.close()
